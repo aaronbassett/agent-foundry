@@ -1,0 +1,19 @@
+# Local configuration files
+.claude/*.local.md
+
+# Temporary review files
+/tmp/pr-review-*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Node modules (if adding any tooling)
+node_modules/

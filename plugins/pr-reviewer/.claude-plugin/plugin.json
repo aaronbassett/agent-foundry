@@ -1,0 +1,16 @@
+{
+  "name": "pr-reviewer",
+  "version": "0.6.0",
+  "description": "Comprehensive PR review plugin that launches specialist agents in parallel to perform deep code reviews, detect issues, verify SDD tasks, and post consolidated findings as PR comments",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com"
+  },
+  "keywords": [
+    "code-review",
+    "pull-request",
+    "github",
+    "automation",
+    "quality"
+  ]
+}
