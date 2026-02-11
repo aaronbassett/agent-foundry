@@ -1,6 +1,6 @@
 {
   "name": "spec-writer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Guide users through creating complete, unambiguous feature specifications using a discovery-driven process.",
   "author": {
     "name": "Aaron Bassett",
