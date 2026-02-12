@@ -11,6 +11,7 @@ Comprehensive PR review plugin that launches multiple specialist agents in paral
 - **Flexible invocation**: Review current PR, specific PR in repo, or any PR in any repo
 - **TODO detection**: Finds TODO, FIXME, HACK, XXX, NOTE, and BUG comments in PR changes
 - **Severity-based reporting**: Organizes findings by critical, important, and suggestions
+- **Interactive fix planning**: `/address-review` command fetches review comments and launches brainstorming session to create user-approved plans for addressing issues
 
 ## Prerequisites
 
@@ -26,12 +27,15 @@ Comprehensive PR review plugin that launches multiple specialist agents in paral
   gh auth login
   ```
 
-- **devs plugin**: Required for language-specific review skills
+- **devs plugin**: Required for language-specific review skills (used by `/review-pr`)
   - Provides: `/devs:python-core`, `/devs:typescript-core`, `/devs:rust-core`, `/devs:react-core`, `/devs:security-core`
+
+- **superpowers plugin**: Required for brainstorming workflow (used by `/address-review`)
+  - Provides: `/superpowers:brainstorming`
 
 ### Optional
 
-- **sdd plugin**: Enhances SDD task verification with additional context
+- **sdd plugin**: Enhances SDD task verification and plan creation with additional context
 
 ## Installation
 
@@ -45,7 +49,9 @@ claude --plugin-dir /path/to/pr-reviewer
 
 ## Usage
 
-### Basic Usage
+### Commands
+
+#### `/review-pr` - Automated PR Review
 
 ```bash
 # Review PR for current branch
@@ -56,9 +62,62 @@ claude --plugin-dir /path/to/pr-reviewer
 
 # Review PR in any repo
 /review-pr user/repo 123
+
+# Dry run (save to file instead of posting)
+/review-pr --dry-run
 ```
 
-### Command Modes
+#### `/address-review` - Discuss and Plan Fixes
+
+After receiving a review, use this command to brainstorm and create a plan for addressing the findings:
+
+```bash
+# Address review for current branch PR
+/address-review
+
+# Address review for specific PR in current repo
+/address-review 123
+
+# Address review for any repo PR
+/address-review user/repo 123
+```
+
+This command:
+1. Fetches the most recent Claude Code review comment
+2. Extracts and summarizes the findings
+3. Invokes the brainstorming skill to discuss with you
+4. Helps create a detailed, user-approved plan for addressing issues
+
+### Workflow: Review → Plan → Fix → Re-review
+
+The plugin supports a complete workflow for addressing PR feedback:
+
+1. **Get Review**: Run `/review-pr` to get automated feedback
+2. **Plan Fixes**: Run `/address-review` to discuss and create a plan
+3. **Implement**: Follow the plan to address the issues
+4. **Verify**: Run `/review-pr` again to confirm fixes
+
+Example workflow:
+```bash
+# Step 1: Get initial review
+/review-pr
+
+# Review is posted with findings (e.g., 2 critical, 3 important, 5 suggestions)
+
+# Step 2: Discuss and plan
+/address-review
+# Brainstorming session starts, you discuss priorities and approach
+# Create a plan for addressing the critical and important issues
+
+# Step 3: Implement the plan
+# Make changes to address the issues
+
+# Step 4: Verify fixes
+/review-pr
+# Get a fresh review to confirm issues are resolved
+```
+
+### Command Modes (review-pr)
 
 **Mode A: Current Branch PR**
 ```bash
@@ -341,6 +400,11 @@ To extend this plugin:
 MIT
 
 ## Version History
+
+- **0.7.0** (2026-02-12): Added interactive fix planning
+  - New `/address-review` command to discuss and plan fixes
+  - Integration with `/superpowers:brainstorming` skill
+  - Complete review → plan → fix → re-review workflow
 
 - **0.1.0** (2026-02-11): Initial release
   - Multi-language code review
