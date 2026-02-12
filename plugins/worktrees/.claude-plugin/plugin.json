@@ -1,6 +1,6 @@
 {
   "name": "worktrees",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Git worktree workflows for parallel AI development",
   "author": {
     "name": "Aaron Bassett",
