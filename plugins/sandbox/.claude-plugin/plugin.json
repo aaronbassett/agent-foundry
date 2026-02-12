@@ -1,6 +1,6 @@
 {
   "name": "sandbox",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Create isolated Docker-based development environments for running Claude Code safely",
   "author": {
     "name": "Aaron Bassett",
