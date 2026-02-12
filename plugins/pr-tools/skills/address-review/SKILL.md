@@ -1,180 +1,115 @@
 ---
-name: address-review
-description: Fetch the most recent PR review comment and discuss a plan for addressing issues using brainstorming
-argument-hint: "[user/repo] [pr-number]"
-allowed-tools:
-  - Bash
-  - Read
-  - Skill
+name: pr-tools:address-review
+description: This skill should be used when the user asks to "address the review", "discuss PR feedback", "plan fixes for the review", "create a plan to fix PR issues", or wants to brainstorm solutions for review findings. Use after a PR review has been posted to fetch the review comment and guide the user through creating an action plan using the brainstorming workflow.
+argument-hint: "[--repo user/repo] --pr number"
 ---
 
-# Address Review Command
+# Address Review
 
 Fetch the most recent Claude Code review comment on a PR and use the brainstorming skill to discuss and create a plan for addressing the identified issues.
 
+## Purpose
+
+Use this skill to:
+1. Retrieve the latest Claude Code review comment from a GitHub PR
+2. Extract and summarize review findings by severity
+3. Launch an interactive brainstorming session with the user
+4. Create a detailed, user-approved action plan for addressing issues
+5. Integrate with SDD workflow if applicable
+
+## Dependencies
+
+- **pr-tools:utils** - Uses utility scripts for GitHub CLI validation, PR argument parsing, and finding review comments
+- **superpowers:brainstorming** - Invoked for interactive planning session
+
 ## Invocation Modes
 
-Parse arguments to determine which PR's review to address:
+Flexible argument styles to specify which PR's review to address:
 
 **Mode A: Current Branch PR**
 ```bash
-/address-review
+/pr-tools:address-review
 ```
 Find and address the review for the PR of the current branch.
 
 **Mode B: Specific PR in Current Repo**
 ```bash
-/address-review 123
+/pr-tools:address-review --pr 123
 ```
 Address review for PR #123 in the current repository.
 
 **Mode C: Any Repo PR**
 ```bash
-/address-review user/repo 123
+/pr-tools:address-review --repo user/repo --pr 123
 ```
 Address review for PR #123 in the specified repository.
 
 ## Implementation Steps
 
-### Step 1: Prerequisites Check
+### Step 1: Validate Prerequisites and Parse Arguments
 
-Before processing, verify prerequisites:
-
-```bash
-# Check gh CLI is installed
-if ! command -v gh &> /dev/null; then
-  echo "❌ GitHub CLI (gh) is not installed."
-  echo "Install: brew install gh"
-  echo "Visit: https://cli.github.com/"
-  exit 1
-fi
-
-# Check gh CLI is authenticated
-if ! gh auth status &> /dev/null; then
-  echo "❌ GitHub CLI is not authenticated."
-  echo "Run: gh auth login"
-  exit 1
-fi
-```
-
-### Step 2: Parse Arguments
-
-Parse $ARGUMENTS to determine mode:
+Use pr-tools utility scripts:
 
 ```bash
-ARGS="$*"
+# Resolve plugin root
+Skill(skill="utils:find-claude-plugin-root")
+PLUGIN_ROOT=$(python3 /tmp/cpr.py pr-tools)
+SCRIPTS="${PLUGIN_ROOT}/utils/scripts"
 
-# Parse mode
-if [ -z "$ARGS" ]; then
-  # Mode A: Current branch PR
-  PR_NUM=$(gh pr view --json number -q .number 2>/dev/null)
-  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+# Check GitHub CLI is ready
+"${SCRIPTS}/github-cli-ready.sh" || exit $?
 
-  if [ -z "$PR_NUM" ]; then
-    echo "❌ No PR found for current branch."
-    echo "Create a PR first or specify PR number."
-    exit 1
-  fi
-
-elif [[ "$ARGS" =~ ^[0-9]+$ ]]; then
-  # Mode B: PR number only
-  PR_NUM="$ARGS"
-  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
-
-  if [ -z "$REPO" ]; then
-    echo "❌ Not in a git repository."
-    exit 1
-  fi
-
-else
-  # Mode C: user/repo PR_NUM
-  REPO=$(echo "$ARGS" | awk '{print $1}')
-  PR_NUM=$(echo "$ARGS" | awk '{print $2}')
-
-  if [ -z "$REPO" ] || [ -z "$PR_NUM" ]; then
-    echo "❌ Invalid arguments."
-    echo "Usage: /address-review [user/repo] [pr-number]"
-    exit 1
-  fi
-fi
+# Parse PR arguments
+PR_DATA=$("${SCRIPTS}/parse-pr-args.py" "$@") || exit $?
+REPO=$(echo "$PR_DATA" | jq -r '.repo')
+PR_NUM=$(echo "$PR_DATA" | jq -r '.pr_number')
 
 echo "📋 Fetching review for PR #$PR_NUM in $REPO"
 ```
 
-### Step 3: Fetch PR Metadata
+### Step 2: Fetch PR Metadata
 
 Fetch PR information to display context:
 
 ```bash
 # Fetch PR details
-PR_DATA=$(gh pr view "$PR_NUM" --repo "$REPO" --json \
-  number,title,state,url 2>&1)
-
-if [ $? -ne 0 ]; then
+PR_META=$(gh pr view "$PR_NUM" --repo "$REPO" --json number,title,state,url 2>&1) || {
   echo "❌ Could not fetch PR #$PR_NUM"
-  echo "$PR_DATA"
+  echo "$PR_META"
   exit 1
-fi
+}
 
-TITLE=$(echo "$PR_DATA" | jq -r '.title')
-PR_URL=$(echo "$PR_DATA" | jq -r '.url')
+TITLE=$(echo "$PR_META" | jq -r '.title')
+PR_URL=$(echo "$PR_META" | jq -r '.url')
 
 echo "PR: $TITLE"
 echo "URL: $PR_URL"
 echo ""
 ```
 
-### Step 4: Find the Most Recent Claude Review Comment
+### Step 3: Find Review Comment
 
-Use gh CLI to fetch all PR comments and find the most recent one with the Claude review marker:
+Use the find-review-comment.sh utility:
 
 ```bash
 echo "🔍 Looking for Claude Code review comment..."
 
-# Fetch all PR comments
-COMMENTS=$(gh pr view "$PR_NUM" --repo "$REPO" --json comments -q '.comments[] | {id: .id, body: .body, createdAt: .createdAt, author: .author.login}' --jq '.')
+# Find the most recent Claude review comment
+REVIEW=$("${SCRIPTS}/find-review-comment.sh" "$REPO" "$PR_NUM") || exit $?
 
-if [ -z "$COMMENTS" ]; then
-  echo "❌ No comments found on this PR."
-  echo "Run /review-pr first to create a review."
-  exit 1
-fi
-
-# Find the most recent comment with the Claude review marker
-# The marker is: <!-- claude-code-review -->
-REVIEW_COMMENT=$(echo "$COMMENTS" | jq -rs '
-  map(select(.body | contains("<!-- claude-code-review -->")))
-  | sort_by(.createdAt)
-  | reverse
-  | .[0]
-')
-
-if [ "$REVIEW_COMMENT" = "null" ] || [ -z "$REVIEW_COMMENT" ]; then
-  echo "❌ No Claude Code review comment found on this PR."
-  echo "Run /review-pr first to create a review."
-  exit 1
-fi
-
-COMMENT_BODY=$(echo "$REVIEW_COMMENT" | jq -r '.body')
-COMMENT_DATE=$(echo "$REVIEW_COMMENT" | jq -r '.createdAt')
+COMMENT_BODY=$(echo "$REVIEW" | jq -r '.body')
+COMMENT_DATE=$(echo "$REVIEW" | jq -r '.createdAt')
 
 echo "✅ Found review comment from $COMMENT_DATE"
-echo ""
-```
 
-### Step 5: Save Review Comment to Temporary File
-
-Save the review comment to a file for easier reference during brainstorming:
-
-```bash
+# Save to file for reference
 REVIEW_FILE="/tmp/pr-${PR_NUM}-review.md"
 echo "$COMMENT_BODY" > "$REVIEW_FILE"
-
 echo "📝 Review saved to: $REVIEW_FILE"
 echo ""
 ```
 
-### Step 6: Extract Key Issues Summary
+### Step 4: Extract Key Issues Summary
 
 Parse the review comment to extract and summarize the key issues:
 
@@ -197,7 +132,7 @@ if [ "$CRITICAL_COUNT" = "0" ] && [ "$IMPORTANT_COUNT" = "0" ] && [ "$SUGGESTION
 fi
 ```
 
-### Step 7: Invoke Brainstorming Skill
+### Step 5: Invoke Brainstorming Skill
 
 Now invoke the brainstorming skill to discuss the review findings with the user and create a plan.
 

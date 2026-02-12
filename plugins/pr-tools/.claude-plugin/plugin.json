@@ -1,5 +1,5 @@
 {
-  "name": "pr-reviewer",
+  "name": "pr-tools",
   "version": "0.7.0",
   "description": "Comprehensive PR review plugin that launches specialist agents in parallel to perform deep code reviews, detect issues, verify SDD tasks, and post consolidated findings as PR comments. Includes brainstorming workflow for addressing review findings.",
   "author": {
