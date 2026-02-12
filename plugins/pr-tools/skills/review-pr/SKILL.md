@@ -1,118 +1,87 @@
 ---
-name: review-pr
-description: Launch parallel specialist agents to review a GitHub pull request and post consolidated findings as a comment
-argument-hint: "[user/repo] [pr-number] [--dry-run]"
-allowed-tools:
-  - Bash
-  - Task
-  - Read
-  - Write
+name: pr-tools:review-pr
+description: This skill should be used when the user asks to "review this PR", "check the pull request", "review PR #123", "analyze this pull request", "get automated review", or wants code review for a GitHub PR. Launches parallel specialist agents for multi-language code review, security analysis, TODO detection, and SDD task verification, then posts consolidated findings as a PR comment.
+argument-hint: "[--repo user/repo] --pr number [--dry-run]"
 ---
 
-# PR Review Command
+# PR Review
 
 Orchestrate a comprehensive pull request review by launching multiple specialist agents in parallel.
 
+## Purpose
+
+Use this skill to:
+1. Automatically detect languages and code patterns in PR changes
+2. Launch parallel specialist review agents (code reviewers, TODO finder, SDD verifier)
+3. Perform deep security, quality, and architecture analysis
+4. Consolidate findings into a structured report
+5. Post or update PR comments with review results
+
+## Dependencies
+
+- **pr-tools:utils** - Uses utility scripts for GitHub CLI validation and PR argument parsing
+- **devs plugin** - Provides language-specific review skills (python-core, typescript-core, rust-core, react-core)
+
 ## Invocation Modes
 
-Parse arguments to determine which PR to review:
+Flexible argument styles to specify which PR to review:
 
 **Mode A: Current Branch PR**
 ```bash
-/review-pr
+/pr-tools:review-pr
 ```
 Find and review the PR for the current branch.
 
 **Mode B: Specific PR in Current Repo**
 ```bash
-/review-pr 123
+/pr-tools:review-pr --pr 123
 ```
 Review PR #123 in the current repository.
 
 **Mode C: Any Repo PR**
 ```bash
-/review-pr user/repo 123
+/pr-tools:review-pr --repo user/repo --pr 123
 ```
-Review PR #42 in the specified repository.
+Review PR #123 in the specified repository.
 
 **Dry Run Mode**
 ```bash
-/review-pr --dry-run
-/review-pr 123 --dry-run
-/review-pr user/repo 123 --dry-run
+/pr-tools:review-pr --dry-run
+/pr-tools:review-pr --pr 123 --dry-run
+/pr-tools:review-pr --repo user/repo --pr 123 --dry-run
 ```
 Perform review but save to `/tmp/pr-review-{PR_NUMBER}.md` instead of posting.
 
 ## Implementation Steps
 
-### Step 1: Prerequisites Check
+### Step 1: Validate Prerequisites and Parse Arguments
 
-Before processing, verify prerequisites:
-
-```bash
-# Check gh CLI is installed
-if ! command -v gh &> /dev/null; then
-  echo "❌ GitHub CLI (gh) is not installed."
-  echo "Install: brew install gh"
-  echo "Visit: https://cli.github.com/"
-  exit 1
-fi
-
-# Check gh CLI is authenticated
-if ! gh auth status &> /dev/null; then
-  echo "❌ GitHub CLI is not authenticated."
-  echo "Run: gh auth login"
-  exit 1
-fi
-```
-
-### Step 2: Parse Arguments
-
-Parse $ARGUMENTS to determine mode and flags:
+Use pr-tools utility scripts:
 
 ```bash
-ARGS="$*"
+# Resolve plugin root
+Skill(skill="utils:find-claude-plugin-root")
+PLUGIN_ROOT=$(python3 /tmp/cpr.py pr-tools)
+SCRIPTS="${PLUGIN_ROOT}/utils/scripts"
+
+# Check GitHub CLI is ready
+"${SCRIPTS}/github-cli-ready.sh" || exit $?
+
+# Extract --dry-run flag (specific to review-pr)
 DRY_RUN=false
-
-# Check for --dry-run flag
-if echo "$ARGS" | grep -q "\--dry-run"; then
-  DRY_RUN=true
-  ARGS=$(echo "$ARGS" | sed 's/--dry-run//g' | xargs)
-fi
-
-# Parse mode
-if [ -z "$ARGS" ]; then
-  # Mode A: Current branch PR
-  PR_NUM=$(gh pr view --json number -q .number 2>/dev/null)
-  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
-
-  if [ -z "$PR_NUM" ]; then
-    echo "❌ No PR found for current branch."
-    echo "Create a PR first or specify PR number."
-    exit 1
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--dry-run" ]; then
+    DRY_RUN=true
+  else
+    ARGS+=("$arg")
   fi
+done
 
-elif [[ "$ARGS" =~ ^[0-9]+$ ]]; then
-  # Mode B: PR number only
-  PR_NUM="$ARGS"
-  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
-
-  if [ -z "$REPO" ]; then
-    echo "❌ Not in a git repository."
-    exit 1
-  fi
-
-else
-  # Mode C: user/repo PR_NUM
-  REPO=$(echo "$ARGS" | awk '{print $1}')
-  PR_NUM=$(echo "$ARGS" | awk '{print $2}')
-
-  if [ -z "$REPO" ] || [ -z "$PR_NUM" ]; then
-    echo "❌ Invalid arguments."
-    echo "Usage: /review-pr [user/repo] [pr-number] [--dry-run]"
-    exit 1
-  fi
-fi
+# Parse PR arguments
+PR_DATA=$("${SCRIPTS}/parse-pr-args.py" "${ARGS[@]}") || exit $?
+REPO=$(echo "$PR_DATA" | jq -r '.repo')
+PR_NUM=$(echo "$PR_DATA" | jq -r '.pr_number')
 
 echo "📋 Reviewing PR #$PR_NUM in $REPO"
 if [ "$DRY_RUN" = true ]; then
@@ -120,7 +89,7 @@ if [ "$DRY_RUN" = true ]; then
 fi
 ```
 
-### Step 3: Fetch PR Metadata
+### Step 2: Fetch PR Metadata
 
 Fetch PR information using gh CLI:
 
@@ -144,7 +113,7 @@ echo "PR: $TITLE"
 echo "State: $STATE | Draft: $IS_DRAFT"
 ```
 
-### Step 4: Launch pr-validator Agent
+### Step 3: Launch pr-validator Agent
 
 Launch the validation agent to check if PR is reviewable:
 
@@ -181,7 +150,7 @@ exit 0
 - `sddDetected`: Boolean indicating if SDD tasks.md was modified
 - Continue to parallel reviews
 
-### Step 5: Launch Parallel Reviews
+### Step 4: Launch Parallel Reviews
 
 Launch all review agents in parallel using a SINGLE Task tool call with multiple invocations:
 
@@ -220,7 +189,7 @@ echo "   ✓ TypeScript review complete"
 echo "   ✓ TODO finder complete"
 ```
 
-### Step 6: Handle Partial Failures
+### Step 5: Handle Partial Failures
 
 If some agents fail or timeout, continue with available results:
 
@@ -232,7 +201,7 @@ fi
 
 Mark failed reviews clearly in the final output.
 
-### Step 7: Launch pr-commenter Agent
+### Step 6: Launch pr-commenter Agent
 
 Consolidate all findings and post/update PR comment:
 
@@ -256,7 +225,7 @@ The agent will:
 5. Determine comment strategy (create new or update existing)
 6. Post comment (or save to file if dry-run)
 
-### Step 8: Display Results
+### Step 7: Display Results
 
 Show summary to the user:
 

@@ -1,6 +1,6 @@
 {
   "name": "settings-presets",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Configuration toolkit for streamlining Claude Code project setup with powerline status line and attribution settings",
   "author": {
     "name": "Aaron Bassett",

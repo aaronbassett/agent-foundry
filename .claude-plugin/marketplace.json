@@ -1,6 +1,6 @@
 {
   "name": "aaronbassett-marketplace",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Personal marketplace for Claude Code plugins, agents, and skills",
   "owner": {
     "name": "Aaron Bassett",
@@ -69,17 +69,8 @@
       "source": "./plugins/worktrees"
     },
     {
-      "source": "./plugins/pr-reviewer",
-      "name": "pr-reviewer",
-      "description": "Comprehensive PR review plugin that launches specialist agents in parallel to perform deep code reviews, detect issues, verify SDD tasks, and post consolidated findings as PR comments",
-      "version": "0.1.0",
-      "keywords": [
-        "code-review",
-        "pull-request",
-        "github",
-        "automation",
-        "quality"
-      ]
+      "name": "pr-tools",
+      "source": "./plugins/pr-tools"
     }
   ]
 }
