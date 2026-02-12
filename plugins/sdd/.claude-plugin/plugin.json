@@ -1,6 +1,6 @@
 {
   "name": "sdd",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Specification-Driven Development workflow for Claude Code. A comprehensive toolkit for defining project governance, creating feature specifications, mapping codebases, planning implementations, generating tasks, and executing with quality gates.",
   "author": {
     "name": "Aaron Bassett",

@@ -53,12 +53,25 @@ If any disqualifying condition is met, set `reviewable: false` and note the reas
 
 ## Step 3: Detect Programming Languages
 
-Analyze file extensions from the `files` array to identify languages:
+Analyze file extensions from the PR to identify languages.
+
+**IMPORTANT**: The `--json files` output is capped at 100 files. For large PRs, use the workaround below.
+
+### Detection Strategy:
+
+**If filesChanged < 100**: Use the files array from Step 1
+**If filesChanged >= 100**: Use `gh pr diff --name-only` to get complete file list:
+
+```bash
+gh pr diff <PR_NUMBER> --repo <REPO> --name-only
+```
+
+This returns all changed files without the 100-file cap.
 
 **Language Detection Map**:
 - `.py` → python
 - `.ts`, `.tsx` → typescript
-- `.js`, `.jsx` → javascript (add "react" if .jsx present)
+- `.js`, `.jsx` → javascript (add "react" if .jsx or .tsx present)
 - `.rs` → rust
 - `.go` → go
 - `.java` → java
@@ -84,9 +97,18 @@ Analyze file extensions from the `files` array to identify languages:
 
 Return a **deduplicated array** of detected languages. If no recognized programming languages are found, return an empty array.
 
+**Note**: For PRs with 100+ files, add a note in the response metadata indicating that the full file list was fetched via diff.
+
 ## Step 4: Detect SDD Usage
 
-Check if Spec-Driven Development is in use by examining the modified files list.
+Check if Spec-Driven Development is in use by examining the modified files.
+
+**IMPORTANT**: The `--json files` output from `gh pr view` is capped at 100 files (see https://github.com/cli/cli/issues/5368). For PRs with 100+ files, you MUST use the workaround below to avoid false negatives.
+
+### Detection Strategy:
+
+**If filesChanged < 100**: Use the files array from Step 1
+**If filesChanged >= 100**: Use `gh pr diff` workaround (see below)
 
 SDD is detected if **any** of these patterns match:
 
@@ -94,7 +116,23 @@ SDD is detected if **any** of these patterns match:
 2. File path matches: `specs/**/*.md` (any markdown in specs directory)
 3. PR title or body mentions "SDD", "spec-driven", or "specification"
 
-Set `sddDetected: true` if any condition is met, otherwise `false`.
+### Workaround for Large PRs (100+ files):
+
+When `filesChanged >= 100`, use this command to search the diff directly:
+
+```bash
+gh pr diff <PR_NUMBER> --repo <REPO> | grep -E '^\+\+\+ b/specs/.*\.md$'
+```
+
+This searches the diff headers for any files in the specs/ directory with .md extension.
+
+Alternative approach - check for specific patterns:
+
+```bash
+gh pr diff <PR_NUMBER> --repo <REPO> --name-only | grep -E '^specs/.*tasks\.md$'
+```
+
+Set `sddDetected: true` if any matches are found, otherwise `false`.
 
 ## Step 5: Generate JSON Response
 
@@ -115,7 +153,8 @@ Return a JSON object with the following structure:
     "linesAdded": <integer>,
     "linesDeleted": <integer>
   },
-  "skipReason": "<string|null>"
+  "skipReason": "<string|null>",
+  "usedDiffFallback": <boolean>
 }
 ```
 
@@ -126,6 +165,7 @@ Return a JSON object with the following structure:
 - `sddDetected`: Boolean indicating if SDD workflow is in use
 - `prMetadata`: Object containing core PR information
 - `skipReason`: String explaining why PR is not reviewable (null if reviewable)
+- `usedDiffFallback`: Boolean indicating if `gh pr diff` was used due to 100+ file limitation (false if not needed)
 
 **Example Skip Reasons**:
 - "PR is in draft state"
@@ -133,13 +173,61 @@ Return a JSON object with the following structure:
 - "PR has no file changes"
 - "PR is trivial (5 lines or less in single file)"
 
+# Practical Implementation Example
+
+Here's how to handle the 100+ file limitation:
+
+```bash
+# Step 1: Get PR metadata
+PR_DATA=$(gh pr view 123 --repo owner/repo --json number,title,state,isDraft,files,additions,deletions,changedFiles)
+FILES_CHANGED=$(echo "$PR_DATA" | jq -r '.changedFiles')
+
+# Step 2: Decide which method to use
+if [ "$FILES_CHANGED" -ge 100 ]; then
+  # Large PR - use diff fallback
+  echo "PR has $FILES_CHANGED files (>=100), using diff fallback"
+
+  # Get complete file list for language detection
+  ALL_FILES=$(gh pr diff 123 --repo owner/repo --name-only)
+
+  # Check for SDD
+  SDD_FILES=$(gh pr diff 123 --repo owner/repo --name-only | grep -E '^specs/.*\.md$')
+  if [ -n "$SDD_FILES" ]; then
+    SDD_DETECTED=true
+  else
+    SDD_DETECTED=false
+  fi
+
+  USED_FALLBACK=true
+else
+  # Small PR - use files array from PR_DATA
+  ALL_FILES=$(echo "$PR_DATA" | jq -r '.files[].path')
+
+  # Check for SDD in files array
+  SDD_FILES=$(echo "$PR_DATA" | jq -r '.files[].path' | grep -E '^specs/.*\.md$')
+  if [ -n "$SDD_FILES" ]; then
+    SDD_DETECTED=true
+  else
+    SDD_DETECTED=false
+  fi
+
+  USED_FALLBACK=false
+fi
+
+# Step 3: Detect languages from ALL_FILES
+# ... language detection logic ...
+
+# Step 4: Build JSON response with usedDiffFallback field
+```
+
 # Quality Standards
 
 1. **Accuracy**: Language detection must be precise based on file extensions
-2. **Performance**: Complete validation in under 10 seconds for typical PRs
-3. **Completeness**: All metadata fields must be populated
+2. **Performance**: Complete validation in under 10 seconds for typical PRs (may take longer for 500+ file PRs due to diff operation)
+3. **Completeness**: All metadata fields must be populated, including `usedDiffFallback`
 4. **Error Handling**: If `gh` CLI fails, return error in JSON format with `reviewable: false`
 5. **Consistency**: Always return valid JSON, never plain text responses
+6. **Large PR Handling**: Always use `gh pr diff --name-only` for PRs with 100+ files to avoid false negatives
 
 # Error Handling
 
@@ -169,6 +257,10 @@ Common error scenarios:
 3. **Multiple Languages**: Return all detected languages, sorted alphabetically
 4. **Renamed Files**: Count as changes and include in language detection
 5. **Deleted Files**: Include in language detection based on extension
+6. **Large PRs (100+ files)**: The `gh pr view --json files` output is capped at 100 files due to GitHub CLI limitation (https://github.com/cli/cli/issues/5368). For these PRs:
+   - Use `gh pr diff --name-only` to get the complete file list for language detection
+   - Use `gh pr diff | grep` to search for specs/ files for SDD detection
+   - Add `"usedDiffFallback": true` to the JSON response to indicate the workaround was needed
 
 # Output Format
 
@@ -177,7 +269,7 @@ Always respond with:
 2. The complete JSON object
 3. If not reviewable, clearly state the reason
 
-Example response:
+Example response (small PR):
 
 "This PR is reviewable with 3 Python and 2 TypeScript files changed. SDD is not in use.
 
@@ -196,7 +288,32 @@ Example response:
     "linesAdded": 234,
     "linesDeleted": 12
   },
-  "skipReason": null
+  "skipReason": null,
+  "usedDiffFallback": false
+}
+```"
+
+Example response (large PR with 100+ files):
+
+"This PR is reviewable with 156 files changed across multiple languages. Used diff fallback due to file list cap. SDD detected in specs/tasks.md.
+
+```json
+{
+  "reviewable": true,
+  "languages": ["javascript", "python", "react", "typescript"],
+  "sddDetected": true,
+  "prMetadata": {
+    "number": 456,
+    "title": "Complete frontend rewrite",
+    "repo": "acme/webapp",
+    "state": "OPEN",
+    "isDraft": false,
+    "filesChanged": 156,
+    "linesAdded": 12453,
+    "linesDeleted": 8902
+  },
+  "skipReason": null,
+  "usedDiffFallback": true
 }
 ```"
 
