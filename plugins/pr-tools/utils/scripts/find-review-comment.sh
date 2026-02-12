@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-MARKER="<!-- claude-code-review -->"
+MARKER="<!-- claude-pr-review -->"
 
 # Check arguments
 if [ $# -ne 2 ]; then
