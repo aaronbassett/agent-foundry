@@ -58,7 +58,7 @@ The following version constraint formats are supported:
 
 ## Installation
 
-This plugin is part of the aaronbassett-marketplace. Install it via:
+This plugin is part of the agent-foundry. Install it via:
 
 ```bash
 claude plugin install utils

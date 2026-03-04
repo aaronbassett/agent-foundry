@@ -41,7 +41,7 @@ nodejs = ["pnpm", "typescript", "ts-node"]
 [claude]
 marketplaces = [
     "anthropics/claude-plugins-official",
-    "aaronbassett/aaronbassett-marketplace"
+    "aaronbassett/agent-foundry"
 ]
 
 [claude.plugins]
@@ -49,9 +49,9 @@ plugins = [
     "rust-analyzer-lsp@claude-plugins-official",
     "pyright-lsp@claude-plugins-official",
     "typescript-lsp@claude-plugins-official",
-    "devs@aaronbassett-marketplace",
-    "git-lovely@aaronbassett-marketplace",
-    "settings-presets@aaronbassett-marketplace"
+    "devs@agent-foundry",
+    "git-lovely@agent-foundry",
+    "settings-presets@agent-foundry"
 ]
 
 [network]

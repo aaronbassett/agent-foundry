@@ -34,8 +34,8 @@ The sandbox plugin provides a complete workflow for creating containerized devel
 Install via Claude Code marketplace:
 
 ```bash
-cc marketplace add aaronbassett/aaronbassett-marketplace
-cc plugin install sandbox@aaronbassett-marketplace
+cc marketplace add aaronbassett/agent-foundry
+cc plugin install sandbox@agent-foundry
 ```
 
 ## Usage
@@ -94,11 +94,11 @@ always_install_tools:
 
 default_marketplaces:
   - anthropics/claude-plugins-official
-  - aaronbassett/aaronbassett-marketplace
+  - aaronbassett/agent-foundry
 
 default_plugins:
-  - devs@aaronbassett-marketplace
-  - git-lovely@aaronbassett-marketplace
+  - devs@agent-foundry
+  - git-lovely@agent-foundry
 ---
 
 # Sandbox Preferences
@@ -182,4 +182,4 @@ MIT
 
 ## Contributing
 
-Issues and pull requests welcome at https://github.com/aaronbassett/aaronbassett-marketplace
+Issues and pull requests welcome at https://github.com/aaronbassett/agent-foundry

@@ -28,19 +28,19 @@ This plugin was also influenced by concepts from [Get Shit Done (GSD)](https://g
 
 1. Add the marketplace in Claude Code:
    ```bash
-   /plugin marketplace add aaronbassett/aaronbassett-marketplace
+   /plugin marketplace add aaronbassett/agent-foundry
    ```
 
 2. Install the SDD plugin:
    ```bash
-   /plugin install sdd@aaronbassett-marketplace
+   /plugin install sdd@agent-foundry
    ```
 
 3. **IMPORTANT**: This plugin requires the `utils` plugin from the same
    marketplace for the CPR (Claude Plugin Root) resolver functionality.
    Ensure utils is installed first.
    ```bash
-   /plugin install utils@aaronbassett-marketplace
+   /plugin install utils@agent-foundry
    ```
 
 ## Quick Start
@@ -163,7 +163,7 @@ Contributions are welcome! Please:
 3. Test changes thoroughly before submitting PR
 4. Update documentation for new features
 
-For bugs and feature requests, visit the [marketplace issues](https://github.com/aaronbassett/aaronbassett-marketplace/issues).
+For bugs and feature requests, visit the [marketplace issues](https://github.com/aaronbassett/agent-foundry/issues).
 
 ## Support
 

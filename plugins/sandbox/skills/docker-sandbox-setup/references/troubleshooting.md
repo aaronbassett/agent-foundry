@@ -526,7 +526,7 @@ docker exec sandbox-project ls /root/.claude/plugins
 ```bash
 ./sandbox/shell.sh
 cc marketplace add anthropics/claude-plugins-official
-cc plugin install devs@aaronbassett-marketplace
+cc plugin install devs@agent-foundry
 ```
 
 3. **Check plugin installation:**

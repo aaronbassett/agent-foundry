@@ -188,7 +188,7 @@ Suggest defaults from user preferences or plugin defaults.
 
 Examples:
 - anthropics/claude-plugins-official
-- aaronbassett/aaronbassett-marketplace
+- aaronbassett/agent-foundry
 
 #### 5.2 Plugins
 
@@ -202,9 +202,9 @@ Example: **"How about:"**
 - typescript-lsp@claude-plugins-official
 - pyright-lsp@claude-plugins-official
 - rust-analyzer-lsp@claude-plugins-official
-- devs@aaronbassett-marketplace
-- git-lovely@aaronbassett-marketplace
-- settings-presets@aaronbassett-marketplace
+- devs@agent-foundry
+- git-lovely@agent-foundry
+- settings-presets@agent-foundry
 
 User can add/remove from suggestions.
 
