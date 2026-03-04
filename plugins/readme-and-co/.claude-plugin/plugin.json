@@ -1,6 +1,6 @@
 {
   "name": "readme-and-co",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "Generate comprehensive GitHub repository documentation including README, LICENSE, CONTRIBUTING, SECURITY, and GitHub templates following best practices",
   "author": {
     "name": "Aaron Bassett",
