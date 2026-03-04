@@ -1,0 +1,21 @@
+{
+  "name": "ideas",
+  "version": "0.7.0",
+  "description": "Turn vague ideas into sharp, well-scoped vision documents through extended creative collaboration before any design or implementation work begins.",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/ideas",
+  "license": "MIT",
+  "keywords": [
+    "ideation",
+    "brainstorming",
+    "vision",
+    "creative",
+    "exploration",
+    "planning"
+  ]
+}

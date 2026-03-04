@@ -1,6 +1,6 @@
 {
   "name": "agent-foundry",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "Personal marketplace for Claude Code plugins, agents, and skills",
   "owner": {
     "name": "Aaron Bassett",
@@ -71,6 +71,20 @@
     {
       "name": "pr-tools",
       "source": "./plugins/pr-tools"
+    },
+    {
+      "source": "./plugins/ideas",
+      "name": "ideas",
+      "description": "Turn vague ideas into sharp, well-scoped vision documents through extended creative collaboration before any design or implementation work begins.",
+      "version": "0.1.0",
+      "keywords": [
+        "ideation",
+        "brainstorming",
+        "vision",
+        "creative",
+        "exploration",
+        "planning"
+      ]
     }
   ]
 }
