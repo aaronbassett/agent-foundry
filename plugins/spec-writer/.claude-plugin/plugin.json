@@ -7,8 +7,8 @@
     "email": "aaronbassett@gmail.com",
     "url": "https://aaronbassett.com"
   },
-  "homepage": "https://github.com/aaronbassett/aaronbassett-marketplace",
-  "repository": "https://github.com/aaronbassett/aaronbassett-marketplace/tree/main/plugins/spec-writer",
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/spec-writer",
   "license": "MIT",
   "keywords": [
     "specifications",

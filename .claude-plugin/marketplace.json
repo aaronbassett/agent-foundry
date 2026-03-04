@@ -1,13 +1,13 @@
 {
-  "name": "aaronbassett-marketplace",
+  "name": "agent-foundry",
   "version": "0.6.4",
   "description": "Personal marketplace for Claude Code plugins, agents, and skills",
   "owner": {
     "name": "Aaron Bassett",
     "email": "aaronbassett@gmail.com"
   },
-  "homepage": "https://github.com/aaronbassett/aaronbassett-marketplace",
-  "repository": "https://github.com/aaronbassett/aaronbassett-marketplace.git",
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry.git",
   "license": "MIT",
   "keywords": [
     "claude",

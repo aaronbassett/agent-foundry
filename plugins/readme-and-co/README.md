@@ -13,10 +13,10 @@ Generate comprehensive GitHub repository documentation following best practices.
 
 ## Installation
 
-This plugin is part of the aaronbassett-marketplace. Install via Claude Code:
+This plugin is part of the agent-foundry. Install via Claude Code:
 
 ```bash
-cc --plugin-dir /Users/aaronbassett/Projects/aaronbassett-marketplace/plugins/readme-and-co
+cc --plugin-dir /Users/aaronbassett/Projects/agent-foundry/plugins/readme-and-co
 ```
 
 Or add to your project's `.claude-plugin/` directory.
@@ -178,5 +178,5 @@ Contributions welcome! See CONTRIBUTING.md for guidelines.
 ## Support
 
 For issues or questions:
-- GitHub Issues: [aaronbassett-marketplace issues](https://github.com/aaronbassett/aaronbassett-marketplace/issues)
+- GitHub Issues: [agent-foundry issues](https://github.com/aaronbassett/agent-foundry/issues)
 - Plugin documentation: See `TEMPLATES.md` and `LICENSES.md`

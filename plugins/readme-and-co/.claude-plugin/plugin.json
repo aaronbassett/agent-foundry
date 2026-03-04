@@ -7,8 +7,8 @@
     "email": "aaronbassett@gmail.com",
     "url": "https://aaronbassett.com"
   },
-  "homepage": "https://github.com/aaronbassett/aaronbassett-marketplace",
-  "repository": "https://github.com/aaronbassett/aaronbassett-marketplace/tree/main/plugins/readme-and-co",
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/readme-and-co",
   "license": "MIT",
   "keywords": [
     "documentation",

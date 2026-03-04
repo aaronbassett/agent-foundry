@@ -13,7 +13,7 @@ Add this plugin to your Claude Code configuration:
 ```json
 {
   "plugins": [
-    "aaronbassett/aaronbassett-marketplace/plugins/worktrees"
+    "aaronbassett/agent-foundry/plugins/worktrees"
   ]
 }
 ```
