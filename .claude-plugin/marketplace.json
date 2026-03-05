@@ -74,17 +74,11 @@
     },
     {
       "source": "./plugins/ideas",
-      "name": "ideas",
-      "description": "Turn vague ideas into sharp, well-scoped vision documents through extended creative collaboration before any design or implementation work begins.",
-      "version": "0.1.0",
-      "keywords": [
-        "ideation",
-        "brainstorming",
-        "vision",
-        "creative",
-        "exploration",
-        "planning"
-      ]
+      "name": "ideas"
+    },
+    {
+      "source": "./plugins/image-gen",
+      "name": "image-gen"
     }
   ]
 }

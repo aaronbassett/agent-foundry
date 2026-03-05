@@ -1,0 +1,20 @@
+{
+  "name": "image-gen",
+  "version": "0.1.0",
+  "description": "AI-powered image generation using Google Gemini models via the nanobanana MCP server. Generate, edit, and manage images with intelligent model selection, aspect ratio control, and multi-model support.",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/image-gen",
+  "license": "MIT",
+  "keywords": [
+    "image-generation",
+    "gemini",
+    "nanobanana",
+    "ai-art",
+    "mcp"
+  ]
+}
