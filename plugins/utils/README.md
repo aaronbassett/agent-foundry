@@ -1,6 +1,6 @@
 # Utils Plugin
 
-Utility skills for plugin management and diagnostics including dependency checking, scanning, and plugin root resolution.
+Utility skills for plugin management and diagnostics including dependency checking, scanning, plugin root resolution, and tokf output filtering.
 
 ## Skills
 
@@ -30,6 +30,24 @@ Scans a plugin to discover and analyze its dependencies, including transitive de
 - Generate a dependency tree for a plugin
 - Identify circular dependencies
 - Audit plugin dependencies
+
+### tokf-filter
+
+Guides creation and modification of tokf filter files — config-driven TOML files that compress command output before it reaches the LLM context.
+
+**Use cases:**
+- Create new tokf filters for any CLI command
+- Understand tokf step types (match_output, skip, keep, section, chunk, parse, etc.)
+- Write test cases for filters
+- Debug and improve existing filters
+
+## Hooks
+
+### PreToolUse — tokf integration
+
+The plugin registers a `PreToolUse` hook on `Bash` commands that delegates to `tokf hook handle`. When tokf is installed, this automatically intercepts Bash tool calls and applies matching output filters, compressing verbose command output before it enters the conversation context.
+
+If tokf is not installed, the hook exits silently with no effect.
 
 ## Plugin Dependencies Format
 
