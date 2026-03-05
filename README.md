@@ -12,6 +12,7 @@ Build. Ship. Repeat. A collection of Claude Code plugins for devs.
 | [flutter-core](plugins/flutter-core) | Flutter and Dart development toolkit covering UI/UX, state management, testing, and ServerPod |
 | [git-lovely](plugins/git-lovely) | Lovely Git workflows with conventional commits and GitHub CLI integration |
 | [ideas](plugins/ideas) | Turn vague ideas into sharp vision documents through structured creative collaboration |
+| [image-gen](plugins/image-gen) | AI-powered image generation using Google Gemini models via nanobanana MCP server |
 | [pr-tools](plugins/pr-tools) | Parallel PR review agents for code quality, SDD task verification, and TODO tracking |
 | [readme-and-co](plugins/readme-and-co) | Generate README, LICENSE, CONTRIBUTING, SECURITY, and GitHub templates |
 | [sandbox](plugins/sandbox) | Isolated Docker-based development environments for Claude Code |
