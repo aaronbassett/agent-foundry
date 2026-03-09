@@ -1,6 +1,6 @@
 {
   "name": "agent-foundry",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Personal marketplace for Claude Code plugins, agents, and skills",
   "owner": {
     "name": "Aaron Bassett",
@@ -79,6 +79,10 @@
     {
       "source": "./plugins/image-gen",
       "name": "image-gen"
+    },
+    {
+      "source": "./plugins/lexisim",
+      "name": "lexisim"
     }
   ]
 }
