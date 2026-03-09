@@ -1,6 +1,6 @@
 # AI Writing Tells
 
-A catalog of patterns, phrases, and structural habits that signal AI-generated text. Use this reference during Phase 4 (Anti-Voice Definition) and when building the rejection list for the voice profile. During the anti-voice phase, users select archetypes their voice is explicitly NOT, and all associated patterns get added to the rejection list.
+A catalog of patterns, phrases, and structural habits that signal AI-generated text. Use this reference during Phase 6 (Anti-Voice Definition) and when building the rejection list for the voice profile. During the anti-voice phase, users select archetypes their voice is explicitly NOT, and all associated patterns get added to the rejection list.
 
 ---
 
@@ -477,7 +477,7 @@ Writes everything as narrative, even when the content doesn't warrant it. Every 
 
 ## Using This Reference
 
-### During Phase 4 (Anti-Voice Definition)
+### During Phase 6 (Anti-Voice Definition)
 
 1. Present the Anti-Voice Archetypes to the user
 2. The user selects which archetypes their voice is explicitly NOT

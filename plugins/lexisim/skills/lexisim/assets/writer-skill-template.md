@@ -138,6 +138,7 @@ Information flow pattern: {{PACING_FLOW_PATTERN}}
 | Exclamation | {{EXCLAMATION_FREQ}} | {{EXCLAMATION_USAGE}} |
 | Ellipsis | {{ELLIPSIS_FREQ}} | {{ELLIPSIS_USAGE}} |
 | Colons | {{COLON_FREQ}} | {{COLON_USAGE}} |
+| Question marks | {{QUESTION_MARK_FREQ}} | {{QUESTION_MARK_USAGE}} |
 
 ### Vocabulary
 

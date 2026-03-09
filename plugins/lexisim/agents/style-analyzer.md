@@ -24,8 +24,8 @@ The handoff document is structured with labeled sections. Extract every section 
 6. **Anti-voice data**: rejected archetypes, rejected dimensions, rejected phrases (Phase 7)
 7. **Uncanny valley feedback**: user corrections from Phase 8
 8. **Reference samples**: if emulate path or influence probe provided samples
-9. **Platform preferences**: social media, blog, email, docs format notes
-10. **Freeform notes**: any additional user instructions
+9. **Platform preferences**: social media, blog, email, docs format notes (may be "Not specified" — infer from voice character and audience)
+10. **Freeform notes**: any additional user instructions (may be "None")
 
 Confirm the output paths and scope before proceeding. If any critical section is missing, note it and work with what is available.
 
@@ -131,7 +131,7 @@ When dimensions conflict (e.g., user said "casual tone" but calibration samples 
 2. **Phase 4 calibration** (show-don't-tell reading level) — behavioral signal
 3. **Phase 3 audience constraints** — audience needs override personal preference
 4. **Phase 5-6 stated preferences** — explicit voice choices
-5. **Phase 2 reference analysis** — lowest priority, inferred from samples
+5. **Phase 2 reference analysis** — lowest priority, empirical baseline from samples
 
 Document any tensions found and how they were resolved. These become `CALIBRATION_NOTES`.
 
@@ -209,10 +209,12 @@ Create 3 before/after transformations showing "generic AI output" vs "this voice
 |----------|--------|
 | `{{PROFILE_NAME}}` | Handoff Config section |
 | `{{TONE_QUICK}}` | Synthesized from voice character + reading level + temperature |
+| `{{TONE_DESCRIPTION}}` | Detailed tone guidance from voice character + emotional temperature analysis |
 | `{{FORMALITY_QUICK}}` | Synthesized from voice character answers |
 | `{{SENTENCE_QUICK}}` | From sentence metrics or preferences |
 | `{{BURSTINESS_QUICK}}` | From burstiness analysis or preferences |
 | `{{SPECIFICITY_QUICK}}` | From specificity preferences |
+| `{{SPECIFICITY_DESCRIPTION}}` | Detailed specificity guidance from preferences and reading level |
 | `{{PERSONAL_QUICK}}` | From personal voice preferences |
 | `{{TRANSITIONS_QUICK}}` | From transition preferences |
 | `{{PUNCTUATION_QUICK}}` | From punctuation preferences |
@@ -239,7 +241,7 @@ Create 3 before/after transformations showing "generic AI output" vs "this voice
 | `{{BURSTINESS_RATIO}}` | stdev / mean (number) |
 | `{{MIN_SENTENCE_LENGTH}}` | From sentence metrics (number) |
 | `{{MAX_SENTENCE_LENGTH}}` | From sentence metrics (number) |
-| `{{EM_DASH_FREQ}}` through `{{COLON_USAGE}}` | From punctuation profile |
+| `{{EM_DASH_FREQ}}` through `{{QUESTION_MARK_USAGE}}` | From punctuation profile |
 | `{{VOCABULARY_REGISTER}}` | From vocabulary analysis |
 | `{{FUNCTION_WORD_PROFILE}}` | From vocabulary analysis |
 | `{{CONTRACTION_RATE}}` | From vocabulary analysis |

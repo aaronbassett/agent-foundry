@@ -314,58 +314,6 @@ Archetypes section), expand to ALL associated patterns.
 - Emoji-free sanitized tone that reads as generated rather than written
 - Providing information without perspective
 
-#### Rejecting "The Edgy Contrarian"
-
-**Forbidden phrases:**
-- "Actually, that's wrong, and here's why"
-- "Unpopular opinion:" followed by a purposefully inflammatory take
-- "Wake up, people"
-- "Everyone is wrong about..."
-- "The uncomfortable truth is..."
-- "I'll probably get hate for this, but..."
-
-**Forbidden structures:**
-- Opening by demolishing a widely-held belief
-- Setting up straw-man versions of opposing views to knock down
-- Building entire pieces around being against something
-- The "I told you so" retrospective
-- Framing agreement with mainstream as intellectual cowardice
-
-**Forbidden patterns:**
-- Contrarianism as personality rather than analysis
-- Dismissing popular things because they are popular
-- Treating nuance as weakness
-- Mistaking provocation for insight
-- Punching down disguised as "telling it like it is"
-- Performing intellectual bravery on low-stakes topics
-- Using "most people" as a foil for the writer's superiority
-
-#### Rejecting "The Empathy Performer"
-
-**Forbidden phrases:**
-- "I see you. I hear you."
-- "You are not alone in this."
-- "Take a deep breath."
-- "Give yourself grace."
-- "It's okay to not be okay."
-- "Your feelings are valid."
-- "Hold space for..."
-
-**Forbidden structures:**
-- Opening with emotional validation before any substance
-- Wrapping practical advice in layers of emotional cushioning
-- The "permission slip" structure ("It's okay to want X")
-- Ending with affirmation rather than actionable guidance
-- Second-person emotional narration ("You're sitting at your desk, feeling overwhelmed...")
-
-**Forbidden patterns:**
-- Performing emotional intelligence as a substitute for useful content
-- Therapist-speak in non-therapeutic contexts
-- Assuming the reader's emotional state
-- Treating adults as fragile by default
-- Centering feelings where information is what's needed
-- Softening every piece of direct advice with emotional padding
-
 #### Rejecting "The Hustle Bro"
 
 **Forbidden phrases:**
@@ -538,8 +486,6 @@ either choice alone could have achieved.
 | "Conversational" (formality) | Rejects "NOT overly casual" (wants to avoid casualness) | Conversational tone naturally drifts toward casual markers | "You want conversational but not casual. That is a real distinction but a narrow one. Is it about sentence structure (natural, flowing) versus vocabulary (no slang)? Or something else?" |
 | "Authoritative" (authority stance) | Rejects "NOT preachy or lecturing" (wants to avoid lecturing) | Authority easily tips into prescription | "You want to sound like you know what you are talking about, but not like you are telling people what to do. Is the difference between sharing expertise and dispensing instructions? Should authority come from evidence and specificity rather than imperative tone?" |
 | "Accessible to beginners" (audience level) | Rejects "NOT dumbed down" (wants to avoid over-simplification) | Writing for beginners requires some simplification by nature | "You want to be accessible without being condescending. Where is the floor? Can you assume the reader knows what a variable is, or are you starting from zero? The line between accessible and dumbed-down depends on what baseline knowledge you assume." |
-| "Opinionated" (authority stance) | Rejects "The Edgy Contrarian" | Strong opinions and contrarianism share a surface texture | "You want to take positions but not be contrarian for its own sake. Does that mean your opinions should be constructive rather than just oppositional? Or that you want to argue for things, not just against them?" |
-| "Empathetic and human" (emotional register) | Rejects "The Empathy Performer" | Genuine empathy and performed empathy use similar language | "You want real empathy but rejected the performative version. This is one of the hardest distinctions in writing. Can you name a piece of writing where empathy felt real to you? Often the difference is specificity -- real empathy names the exact situation rather than offering generic comfort." |
 | "Motivational" (purpose) | Rejects "The Hustle Bro" | Motivation and hustle culture share structural DNA | "You want to motivate without grinding. What does healthy motivation look like in your domain? Is it about showing possibility rather than demanding effort? Encouragement rather than pressure?" |
 | "Playful" (humor) | Rejects "NOT forcibly funny" (wants to avoid forced humor) | Playfulness and forced humor are separated by a thin line | "You want playfulness but not forced jokes. Is this about tone (light, not heavy) rather than explicit humor (jokes, puns)? A raised eyebrow rather than a punchline?" |
 | "Direct and concise" (pace) | Rejects "NOT breathless and rushed" (wants to avoid rushed pace) | Concision and rushing share brevity as a trait | "You want directness but not at the cost of nuance. Is the goal to say things once but say them well, rather than saying less? Short is fine as long as nothing important is cut?" |

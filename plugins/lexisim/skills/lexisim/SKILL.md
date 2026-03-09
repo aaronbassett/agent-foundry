@@ -319,6 +319,9 @@ Build the following document by extracting from the conversation. Copy writing s
 ## Influences (emulate path)
 {Q4-Q6 responses and analysis}
 
+## Platform Preferences
+{Inferred from audience persona, content type context, and voice character. The style-analyzer should adapt voice guidance for common platforms: social media (short-form), blog (long-form), documentation (reference), email (direct). If the user mentioned specific platforms during the questionnaire, note them here. Otherwise, leave as "Not specified — infer from voice character and audience."}
+
 ## Tension Resolutions
 {each tension surfaced, the resolution question asked, the user's response, and the calibration note derived}
 {or "None detected" if no tensions found}
@@ -334,6 +337,10 @@ Build the following document by extracting from the conversation. Copy writing s
 
 ## Cross-Reference Notes
 {any conflicts detected between phases and how they were resolved}
+
+## Freeform Notes
+{any additional instructions or preferences the user volunteered during the questionnaire that don't fit the categories above — copy verbatim}
+{or "None" if nothing extra was provided}
 ```
 
 **Important**: Copy ALL data verbatim. The sub-agent needs raw text for accurate analysis. Do not paraphrase or editorialize.
