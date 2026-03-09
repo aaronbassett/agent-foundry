@@ -442,37 +442,31 @@ For the **Emulate path**: also compare these preferences against the empirical a
 
 **multiSelect**: true
 
-**Options**:
+**Options** (present these 4 most common archetypes; if the user wants more choices, present additional archetypes from `references/ai-tells.md`):
 
-1. **"The Corporate Communicator"**
-   - Description: "Leverages synergies, drives alignment, and circle-backs on action items. Everything is a 'solution' and every problem is an 'opportunity.' Writes in a way that says everything and means nothing."
+1. **"The Corporate Blogger"**
+   - Description: "Leverages synergies, drives alignment, and circle-backs on action items. Everything is a 'solution' and every problem is an 'opportunity.' Polished to the point of saying nothing."
 
-2. **"The Breathless Enthusiast"**
-   - Description: "Everything is AMAZING and GAME-CHANGING and you NEED to see this! Exclamation points everywhere! Can't contain excitement! Zero critical distance from any topic!"
+2. **"The LinkedIn Thought Leader"**
+   - Description: "Every post is a lesson, every experience is a parable. Performs insight for an audience. 'I failed. And it was the best thing that ever happened to me.' More about being seen sharing ideas than sharing ideas."
 
-3. **"The Academic Gatekeeper"**
-   - Description: "Writes to demonstrate intelligence rather than communicate ideas. Unnecessarily complex vocabulary, passive voice, hedge upon hedge. Would never use one word when seven will do."
+3. **"The Hype Machine"**
+   - Description: "Everything is AMAZING and GAME-CHANGING and you NEED to see this! Exclamation points everywhere! Can't calibrate enthusiasm — a minor UI tweak gets the same breathless treatment as a breakthrough."
 
-4. **"The Condescending Explainer"**
-   - Description: "As you might already know... Simply put... It's actually quite straightforward... Manages to make the reader feel stupid while claiming to be helpful."
-
-5. **"The Motivational Speaker"**
-   - Description: "You've GOT this! Believe in yourself! Every setback is a setup for a comeback! Relentlessly positive, allergic to nuance, treats all problems as mindset issues."
-
-6. **"The Edgelord Contrarian"**
-   - Description: "Hot takes for the sake of hot takes. Everything mainstream is wrong. Deliberately provocative framing. More interested in being surprising than being right."
-
-7. **"The AI Default"**
+4. **"The AI Default"**
    - Description: "Certainly! Great question. Let me break this down for you. In today's rapidly evolving landscape... Helpful to a fault, structured to a fault, generic to a fault."
 
-**Analysis note**: Anti-voice archetypes define the boundaries of the voice by negative space. Each selected archetype maps to specific patterns that the generated voice must actively avoid:
-- **Corporate Communicator**: Ban buzzwords list, avoid nominalization, forbid "leverage/utilize/drive/align/synergy"
-- **Breathless Enthusiast**: Cap exclamation marks (0-1 per piece), limit superlatives, require hedging on strong claims
-- **Academic Gatekeeper**: Enforce plain-language alternatives, limit passive voice, cap average sentence length
-- **Condescending Explainer**: Ban "simply," "just," "actually," "as you might know," "of course"
-- **Motivational Speaker**: Ban hollow encouragement, require specificity on advice, avoid imperative-heavy structures
-- **Edgelord Contrarian**: Require charitable framing of opposing views, ban "hot take" framing devices
-- **AI Default**: Cross-reference with Q26 for specific pattern rejection
+Note: If the user selects "Other" or asks for more options, present these additional archetypes from `references/ai-tells.md`: The Textbook, The Hustle Bro, The Academic, The Breathless Storyteller. All archetype names must match the canonical names in ai-tells.md exactly.
+
+**Analysis note**: Anti-voice archetypes define the boundaries of the voice by negative space. Each selected archetype maps to specific patterns that the generated voice must actively avoid — expand each archetype using the full pattern definitions in `references/ai-tells.md`:
+- **The Corporate Blogger**: Ban buzzwords list, avoid nominalization, forbid "leverage/utilize/drive/align/synergy"
+- **The LinkedIn Thought Leader**: Ban performative insight, humble-brag structures, engagement-bait questions, one-sentence-paragraph stacking for dramatic effect
+- **The Hype Machine**: Cap exclamation marks (0-1 per piece), limit superlatives, require calibrated enthusiasm
+- **The AI Default**: Cross-reference with Q26 for specific pattern rejection
+- **The Textbook**: Enforce plain-language alternatives, limit passive voice, ban nominalizations
+- **The Hustle Bro**: Ban hollow encouragement, require specificity on advice, avoid imperative-heavy structures and binary framing
+- **The Academic**: Enforce readable sentence length, limit hedging chains, ban unnecessary jargon
+- **The Breathless Storyteller**: Ban manufactured narrative tension in non-narrative content, unnecessary anecdotes as openers
 
 Cross-reference with Q9 (Reader Frustrations) — frustrations often map directly to anti-voice archetypes. If a user's frustrations align with archetypes they didn't select, surface this and ask if they want to add them.
 
@@ -578,9 +572,9 @@ _This phase is not a traditional question — it's a generative test-and-refine 
 Using all collected data from Phases 1-7, generate 2-3 short paragraphs (3-5 sentences each) that demonstrate the designed voice applied to a realistic topic. Choose a topic relevant to the user's stated audience (Q7) and domain context.
 
 Each paragraph should exercise different aspects of the voice:
-- Paragraph 1: Explanatory/teaching content (tests vocabulary, scaffolding, information density)
-- Paragraph 2: Opinionated/persuasive content (tests emotional temperature, personal voice, conviction level)
-- Paragraph 3: Transitional/connecting content (tests pacing, transitions, sentence structure)
+- Paragraph 1: Casual/conversational content (tests warmth, rhythm, vocabulary at informal register)
+- Paragraph 2: Explanatory/technical content (tests reading level axes, scaffolding, concept density)
+- Paragraph 3: Opinionated/persuasive content (tests emotional temperature, personal voice, conviction)
 
 **Step 2: Present to the user**
 

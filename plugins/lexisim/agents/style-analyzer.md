@@ -108,7 +108,7 @@ Construct the full set of forbidden patterns by combining multiple sources:
 1. **Start with explicitly rejected phrases** from the questionnaire (Q26 or equivalent). Copy these verbatim.
 
 2. **Expand from rejected archetypes** (Q25 or equivalent):
-   - Read the ai-tells.md catalog from: `plugins/lexisim/skills/lexisim/references/ai-tells.md`
+   - Read the ai-tells.md catalog from the path provided in the handoff prompt
    - For each rejected archetype, find all associated patterns in ai-tells.md
    - Extract the specific phrases, structures, and habits listed under that archetype
    - These become forbidden patterns
@@ -201,7 +201,7 @@ Create 3 before/after transformations showing "generic AI output" vs "this voice
 ## Step 5: Fill Writer Skill Template
 
 1. Read the writer skill template from the path provided in the handoff document. The default location is:
-   `plugins/lexisim/skills/lexisim/assets/writer-skill-template.md`
+   the writer skill template path provided in the handoff prompt
 
 2. Fill ALL `{{VARIABLE}}` placeholders with the analyzed data. Key mappings:
 
@@ -285,7 +285,7 @@ Create 3 before/after transformations showing "generic AI output" vs "this voice
 ## Step 6: Fill Writer Agent Template
 
 1. Read the writer agent template from the path provided in the handoff document. The default location is:
-   `plugins/lexisim/skills/lexisim/assets/writer-agent-template.md`
+   the writer agent template path provided in the handoff prompt
 
 2. Fill placeholders:
 
@@ -327,7 +327,7 @@ Before reporting completion, validate both generated files:
 ## Important Reminders
 
 - Work ONLY with the handoff data provided in the prompt. Do NOT search for other files or explore the repository.
-- The ONLY files to read are: the two templates (paths in handoff or defaults above) and `plugins/lexisim/skills/lexisim/references/ai-tells.md`.
+- The ONLY files to read are: the two templates and the ai-tells.md catalog (all paths provided in the handoff prompt).
 - Copy user's words VERBATIM where noted (frustrations, freeform rejections, specific phrases they want to keep or avoid).
 - The exemplars are the most critical output. They serve as the "north star" for the generated writer skill. Invest significant effort in making them natural, varied, and true to the designed voice.
 - When filling the template, every `{{VARIABLE}}` must be replaced. Do not leave any placeholders.

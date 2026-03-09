@@ -65,41 +65,11 @@ Everything needed to build the voice profile comes from the user's responses to 
 
 ## Phase 1: Entry Path & Setup
 
-### Q1: Entry Path
+Present questions Q1-Q3 from the question bank (`references/question-bank.md` → Phase 1).
 
-Use `AskUserQuestion`:
-- **Question**: "How would you like to build your writing style?"
-- **Options**:
-  - "Design from scratch" (description: "I'll describe the voice I want through a series of guided questions")
-  - "Emulate a reference" (description: "I have writing samples I'd like to use as a starting point")
-- **multiSelect**: false
-
-Store the response as `ENTRY_PATH`. This determines the entire flow:
-- **"Design from scratch"**: Skip Phase 2, include Phase 7.
-- **"Emulate a reference"**: Include Phase 2, skip Phase 7.
-
-### Q2: Profile Name
-
-Ask the user directly (free text, not `AskUserQuestion`):
-
-> **What name should this writing style have?** This gets used in file names and the skill title. A short label works best (e.g., "technical-voice", "blog-tone", "aaron-style").
-
-Store the response as `PROFILE_NAME`. If the user gives a name with spaces, convert to lowercase kebab-case (e.g., "My Blog Voice" becomes "my-blog-voice").
-
-### Q3: Scope Selection
-
-Use `AskUserQuestion`:
-- **Question**: "Where should the generated skill and writing assistant be created?"
-- **Options**:
-  - "Project scope" (description: "Install in .claude/ within the current project — available only in this repository")
-  - "User scope" (description: "Install in ~/.claude/ — available across all your projects")
-- **multiSelect**: false
-
-Store the response as `SCOPE`. Resolve output paths:
-- **Project scope**: Writer skill goes to `.claude/skills/`, writing assistant goes to `.claude/agents/` (relative to the current working directory).
-- **User scope**: Writer skill goes to `~/.claude/skills/`, writing assistant goes to `~/.claude/agents/`.
-
-If the user is unsure, suggest project scope as the safer default since it can be moved later.
+- **Q1** determines the entire flow: "Design from scratch" skips Phase 2 and includes Phase 7. "Emulate a reference" includes Phase 2 and skips Phase 7.
+- **Q2** (free text): Store as `PROFILE_NAME`. Convert spaces to lowercase kebab-case.
+- **Q3**: Store as `SCOPE`. Resolve output paths — project scope writes to `.claude/skills/` and `.claude/agents/` in the current working directory; user scope writes to `~/.claude/skills/` and `~/.claude/agents/`.
 
 ---
 
@@ -107,13 +77,9 @@ If the user is unsure, suggest project scope as the safer default since it can b
 
 _Skip this phase entirely if `ENTRY_PATH` is "Design from scratch". Proceed directly to Phase 3._
 
-### Q4: Reference Samples
+Present questions Q4-Q6 from the question bank (`references/question-bank.md` → Phase 2).
 
-Ask the user directly (free text, not `AskUserQuestion`):
-
-> **Paste 1-3 excerpts of writing you want to emulate.** These can be from different sources — blog posts, documentation, articles, newsletters, whatever captures the voice you're after. Longer excerpts (3+ paragraphs each) give better results.
-
-When the user provides samples, perform lightweight stylometric analysis on each:
+When the user provides samples (Q4), perform lightweight stylometric analysis on each:
 - Count sentences and calculate mean/stdev of sentence length
 - Note vocabulary register (formal/informal/technical/conversational)
 - Identify punctuation patterns (em-dash frequency, parenthetical rate, semicolons, exclamation density)
@@ -122,83 +88,22 @@ When the user provides samples, perform lightweight stylometric analysis on each
 
 Store both the verbatim samples and the analysis results.
 
-### Q5: What You Like
+Q5 reveals which dimensions of the reference the user is drawn to versus which are incidental. Use it to weight the Q4 analysis — amplify the dimensions the user calls out, treat uncalled dimensions as secondary.
 
-Ask the user directly (free text, not `AskUserQuestion`):
-
-> **What specifically do you like about this writing?** What makes it work for you — is it the tone, the pacing, the way it explains things, the personality? Be as specific as you can.
-
-This reveals which dimensions of the reference the user is drawn to versus which are incidental. Use it to weight the analysis from Q4 — amplify the dimensions the user calls out, treat uncalled dimensions as secondary.
-
-### Q6: Influence Blending
-
-Use `AskUserQuestion`:
-- **Question**: "Do you want to blend elements from multiple influences?"
-- **Options**:
-  - "Just this one reference" (description: "Use these samples as the primary model for the voice")
-  - "Add more influences" (description: "I want to mix in elements from other writing too")
-- **multiSelect**: false
-
-If the user selects "Add more influences," loop back to Q4 and Q5 for additional references. Cap at 3 total reference sets to avoid dilution. When blending, ask the user to rank which dimensions they want from each source.
+If the user selects "Add more influences" in Q6, loop back to Q4 and Q5 for additional references. Cap at 3 total reference sets to avoid dilution.
 
 ---
 
 ## Phase 3: Audience Persona
 
-### Q7: Audience Type
+Present questions Q7-Q10 from the question bank (`references/question-bank.md` → Phase 3).
 
-Use `AskUserQuestion`:
-- **Question**: "Who is the primary reader for writing in this voice?"
-- **Options**:
-  - "Technical practitioners" (description: "Engineers, developers, designers — people who build things and want implementation detail")
-  - "Technical leadership" (description: "Engineering managers, architects, CTOs — people who make technical decisions but may not write code daily")
-  - "Non-technical stakeholders" (description: "Product managers, executives, clients — people who need to understand outcomes without implementation detail")
-  - "General public" (description: "No assumed technical background — the writing should be accessible to anyone")
-- **multiSelect**: false
+After collecting all answers, synthesize a brief audience persona summary and confirm
+with the user: "Here's who we're writing for: [summary]. Sound right?"
+Use AskUserQuestion with options: "Yes, that's right" / "Close, but let me adjust".
 
-### Q8: Knowledge Level
-
-Use `AskUserQuestion`:
-- **Question**: "What's their familiarity with the subject matter you'll be writing about?"
-- **Options**:
-  - "Expert" (description: "They know the domain deeply — skip the basics, get to the nuance")
-  - "Intermediate" (description: "They have working knowledge but appreciate context on advanced topics")
-  - "Beginner" (description: "They're learning — define terms, explain motivation, build from foundations")
-  - "Mixed" (description: "The audience spans multiple levels — the writing needs to work for all of them")
-- **multiSelect**: false
-
-### Q9: Reader Frustrations
-
-Ask the user directly (free text, not `AskUserQuestion`):
-
-> **What frustrates your readers about existing writing in this space?** What do they complain about — too jargon-heavy, too dumbed down, too long, too vague, too corporate? If you're not sure, describe what frustrates YOU when reading in this domain.
-
-Store the response verbatim. These frustrations map directly to anti-patterns and serve as hard constraints that override other calibration signals.
-
-### Q10: Reader Time Budget
-
-Use `AskUserQuestion`:
-- **Question**: "How will your readers typically engage with this writing?"
-- **Options**:
-  - "Scanning quickly" (description: "They skim for key points — headings, bold text, and first sentences matter most")
-  - "Focused reading" (description: "They'll read the whole thing but won't re-read — clarity on first pass is essential")
-  - "Deep engagement" (description: "They'll sit with the writing, re-read sections, and think about it — density is welcome")
-- **multiSelect**: false
-
-### Audience Persona Synthesis
-
-After collecting all four answers, synthesize a brief persona summary and confirm it with the user:
-
-> Here's who we're writing for: [1-2 sentence synthesis combining audience type, knowledge level, frustrations, and engagement style]. Sound right?
-
-Use `AskUserQuestion` for the confirmation:
-- **Question**: "Does this audience summary capture it?"
-- **Options**:
-  - "Yes, that's right" (description: "Move on")
-  - "Close, but let me adjust" (description: "I'll clarify")
-- **multiSelect**: false
-
-If the user wants to adjust, collect the correction as free text and update the synthesized persona before proceeding.
+Cross-reference Q8 (knowledge level) with Q9 (reader frustrations) — frustrations
+often reveal implicit knowledge level assumptions. If the user wants to adjust, collect the correction as free text and update the synthesized persona before proceeding.
 
 ---
 
@@ -206,30 +111,7 @@ If the user wants to adjust, collect the correction as free text and update the 
 
 Read the reference file `references/reading-level-calibration.md` for the 8 example pairs.
 
-Present each pair to the user using `AskUserQuestion`. For each pair, show both Version A and Version B in full, then ask:
-
-### Q11-Q18: Reading Level Pairs
-
-For each of the 8 pairs, use `AskUserQuestion`:
-- **Question**: Present both versions, then ask "Which feels closer to what you're aiming for?"
-- **Options**:
-  - "Closer to Version A" (description: varies by pair — see calibration file)
-  - "Closer to Version B" (description: varies by pair — see calibration file)
-  - "Somewhere between" (description: "Neither extreme — aim for a middle ground")
-- **multiSelect**: false
-
-The pairs and what they calibrate:
-
-| Question | Pair | Dimension |
-|----------|------|-----------|
-| Q11 | Pair 1: Caching strategy | Vocabulary complexity |
-| Q12 | Pair 2: API rate limiter | Vocabulary complexity |
-| Q13 | Pair 3: Feature flag deployment | Syntactic complexity |
-| Q14 | Pair 4: Database index | Syntactic complexity |
-| Q15 | Pair 5: Microservices latency | Conceptual density |
-| Q16 | Pair 6: Load balancer | Conceptual density |
-| Q17 | Pair 7: Environment variables | Scaffolding level |
-| Q18 | Pair 8: Pull request workflow | Scaffolding level |
+Present Q11-Q18 from the question bank (`references/question-bank.md` → Phase 4). For each pair, show both Version A and Version B in full from the calibration file, then present the AskUserQuestion.
 
 Each dimension is tested twice. Average the two responses per dimension:
 - Both "Version A" = strong preference for the simpler end
@@ -260,84 +142,9 @@ Transitional message:
 
 > Now let's get into the personality of this voice — how it sounds, how it moves, how it opens.
 
-### Q19: Emotional Temperature
+Present questions Q19-Q24 from the question bank (`references/question-bank.md` → Phase 5).
 
-Use `AskUserQuestion`:
-- **Question**: "What emotional register should this voice operate in?"
-- **Options**:
-  - "Cool and precise" (description: "Measured, controlled, deliberate. Think Stripe documentation, RFC-style prose, or a well-edited technical paper. The writing respects the reader's time and intelligence without trying to be their friend.")
-  - "Warm and approachable" (description: "Friendly without being casual, helpful without being condescending. Think a senior colleague explaining something over coffee. The writing puts the reader at ease.")
-  - "Neutral and balanced" (description: "Neither warm nor cold — the subject speaks for itself. Think quality journalism or well-written reference material. The voice doesn't draw attention to itself.")
-  - "Passionate and energetic" (description: "Opinionated, enthusiastic, alive. Think a great conference talk or a blog post by someone who genuinely cares. The writing has momentum and conviction.")
-- **multiSelect**: false
-
-### Q20: Pacing & Information Flow
-
-Use `AskUserQuestion`:
-- **Question**: "How should information unfold in this voice?"
-- **Options**:
-  - "Inverted pyramid" (description: "Lead with the conclusion, then support it. The most important information comes first. If the reader stops at any point, they've already gotten the key takeaway.")
-  - "Narrative build" (description: "Set up context, develop the argument, arrive at the insight. The payoff comes at the end. Reward readers who stay with you.")
-  - "Tutorial rhythm" (description: "Step-by-step progression. Each section builds on the last. Clear signposts mark where you are and what's coming next.")
-  - "Conversational meander" (description: "Follow the thought where it goes. Tangents are features, not bugs. The journey matters as much as the destination.")
-- **multiSelect**: false
-
-### Q21: Sentence Structure
-
-This is a show-don't-tell question. Present three example paragraphs that demonstrate different sentence structures.
-
-Use `AskUserQuestion`:
-- **Question**: Present the following three versions, then ask "Read these three versions of the same idea. Which feels closest to what you want this voice to sound like?"
-- **Options**:
-  - "Short and direct" (description: "Tight sentences. One idea each. No wasted words.")
-  - "Flowing and connected" (description: "Ideas link together and sentences carry the reader forward.")
-  - "Deliberately varied" (description: "Mix short and long. Use contrast to create rhythm and emphasis.")
-- **multiSelect**: false
-
-Show the three preview paragraphs before presenting the options:
-
-**Version A — Short and direct:**
-> Good documentation starts with knowing your reader. Figure out what they need. Then give them exactly that. Cut everything else. If a sentence doesn't serve the reader, delete it. White space is not wasted space. It's breathing room. Your reader will thank you for the things you chose not to say.
-
-**Version B — Flowing and connected:**
-> Good documentation starts with knowing your reader, which means understanding not just what they need to learn but also what they already know and what they're trying to accomplish. Once you have that picture, the writing almost organizes itself, because every sentence exists to move the reader closer to their goal, and anything that doesn't serve that purpose — however well-crafted it might be — is a candidate for cutting.
-
-**Version C — Deliberately varied:**
-> Good documentation starts with knowing your reader. Not their job title or their years of experience, but what they're actually trying to do right now and what's standing in their way. Figure that out and the structure reveals itself. Every sentence either moves the reader forward or it doesn't. The ones that don't? Cut them. It feels ruthless. It's not. It's respect — for your reader's time and for the craft itself.
-
-### Q22: Transition Style
-
-Use `AskUserQuestion`:
-- **Question**: "How should this voice move from one idea to the next?"
-- **Options**:
-  - "Casual connectors" (description: "So, anyway, the thing is, turns out, here's the deal... Transitions that sound like thinking out loud.")
-  - "Formal connectors" (description: "However, additionally, that said, consequently... Transitions that signal logical structure explicitly.")
-  - "Questions" (description: "But what does this mean in practice? So how do you actually do this? Transitions that pivot by asking.")
-  - "Direct jumps" (description: "No bridge needed. End one point, start the next. The reader follows without being led.")
-- **multiSelect**: false
-
-### Q23: Opening/Hook Style
-
-Use `AskUserQuestion`:
-- **Question**: "How should this voice typically open a piece of writing?"
-- **Options**:
-  - "Direct statement" (description: "Jump straight in. 'Here's the problem with X.' No preamble, no throat-clearing.")
-  - "Question" (description: "Open with a question that frames the piece. 'Why do most style guides fail?' Pull the reader in by making them curious.")
-  - "Story or scenario" (description: "Start with a specific moment or situation. 'You're three hours into a refactor when you realize the tests don't cover what you thought they did.' Ground the reader in experience.")
-  - "Observation" (description: "Name a pattern or phenomenon. 'Most teams write documentation the same way they write code — iteratively, reluctantly, and at the last minute.' Start from something the reader recognizes.")
-- **multiSelect**: false
-
-### Q24: Personal Voice Level
-
-Use `AskUserQuestion`:
-- **Question**: "How much personality and self-reference should show up in this voice?"
-- **Options**:
-  - "Heavily personal" (description: "Lots of 'I think,' 'in my experience,' personal anecdotes and opinions. The writer's perspective is the frame for everything.")
-  - "Lightly personal" (description: "Some first-person and occasional personal references, but the focus stays on the subject. The writer is present but not the star.")
-  - "Minimal self-reference" (description: "The subject speaks for itself. No 'I' statements, no personal anecdotes. Authority comes from the content, not the author.")
-- **multiSelect**: false
-
-### Phase 5 Transition
+For Q21 (Sentence Structure), this is a show-don't-tell question — present the three preview paragraphs from the question bank before the AskUserQuestion options.
 
 After collecting all voice character answers:
 
@@ -349,54 +156,11 @@ After collecting all voice character answers:
 
 Read the reference file `references/ai-tells.md` for archetype descriptions.
 
-### Q25: Anti-Voice Archetypes
+Present questions Q25-Q27 from the question bank (`references/question-bank.md` → Phase 6).
 
-Use `AskUserQuestion`:
-- **Question**: "Which of these writing 'characters' is this voice explicitly NOT? Select all that apply."
-- **Options**:
-  - "The Corporate Communicator" (description: "Leverages synergies, drives alignment, and circle-backs on action items. Everything is a 'solution' and every problem is an 'opportunity.' Writes in a way that says everything and means nothing.")
-  - "The Breathless Enthusiast" (description: "Everything is AMAZING and GAME-CHANGING and you NEED to see this! Exclamation points everywhere! Can't contain excitement! Zero critical distance from any topic!")
-  - "The Academic Gatekeeper" (description: "Writes to demonstrate intelligence rather than communicate ideas. Unnecessarily complex vocabulary, passive voice, hedge upon hedge. Would never use one word when seven will do.")
-  - "The Condescending Explainer" (description: "As you might already know... Simply put... It's actually quite straightforward... Manages to make the reader feel stupid while claiming to be helpful.")
-  - "The Motivational Speaker" (description: "You've GOT this! Believe in yourself! Every setback is a setup for a comeback! Relentlessly positive, allergic to nuance, treats all problems as mindset issues.")
-  - "The Edgelord Contrarian" (description: "Hot takes for the sake of hot takes. Everything mainstream is wrong. Deliberately provocative framing. More interested in being surprising than being right.")
-  - "The AI Default" (description: "Certainly! Great question. Let me break this down for you. In today's rapidly evolving landscape... Helpful to a fault, structured to a fault, generic to a fault.")
-- **multiSelect**: true
+For Q25 (Anti-Voice Archetypes): after the user selects their rejected archetypes, read `references/anti-voice-catalog.md` and expand each selected archetype to its full list of forbidden phrases, structures, and patterns. Store the expanded pattern lists. If the user selected "The AI Default" archetype in Q25, consider pre-selecting all Q26 options and asking the user to confirm or deselect any they're actually fine with.
 
-After the user selects their rejected archetypes, read `references/anti-voice-catalog.md` and expand each selected archetype to its full list of forbidden phrases, structures, and patterns. Store the expanded pattern lists.
-
-### Q26: AI Pattern Rejection
-
-Use `AskUserQuestion`:
-- **Question**: "Which of these common AI-generated patterns should this voice actively avoid? Select all that apply."
-- **Options**:
-  - "Hedging qualifiers" (description: "'It's worth noting that...', 'It bears mentioning...', 'What's interesting is...' — phrases that add distance without adding meaning")
-  - "Generic contextual openers" (description: "'In today's fast-paced world...', 'In the ever-evolving landscape of...', 'As technology continues to advance...' — throat-clearing that could open any article on any topic")
-  - "Overblown attribution" (description: "'This serves as a testament to...', 'This underscores the importance of...', 'This speaks volumes about...' — inflated significance markers")
-  - "Forced engagement phrases" (description: "'Let's dive in!', 'Let's unpack this', 'Buckle up!' — manufactured enthusiasm that tries to create energy the content should generate on its own")
-  - "Rule-of-three lists" (description: "Always grouping things in exactly three: 'faster, better, stronger' / 'plan, execute, iterate' — the AI default for any enumeration")
-  - "Formal stacking connectors" (description: "'Moreover...', 'Furthermore...', 'Additionally...' — connectors that feel more like a term paper than something a human would write")
-  - "Negative parallelism" (description: "'Not only X, but also Y', 'It's not about X, it's about Y', 'The question isn't X, it's Y' — reframe-then-pivot structures used so frequently they've become invisible cliches")
-  - "Summary recaps" (description: "'In conclusion...', 'To summarize...', 'In summary, we've explored...' — restating everything the reader just read as if they've already forgotten")
-- **multiSelect**: true
-
-After selections, also ask as free text:
-
-> Any other specific words or phrases that should be banned from this voice? Things you've seen in AI-generated writing (or bad human writing) that make you cringe? List as many as you like, or say "nothing else" to move on.
-
-Store both the selected patterns and any freeform additions.
-
-If the user selected "The AI Default" archetype in Q25, consider pre-selecting all options here and asking the user to confirm or deselect any they're actually fine with.
-
-### Q27: Emoji & Formatting
-
-Use `AskUserQuestion`:
-- **Question**: "How should this voice handle emoji and expressive formatting?"
-- **Options**:
-  - "Use emoji naturally" (description: "Emoji are part of the voice — use them for emphasis, tone, or personality where they fit")
-  - "Rarely, if ever" (description: "Keep the writing clean of emoji — let words carry the tone")
-  - "Depends on context" (description: "Casual or social content can use emoji; formal or professional writing should not")
-- **multiSelect**: false
+After Q26, also ask as free text for any additional banned words or phrases.
 
 ### Tension Detection
 
@@ -410,7 +174,7 @@ Compare the user's positive voice choices (emotional temperature, pacing, audien
 - "Cool and precise" + rejected "The Textbook"
 - "Conversational" formality + rejected casual dimensions
 - "Authoritative" stance + rejected lecturing dimensions
-- "Opinionated" + rejected "The Edgelord Contrarian"
+- "Opinionated" + rejected "The Edgy Contrarian"
 
 If tensions are found, surface them **one at a time** using the resolution questions from the tension table. For each tension:
 
@@ -427,15 +191,11 @@ Do NOT silently resolve tensions. The resolved tension is one of the most valuab
 
 _Skip this phase if `ENTRY_PATH` is "Emulate a reference". Proceed directly to Phase 8._
 
-### Q28: Influence Probe
+Present Q28 from the question bank (`references/question-bank.md` → Phase 7).
 
-Ask the user directly (free text, not `AskUserQuestion`):
+If the user names a specific source or pastes samples, perform the same lightweight stylometric analysis as Phase 2. Store the results as influence data for the handoff document.
 
-> **Is there any writing you've encountered that feels close to what you're imagining — even roughly?** It could be a specific author, a blog, documentation you admire, a newsletter, anything. If nothing comes to mind, that's fine too — just say so.
-
-If the user names a specific source or pastes samples, perform the same lightweight stylometric analysis as Phase 2 (sentence count, vocabulary register, punctuation patterns, sentence length variance). Store the results as influence data for the handoff document.
-
-If the user says "nothing comes to mind," accept it and move on. Do not push for an answer. This question comes late deliberately — by Phase 7, the user has made concrete choices about audience, reading level, voice character, and anti-patterns. An influence named now serves as a consistency check, not a starting point.
+If the user says "nothing comes to mind," accept it and move on. Do not push for an answer.
 
 ---
 
@@ -449,9 +209,9 @@ Using ALL collected data from Phases 1-7, generate 2-3 short paragraphs (3-5 sen
 
 Each paragraph should exercise different aspects of the voice:
 
-1. **Casual/conversational** — Tests warmth, personal voice, transition style, and natural rhythm. A paragraph about a common frustration or everyday observation in the user's domain.
-2. **Explanatory/technical** — Tests vocabulary level, scaffolding, information density, and sentence structure. A paragraph explaining a concept to the stated audience.
-3. **Opinionated/persuasive** — Tests emotional temperature, conviction level, opening style, and pacing. A paragraph arguing a position relevant to the user's domain.
+1. **Casual/conversational** — Tests warmth, rhythm, vocabulary at informal register. A paragraph about a common frustration or everyday observation in the user's domain.
+2. **Explanatory/technical** — Tests reading level axes, scaffolding, concept density. A paragraph explaining a concept to the stated audience.
+3. **Opinionated/persuasive** — Tests emotional temperature, personal voice, conviction. A paragraph arguing a position relevant to the user's domain.
 
 ### Step 2: Present to the User
 
@@ -582,7 +342,7 @@ Build the following document by extracting from the conversation. Copy writing s
 
 ## Phase 10: Analysis & Generation (Sub-Agent)
 
-Use the `Agent` tool to spawn the style-analyzer sub-agent. This keeps the heavy analytical work in a fresh context with only the clean, structured dataset.
+Use the `Agent` tool to spawn the style-analyzer sub-agent with the handoff document.
 
 ### Launch the Sub-Agent
 
@@ -591,14 +351,6 @@ Agent(
   subagent_type: "style-analyzer",
   description: "Analyze style + generate writer skill and agent",
   prompt: "[INSERT FULL HANDOFF DOCUMENT FROM PHASE 9]
-
-  You are generating a writer skill and writing assistant agent from collected style
-  preferences and analysis data. Your job is to analyze the handoff data, then write
-  two output files.
-
-  IMPORTANT: Work ONLY with the handoff data provided above. Do NOT search for, read,
-  or reference any other files on the user's machine beyond the template and reference
-  files listed below.
 
   TEMPLATE AND REFERENCE FILES TO READ:
   - Writer skill template: [resolved path to assets/writer-skill-template.md]
@@ -609,46 +361,12 @@ Agent(
   OUTPUT LOCATIONS:
   - Writer skill: [resolved output skill path]/{PROFILE_NAME}-writer/SKILL.md
   - Writer agent: [resolved output agent path]/{PROFILE_NAME}-writer.md
-
-  ANALYSIS STEPS:
-
-  Step 1: Analyze All Data
-  From the handoff data, extract and synthesize:
-  - Reading level profile (4-axis: vocabulary, syntax, density, scaffolding)
-  - Voice character summary (temperature, pacing, structure, transitions, openings, personal voice)
-  - Audience constraints (who they are, what they need, what frustrates them)
-  - Anti-voice constraints (all forbidden patterns, expanded from archetypes)
-  - Tension resolutions (these are high-priority calibration signals)
-  - Uncanny valley feedback (highest-priority — overrides earlier signals where they conflict)
-
-  For the Emulate path: also analyze reference samples for sentence metrics, vocabulary
-  patterns, punctuation profile, and structural patterns. Cross-reference observed patterns
-  against stated preferences.
-
-  Step 2: Build Rejection List
-  Compile all forbidden patterns from:
-  - Rejected archetypes (expanded via anti-voice-catalog)
-  - Rejected AI patterns (expanded to full categories)
-  - Freeform rejected phrases
-  - Patterns flagged during uncanny valley feedback
-  - Reader frustrations that map to avoidance rules
-
-  Step 3: Generate Writer Skill
-  Read the writer skill template and fill in ALL placeholders with analyzed values.
-  The writer skill must be self-contained — it works in any tool without needing
-  additional files. Every {{PLACEHOLDER}} must be replaced with actual content.
-
-  Step 4: Generate Writing Assistant Agent
-  Read the writer agent template and fill in ALL placeholders. The agent should
-  reference the writer skill and provide a complete writing assistant experience
-  (draft, revise, critique, adapt).
-
-  IMPORTANT: Do not use placeholder text in output files. Every {{PLACEHOLDER}} must
-  be replaced with actual analyzed values or natural-language descriptions derived
-  from the data.
   "
 )
 ```
+
+The style-analyzer agent file contains all analysis and generation instructions.
+Do NOT include analysis steps in this prompt — let the agent handle them.
 
 ### After Sub-Agent Completes
 
@@ -696,7 +414,3 @@ When inputs from different phases disagree, prioritize in this order:
 5. **Phase 2 reference analysis** — Empirical baseline (if available)
 
 The exception is **anti-patterns (Phase 6)**: these are hard constraints that override everything. If the user says "never do X," the voice never does X, regardless of what other signals suggest.
-
-## References
-
-All reference files are listed with resolved paths in the Reference Files section above.
