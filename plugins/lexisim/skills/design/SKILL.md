@@ -1,5 +1,5 @@
 ---
-name: lexisim:lexisim
+name: lexisim:design
 description: >
   Design a writing voice through guided questioning — either from scratch or by
   emulating references — then generate a personalized writer skill and full writing
@@ -23,16 +23,14 @@ Shallow instructions like "write casually" or "be professional" collapse into ge
 
 ## Reference Files
 
-All reference file paths are resolved from the `/generate` command output above. Use these exact paths — do not search or glob.
+All reference files live within this skill's directory. `${CLAUDE_SKILL_DIR}` resolves to the directory containing this SKILL.md. Use these exact paths — do not search or glob.
 
-```
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/references/question-bank.md
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/references/reading-level-calibration.md
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/references/ai-tells.md
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/references/anti-voice-catalog.md
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/assets/writer-skill-template.md
-echo ${CLAUDE_PLUGIN_ROOT}/skills/lexisim/assets/writer-agent-template.md
-```
+- **Question bank**: `${CLAUDE_SKILL_DIR}/references/question-bank.md`
+- **Reading level calibration**: `${CLAUDE_SKILL_DIR}/references/reading-level-calibration.md`
+- **AI tells catalog**: `${CLAUDE_SKILL_DIR}/references/ai-tells.md`
+- **Anti-voice catalog**: `${CLAUDE_SKILL_DIR}/references/anti-voice-catalog.md`
+- **Writer skill template**: `${CLAUDE_SKILL_DIR}/assets/writer-skill-template.md`
+- **Writer agent template**: `${CLAUDE_SKILL_DIR}/assets/writer-agent-template.md`
 
 ## Workflow Overview
 
