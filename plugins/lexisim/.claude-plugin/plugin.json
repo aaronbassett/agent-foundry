@@ -1,0 +1,19 @@
+{
+  "name": "lexisim",
+  "version": "0.1.0",
+  "description": "Design writing voices from scratch or by emulating references, then generate a writer skill and writing assistant subagent",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/ideas",
+  "license": "MIT",
+  "keywords": [
+    "writing",
+    "style",
+    "voice",
+    "creative"
+  ]
+}
