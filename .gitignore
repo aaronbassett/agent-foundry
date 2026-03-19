@@ -41,3 +41,4 @@ reviews/
 docs/
 discovery/
 .sdd/
+.env
