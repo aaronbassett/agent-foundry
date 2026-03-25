@@ -93,6 +93,11 @@ referencing the same tech patterns, the same competitors, the same
 conventions. The conversation needs a window into a completely different
 world where similar problems have been solved differently.
 
+**See also:** Mechanic transfer (below) for stealing a specific
+mechanism rather than drawing a general parallel. Metaphor mutation
+(techniques-reframing.md) for evolving an analogy through successive
+steps.
+
 ---
 
 ### Combination
@@ -167,6 +172,11 @@ separate threads. The conversation is hopping between topics without
 cross-pollinating. Someone says "going back to the earlier point
 about..." — that's the signal. What if that earlier point didn't just
 get revisited but got married to the current one?
+
+**See also:** Signal amplification (techniques-mutation.md) for
+making one thread the center, then combining. "Yes, and..."
+(techniques-flow.md) for building on a single thread rather than
+merging two.
 
 ---
 
@@ -254,6 +264,10 @@ Someone says "that's a nice metaphor but what would we actually build?"
 Mechanic transfer is the concrete answer. It takes the analogy's
 insight and turns it into a specific operational pattern with rules
 and structure.
+
+**See also:** Analogy (above) for general domain parallels.
+Constraint game (techniques-mutation.md) for using borrowed
+constraints rather than borrowed mechanisms.
 
 ---
 

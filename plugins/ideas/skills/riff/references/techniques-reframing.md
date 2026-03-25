@@ -76,6 +76,10 @@ where everyone is nodding along.
 referenced. The idea feels "obvious" — perspective shift makes it
 unfamiliar again.
 
+**See also:** Misuse exploration (below) for an extreme perspective
+shift. Narrative seeding (below) for embedding a perspective in a
+story.
+
 ---
 
 ### Word pivot
@@ -131,6 +135,9 @@ move: quick, low-effort, surprisingly generative.
 **When to deploy:** The framing feels locked in. The same word keeps
 appearing. People are building on the word's assumptions without
 questioning them. A quick pivot can break the frame in thirty seconds.
+
+**See also:** Metaphor mutation (below) for evolving a framing
+through successive steps rather than a single swap.
 
 ---
 
@@ -194,6 +201,9 @@ its comfort zone is where the interesting stuff lives.
 producing ideas, but the thread is starting to repeat. The metaphor
 has given what it can at its current form. Mutate it forward instead
 of abandoning it.
+
+**See also:** Word pivot (above) for single-word reframes. Analogy
+(techniques-connection.md) for introducing a new domain parallel.
 
 ---
 
@@ -473,3 +483,7 @@ angles that "proper" ideation would never reach.
 obvious. The conversation is only exploring the "proper" use. The
 idea's boundaries are assumed but unexamined. Misuse exploration
 widens the aperture by asking what happens at the edges.
+
+**See also:** Perspective shift (above) for structured viewpoint
+changes. Inversion (techniques-mutation.md) for flipping assumptions
+rather than exploring edges.

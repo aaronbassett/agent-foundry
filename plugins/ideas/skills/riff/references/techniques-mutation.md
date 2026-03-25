@@ -142,6 +142,9 @@ learned something.
 features, too expected, too safe. Subtraction strips it to the frame
 and asks whether the frame is interesting on its own.
 
+**See also:** Remove the goal (below) for an extreme subtraction
+that drops the purpose, not just a feature.
+
 ---
 
 ### Exaggeration
@@ -223,6 +226,9 @@ optimizing within the current scale. Exaggeration forces the
 conversation past comfortable numbers into territory where new
 possibilities live.
 
+**See also:** Signal amplification (below) for promoting a small
+detail to center stage rather than scaling up.
+
 ---
 
 ### Signal amplification
@@ -299,6 +305,10 @@ attention — or someone else's — and then was dropped. An interesting
 aside was overshadowed by the "main" discussion. A minor feature seems
 disproportionately compelling. That's the signal. Amplify it.
 
+**See also:** Combination (techniques-connection.md) for smashing an
+amplified signal into another thread. Exaggeration (above) for
+scaling up rather than promoting to center.
+
 ---
 
 ### Remove the goal
@@ -367,6 +377,10 @@ to a better goal.
 conversation keeps circling back to the same objective, and every idea
 is a slight variation on "achieve X better." Removing the goal asks
 whether X is even the right target.
+
+**See also:** Subtraction (above) for removing features rather than
+purpose. Inversion (above) for flipping the goal rather than dropping
+it.
 
 ---
 
@@ -440,6 +454,10 @@ enough to change the design.
 but none of them are being pushed into specificity. A single sharp
 constraint gives the riff a wall to push against, and pushing produces
 depth.
+
+**See also:** Constraint explosion (below) for stacking multiple
+conflicting constraints. Mechanic transfer (techniques-connection.md)
+for borrowing constraints from other domains.
 
 ---
 

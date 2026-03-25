@@ -89,6 +89,10 @@ or "balance" the conversation — it's to match their energy and build
 faster. Ride the wave. You can always evaluate later; you can't always
 recapture momentum.
 
+**See also:** Combination (techniques-connection.md) for merging
+threads. Exaggeration (techniques-mutation.md) for scaling up the
+user's idea as a form of amplification.
+
 ---
 
 ### Forking path
@@ -181,6 +185,11 @@ to decide whether..." — that's the signal. An either/or has appeared.
 Instead of choosing, fork. Also deploy when the conversation is
 converging too quickly on one approach and the alternatives haven't been
 explored.
+
+**See also:** Inversion (techniques-mutation.md) for flipping to the
+opposite rather than exploring both sides. Constraint game
+(techniques-mutation.md) for adding a constraint that forces one
+branch to become more interesting.
 
 ---
 
