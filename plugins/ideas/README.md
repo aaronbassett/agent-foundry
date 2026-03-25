@@ -1,14 +1,15 @@
 # Ideas Plugin
 
-Develop, refine, and sharpen ideas through structured creative collaboration before any design or implementation work begins.
+Explore, develop, and refine ideas through creative collaboration — from open-ended riffing to structured ideation to ruthless refinement — before any design or implementation work begins.
 
 ## Features
 
 - **Creative partnership** - Generates original ideas, draws cross-domain analogies, and challenges assumptions rather than passively extracting requirements
 - **Structured exploration** - Guides through understanding, expansion, pressure-testing, and scoping phases
 - **Adaptive refinement** - Three intensity modes (ruthless, firm, socratic) that match the user's needs
+- **Technique-driven divergence** - 22-technique toolkit for sustained creative exploration without convergence pressure
 - **Interactive decision-making** - Uses AskUserQuestion for structured choices throughout every process
-- **Written deliverables** - Produces vision docs and refined briefs in `docs/ideas/`
+- **Written deliverables** - Produces vision docs, refined briefs, and branching outlines in `docs/ideas/`
 
 ## Skills
 
@@ -37,6 +38,21 @@ Strips ideas down to their irreducible core through systematic elimination and c
 Three adaptive modes: **ruthless** (argue against everything), **firm** (challenge but respect conviction), **socratic** (guide through questions).
 
 **Trigger phrases**: "refine this idea", "what's the core of this", "help me cut this down", "challenge this idea", "is this idea any good", "strip this back"
+
+### riff
+
+Sustained divergent exploration that stays in creative space without converging on a single direction. Unlike ideation (which funnels toward a vision document) or refine (which strips to essentials), riff deliberately maintains multiple threads and follows unexpected connections.
+
+Uses a 22-technique toolkit organized in 4 groups:
+
+- **Reframing** - Shift perspective to see the idea from new angles
+- **Mutation** - Transform and evolve elements in unexpected ways
+- **Connection** - Bridge across domains and find surprising links
+- **Flow** - Maintain creative momentum and deepen exploration
+
+The session adapts dynamically, selecting techniques based on creative energy and where the exploration leads. The deliverable is a branching outline capturing all threads and possibilities, written to `docs/ideas/`.
+
+**Trigger phrases**: "let's riff on this", "let's jam on", "what if we just explored", "let's go wild with", "riff on this idea", "free-associate around"
 
 ## Installation
 
