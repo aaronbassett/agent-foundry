@@ -1,7 +1,7 @@
 {
   "name": "ideas",
-  "version": "0.7.0",
-  "description": "Turn vague ideas into sharp, well-scoped vision documents through extended creative collaboration before any design or implementation work begins.",
+  "version": "0.8.0",
+  "description": "Explore, develop, and refine ideas through creative collaboration — from open-ended riffing to structured ideation to ruthless refinement — before any design or implementation work begins.",
   "author": {
     "name": "Aaron Bassett",
     "email": "aaronbassett@gmail.com",
@@ -16,6 +16,8 @@
     "vision",
     "creative",
     "exploration",
-    "planning"
+    "planning",
+    "riffing",
+    "divergent"
   ]
 }
