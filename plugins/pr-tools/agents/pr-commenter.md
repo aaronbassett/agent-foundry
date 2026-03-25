@@ -1,6 +1,56 @@
 ---
 name: pr-commenter
-description: Use this agent when you need to consolidate multiple code review findings into a single PR comment, merge review results from different language reviewers, post or update GitHub PR comments with review summaries, or format comprehensive review reports. Examples: <example>Context: After running code-reviewer, todo-finder, and sdd-task-verifier agents, all outputs need to be combined into one PR comment. user: "Consolidate review findings and post to PR #123" assistant: "I'll consolidate all the review findings from the different agents and post them to the pull request." <commentary>The agent should trigger because we have multiple review outputs that need to be merged, deduplicated, formatted into a comprehensive report, and posted as a GitHub PR comment.</commentary> assistant: "I'll use the pr-comment-consolidator agent to merge the findings and update the PR comment."</example> <example>Context: Review agents have completed analysis. The orchestrator needs to create a final summary comment. user: "Update PR comment with these review results: {json_data}" assistant: "I'll process the review results and update the pull request comment." <commentary>This is an explicit request to consolidate and post review results. The agent should parse the JSON, organize findings by severity, and either update an existing Claude comment or create a new one.</commentary> assistant: "I'll use the pr-comment-consolidator agent to format and post the consolidated review."</example> <example>Context: A PR has been reviewed by multiple language-specific agents and todo-finder. user: "Create the final review report for PR #456" assistant: "I'll gather all the review findings and create a comprehensive report." <commentary>The agent should consolidate findings from all reviewers, deduplicate similar issues, organize by severity with appropriate indicators (critical, important, suggestions, highlights), and post via gh CLI.</commentary> assistant: "I'll use the pr-comment-consolidator agent to generate and post the final review report."</example> <example>Context: Review process completed with mixed results from different agents. user: "Post the consolidated review to the PR, including any failures" assistant: "I'll compile all results including any agent failures." <commentary>The agent needs to handle both successful and failed agent outputs, surface any analysis failures in the report, and ensure the PR author is aware of the complete review status.</commentary> assistant: "I'll use the pr-comment-consolidator agent to create a comprehensive report including failure notifications."</example>
+description: >-
+  Use this agent when you need to consolidate multiple code review findings
+  into a single PR comment, merge review results from different language
+  reviewers, post or update GitHub PR comments with review summaries, or
+  format comprehensive review reports. Examples:
+
+  <example>Context: After running code-reviewer, todo-finder, and
+  sdd-task-verifier agents, all outputs need to be combined into one PR
+  comment.
+  user: "Consolidate review findings and post to PR #123"
+  assistant: "I'll consolidate all the review findings from the different
+  agents and post them to the pull request."
+  <commentary>The agent should trigger because we have multiple review
+  outputs that need to be merged, deduplicated, formatted into a
+  comprehensive report, and posted as a GitHub PR comment.</commentary>
+  assistant: "I'll use the pr-comment-consolidator agent to merge the
+  findings and update the PR comment."</example>
+
+  <example>Context: Review agents have completed analysis. The orchestrator
+  needs to create a final summary comment.
+  user: "Update PR comment with these review results: {json_data}"
+  assistant: "I'll process the review results and update the pull request
+  comment."
+  <commentary>This is an explicit request to consolidate and post review
+  results. The agent should parse the JSON, organize findings by severity,
+  and either update an existing Claude comment or create a new
+  one.</commentary>
+  assistant: "I'll use the pr-comment-consolidator agent to format and post
+  the consolidated review."</example>
+
+  <example>Context: A PR has been reviewed by multiple language-specific
+  agents and todo-finder.
+  user: "Create the final review report for PR #456"
+  assistant: "I'll gather all the review findings and create a comprehensive
+  report."
+  <commentary>The agent should consolidate findings from all reviewers,
+  deduplicate similar issues, organize by severity with appropriate
+  indicators (critical, important, suggestions, highlights), and post via
+  gh CLI.</commentary>
+  assistant: "I'll use the pr-comment-consolidator agent to generate and
+  post the final review report."</example>
+
+  <example>Context: Review process completed with mixed results from
+  different agents.
+  user: "Post the consolidated review to the PR, including any failures"
+  assistant: "I'll compile all results including any agent failures."
+  <commentary>The agent needs to handle both successful and failed agent
+  outputs, surface any analysis failures in the report, and ensure the PR
+  author is aware of the complete review status.</commentary>
+  assistant: "I'll use the pr-comment-consolidator agent to create a
+  comprehensive report including failure notifications."</example>
 model: inherit
 color: blue
 ---

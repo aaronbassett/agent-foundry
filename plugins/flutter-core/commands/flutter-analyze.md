@@ -1,7 +1,7 @@
 ---
 name: flutter-analyze
 description: Comprehensive code quality analysis with Flutter analyzer, Dart analyzer, AI rules compliance checking, and auto-fix capabilities
-argument-hint: [--fix] [--rules] [--strict] [--format=<json|default>]
+argument-hint: "[--fix] [--rules] [--strict] [--format=<json|default>]"
 allowed-tools:
   - Bash
   - Read

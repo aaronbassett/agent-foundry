@@ -2,13 +2,13 @@
 name: worktrees:orchestrator
 description: Use for multi-subagent parallel development. A main Claude instance manages multiple concurrent subagents, each working in isolated worktrees. Invoke with "/worktrees:orchestrator <feature>" or when user mentions "orchestrate agents", "parallel subagents", "coordinate development", "multi-agent workflow", "spawn subagents", or "divide feature into tasks".
 argument-hint: "<feature> [--tasks <count>]"
-version: 0.1.0
+version: "0.1.0"
 arguments:
   - name: feature
     description: Feature name for orchestrated development
     required: true
-  - name: --tasks
-    description: Number of parallel tasks (default: auto-detect from decomposition)
+  - name: "--tasks"
+    description: "Number of parallel tasks (default: auto-detect from decomposition)"
     required: false
 ---
 

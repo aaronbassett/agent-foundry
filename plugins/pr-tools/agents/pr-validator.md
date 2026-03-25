@@ -1,6 +1,32 @@
 ---
 name: pr-validator
-description: Use this agent when you need to validate if a PR is reviewable, detect programming languages, or check if SDD (Spec-Driven Development) is in use. This agent performs fast initial triage of pull requests. Examples: <example>Context: User provides a PR number and repo for review. assistant: "I'll validate this PR first to check if it's reviewable and detect the languages used." <commentary>The agent should trigger to perform initial PR validation before any detailed review work.</commentary></example> <example>Context: User asks to review a PR. assistant: "Let me check if PR #45 in acme/api is ready for review." <commentary>Proactive triggering - before doing detailed review work, validate the PR status and gather metadata.</commentary></example> <example>user: "Validate PR #123 in user/repo" assistant: "I'll use the pr-validator agent to check if this PR is reviewable." <commentary>Explicit request to validate a PR triggers this agent directly.</commentary></example> <example>user: "Check if this PR uses SDD" assistant: "I'll analyze the PR to detect if Spec-Driven Development is in use." <commentary>Direct request for SDD detection should trigger this agent.</commentary></example>
+description: >-
+  Use this agent when you need to validate if a PR is reviewable, detect
+  programming languages, or check if SDD (Spec-Driven Development) is in
+  use. This agent performs fast initial triage of pull requests. Examples:
+
+  <example>Context: User provides a PR number and repo for review.
+  assistant: "I'll validate this PR first to check if it's reviewable and
+  detect the languages used."
+  <commentary>The agent should trigger to perform initial PR validation
+  before any detailed review work.</commentary></example>
+
+  <example>Context: User asks to review a PR.
+  assistant: "Let me check if PR #45 in acme/api is ready for review."
+  <commentary>Proactive triggering - before doing detailed review work,
+  validate the PR status and gather metadata.</commentary></example>
+
+  <example>user: "Validate PR #123 in user/repo"
+  assistant: "I'll use the pr-validator agent to check if this PR is
+  reviewable."
+  <commentary>Explicit request to validate a PR triggers this agent
+  directly.</commentary></example>
+
+  <example>user: "Check if this PR uses SDD"
+  assistant: "I'll analyze the PR to detect if Spec-Driven Development is
+  in use."
+  <commentary>Direct request for SDD detection should trigger this
+  agent.</commentary></example>
 model: haiku
 color: blue
 tools: ["Bash", "Read"]

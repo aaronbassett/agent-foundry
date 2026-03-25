@@ -1,6 +1,49 @@
 ---
 name: sdd-task-verifier
-description: Use this agent when you need to verify completed SDD (Spec-Driven Development) tasks in a pull request. This agent analyzes PR diffs to find newly checked tasks, parses task metadata, performs deep implementation reviews for P1 (MVP-critical) tasks, and validates file existence for other tasks. Examples: <example>Context: User is reviewing a PR that modifies specs/tasks.md with newly completed tasks. user: "Verify SDD tasks in PR #123" assistant: "I'll use the sdd-task-verifier agent to analyze the PR diff, extract completed tasks, and verify their implementation." <commentary>The user explicitly requests SDD task verification for a specific PR. This is the primary use case for the agent.</commentary></example> <example>Context: The pr-reviewer orchestrator has detected that specs/**/tasks.md was modified in a PR and needs task verification. user: "Review this PR" assistant: "I'll check the PR changes. I notice specs/features/tasks.md was modified with newly checked tasks. I'll use the sdd-task-verifier agent to verify these completed tasks." <commentary>The agent should proactively trigger when the orchestrator detects SDD task file modifications in a PR, even without explicit user request.</commentary></example> <example>Context: Developer wants to check if their P1 task implementations are complete before merging. user: "Check if my P1 tasks in this PR are properly implemented" assistant: "I'll use the sdd-task-verifier agent to perform deep verification of your P1 task implementations, checking the actual code against task descriptions." <commentary>User is concerned about P1 task quality, which requires the deep implementation review capability of this agent.</commentary></example> <example>Context: A PR comment thread discusses whether a task marked as complete actually has the implementation. user: "Is task T003 actually implemented in the changed files?" assistant: "I'll use the sdd-task-verifier agent to verify task T003's implementation status in this PR." <commentary>Specific task verification request - the agent can verify individual tasks by examining the PR diff and implementation files.</commentary></example>
+description: >-
+  Use this agent when you need to verify completed SDD (Spec-Driven
+  Development) tasks in a pull request. This agent analyzes PR diffs to find
+  newly checked tasks, parses task metadata, performs deep implementation
+  reviews for P1 (MVP-critical) tasks, and validates file existence for
+  other tasks. Examples:
+
+  <example>Context: User is reviewing a PR that modifies specs/tasks.md
+  with newly completed tasks.
+  user: "Verify SDD tasks in PR #123"
+  assistant: "I'll use the sdd-task-verifier agent to analyze the PR diff,
+  extract completed tasks, and verify their implementation."
+  <commentary>The user explicitly requests SDD task verification for a
+  specific PR. This is the primary use case for the
+  agent.</commentary></example>
+
+  <example>Context: The pr-reviewer orchestrator has detected that
+  specs/**/tasks.md was modified in a PR and needs task verification.
+  user: "Review this PR"
+  assistant: "I'll check the PR changes. I notice specs/features/tasks.md
+  was modified with newly checked tasks. I'll use the sdd-task-verifier
+  agent to verify these completed tasks."
+  <commentary>The agent should proactively trigger when the orchestrator
+  detects SDD task file modifications in a PR, even without explicit user
+  request.</commentary></example>
+
+  <example>Context: Developer wants to check if their P1 task
+  implementations are complete before merging.
+  user: "Check if my P1 tasks in this PR are properly implemented"
+  assistant: "I'll use the sdd-task-verifier agent to perform deep
+  verification of your P1 task implementations, checking the actual code
+  against task descriptions."
+  <commentary>User is concerned about P1 task quality, which requires the
+  deep implementation review capability of this
+  agent.</commentary></example>
+
+  <example>Context: A PR comment thread discusses whether a task marked as
+  complete actually has the implementation.
+  user: "Is task T003 actually implemented in the changed files?"
+  assistant: "I'll use the sdd-task-verifier agent to verify task T003's
+  implementation status in this PR."
+  <commentary>Specific task verification request - the agent can verify
+  individual tasks by examining the PR diff and implementation
+  files.</commentary></example>
 model: opus
 color: blue
 tools: ["Bash", "Read", "Grep"]
