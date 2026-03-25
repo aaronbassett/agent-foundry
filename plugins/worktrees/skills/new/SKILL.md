@@ -2,15 +2,15 @@
 name: worktrees:new
 description: Use when creating a new git worktree. Handles gitignore setup, worktree creation, and provides guidance. Invoke with "/worktrees:new <name>" or when user mentions "create worktree", "new worktree", "start feature in worktree", or "isolated workspace".
 argument-hint: "<name> [--base <branch>] [--lock]"
-version: 0.1.0
+version: "0.1.0"
 arguments:
   - name: name
     description: Name for the worktree and branch
     required: true
-  - name: --base
-    description: Base branch (default: main)
+  - name: "--base"
+    description: "Base branch (default: main)"
     required: false
-  - name: --lock
+  - name: "--lock"
     description: Lock worktree after creation
     required: false
 ---

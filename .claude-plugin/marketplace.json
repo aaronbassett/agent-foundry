@@ -1,24 +1,26 @@
 {
   "name": "agent-foundry",
-  "version": "0.8.0",
-  "description": "Personal marketplace for Claude Code plugins, agents, and skills",
+  "metadata": {
+    "version": "0.8.0",
+    "description": "Personal marketplace for Claude Code plugins, agents, and skills",
+    "homepage": "https://github.com/aaronbassett/agent-foundry",
+    "repository": "https://github.com/aaronbassett/agent-foundry.git",
+    "license": "MIT",
+    "keywords": [
+      "claude",
+      "marketplace",
+      "plugins",
+      "agents",
+      "skills",
+      "development",
+      "coding",
+      "automation"
+    ]
+  },
   "owner": {
     "name": "Aaron Bassett",
     "email": "aaronbassett@gmail.com"
   },
-  "homepage": "https://github.com/aaronbassett/agent-foundry",
-  "repository": "https://github.com/aaronbassett/agent-foundry.git",
-  "license": "MIT",
-  "keywords": [
-    "claude",
-    "marketplace",
-    "plugins",
-    "agents",
-    "skills",
-    "development",
-    "coding",
-    "automation"
-  ],
   "plugins": [
     {
       "name": "constitution",

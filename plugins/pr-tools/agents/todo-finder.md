@@ -1,6 +1,34 @@
 ---
 name: todo-finder
-description: Use this agent when you need to scan pull request changes for TODO, FIXME, HACK, XXX, NOTE, or BUG comments. This agent performs fast pattern matching on newly added lines to identify action items and technical debt markers. Examples: <example>Context: User wants to review a PR and check for TODOs. assistant: "I'll scan the PR for any TODO or FIXME comments in the newly added code." <commentary>The agent should trigger to find action items in PR changes before completing the review.</commentary></example> <example>Context: PR review is being orchestrated and needs TODO detection. assistant: "Let me find any TODO, FIXME, HACK, or other action items in PR #123." <commentary>Proactive triggering during automated PR review workflow to detect technical debt markers.</commentary></example> <example>user: "Find TODOs in PR #45" assistant: "I'll use the todo-finder agent to scan for TODO comments in the PR changes." <commentary>Explicit request to find TODOs triggers this agent directly.</commentary></example> <example>user: "Are there any FIXME comments in this PR?" assistant: "I'll scan the PR diff for FIXME and other action item comments." <commentary>Direct request for specific comment patterns should trigger this agent.</commentary></example>
+description: >-
+  Use this agent when you need to scan pull request changes for TODO, FIXME,
+  HACK, XXX, NOTE, or BUG comments. This agent performs fast pattern matching
+  on newly added lines to identify action items and technical debt markers.
+  Examples:
+
+  <example>Context: User wants to review a PR and check for TODOs.
+  assistant: "I'll scan the PR for any TODO or FIXME comments in the newly
+  added code."
+  <commentary>The agent should trigger to find action items in PR changes
+  before completing the review.</commentary></example>
+
+  <example>Context: PR review is being orchestrated and needs TODO detection.
+  assistant: "Let me find any TODO, FIXME, HACK, or other action items in
+  PR #123."
+  <commentary>Proactive triggering during automated PR review workflow to
+  detect technical debt markers.</commentary></example>
+
+  <example>user: "Find TODOs in PR #45"
+  assistant: "I'll use the todo-finder agent to scan for TODO comments in
+  the PR changes."
+  <commentary>Explicit request to find TODOs triggers this agent
+  directly.</commentary></example>
+
+  <example>user: "Are there any FIXME comments in this PR?"
+  assistant: "I'll scan the PR diff for FIXME and other action item
+  comments."
+  <commentary>Direct request for specific comment patterns should trigger
+  this agent.</commentary></example>
 model: haiku
 color: yellow
 tools: ["Bash", "Read"]

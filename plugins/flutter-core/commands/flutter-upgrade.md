@@ -1,7 +1,7 @@
 ---
 name: flutter-upgrade
 description: Upgrade Flutter SDK and project dependencies with automated migration guides and breaking change detection
-argument-hint: [sdk|deps|all] [--check-only] [--migrate]
+argument-hint: "[sdk|deps|all] [--check-only] [--migrate]"
 allowed-tools:
   - Bash
   - Read

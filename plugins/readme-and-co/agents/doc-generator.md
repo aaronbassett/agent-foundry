@@ -1,43 +1,79 @@
 ---
 name: doc-generator
-description: Use this agent when the user wants to create GitHub repository documentation, set up README files, generate LICENSE files, create CONTRIBUTING guides, or when user asks to "create repo docs", "generate documentation", "set up GitHub files", "create README", "add license", "generate templates". Also triggers when user runs /readme-and-co:create command. Examples:
+description: >-
+  Use this agent when the user wants to create GitHub repository documentation,
+  set up README files, generate LICENSE files, create CONTRIBUTING guides, or
+  when user asks to "create repo docs", "generate documentation", "set up
+  GitHub files", "create README", "add license", "generate templates". Also
+  triggers when user runs /readme-and-co:create command. Examples:
 
-<example>
-Context: User has a new Python repository with no documentation
-user: "Help me set up repository documentation"
-assistant: "I'm going to use the Task tool to launch the doc-generator agent to create comprehensive repository documentation for your project."
-<commentary>
-User explicitly asked for repository documentation setup. The doc-generator agent will analyze the project, ask questions, and generate appropriate documentation files.
-</commentary>
-</example>
 
-<example>
-Context: User wants to add documentation to an existing project
-user: "I need to create a README and LICENSE for my project"
-assistant: "I'm going to use the Task tool to launch the doc-generator agent to generate README and LICENSE files with best practices."
-<commentary>
-User needs specific documentation files. Agent will focus on those files while offering to create additional recommended documentation.
-</commentary>
-</example>
+  <example>
 
-<example>
-Context: User runs the create command
-user: "/readme-and-co:create"
-assistant: [Launches doc-generator agent automatically per command instructions]
-<commentary>
-The create command specifically invokes this agent to handle the entire documentation generation workflow.
-</commentary>
-</example>
+  Context: User has a new Python repository with no documentation
 
-<example>
-Context: User wants to understand licensing options
-user: "What license should I use for my FastAPI project?"
-assistant: "I'm going to use the Task tool to launch the doc-generator agent to help you choose an appropriate license and create the LICENSE file."
-<commentary>
-License selection is part of documentation setup. The agent will use the license-selection skill to guide the user through choosing and creating a license.
-</commentary>
-</example>
+  user: "Help me set up repository documentation"
 
+  assistant: "I'm going to use the Task tool to launch the doc-generator agent to create comprehensive repository documentation for your project."
+
+  <commentary>
+
+  User explicitly asked for repository documentation setup. The doc-generator agent will analyze the project, ask questions, and generate appropriate documentation files.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User wants to add documentation to an existing project
+
+  user: "I need to create a README and LICENSE for my project"
+
+  assistant: "I'm going to use the Task tool to launch the doc-generator agent to generate README and LICENSE files with best practices."
+
+  <commentary>
+
+  User needs specific documentation files. Agent will focus on those files while offering to create additional recommended documentation.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User runs the create command
+
+  user: "/readme-and-co:create"
+
+  assistant: [Launches doc-generator agent automatically per command instructions]
+
+  <commentary>
+
+  The create command specifically invokes this agent to handle the entire documentation generation workflow.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User wants to understand licensing options
+
+  user: "What license should I use for my FastAPI project?"
+
+  assistant: "I'm going to use the Task tool to launch the doc-generator agent to help you choose an appropriate license and create the LICENSE file."
+
+  <commentary>
+
+  License selection is part of documentation setup. The agent will use the license-selection skill to guide the user through choosing and creating a license.
+
+  </commentary>
+
+  </example>
 model: inherit
 color: green
 tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task", "AskUserQuestion", "Skill"]

@@ -1,6 +1,95 @@
 ---
 name: Explore
-description: Use this agent when you need to explore, search, or understand a codebase. This includes finding files, understanding code structure, tracing implementations, locating definitions, analyzing dependencies, or getting an overview of project architecture. Examples:\n\n<example>\nContext: User wants to understand how a feature is implemented\nuser: "How does the batch auction clearing price calculation work?"\nassistant: "I'll use the codebase-navigator agent to trace through the implementation and find all relevant code."\n<commentary>\nSince the user wants to understand an implementation, use the codebase-navigator agent to search for relevant files, trace function calls, and build a comprehensive picture of how the feature works.\n</commentary>\n</example>\n\n<example>\nContext: User needs to find where something is defined\nuser: "Where is the ExecutionWorker struct defined and what does it do?"\nassistant: "Let me use the codebase-navigator agent to locate the definition and analyze its purpose."\n<commentary>\nThe user is looking for a specific definition. Use the codebase-navigator agent to quickly locate the struct and understand its role in the codebase.\n</commentary>\n</example>\n\n<example>\nContext: User wants to understand project structure\nuser: "Give me an overview of the node/src directory structure"\nassistant: "I'll use the codebase-navigator agent to explore the directory and summarize its organization."\n<commentary>\nFor understanding project structure and organization, the codebase-navigator agent can efficiently traverse directories and provide a clear overview.\n</commentary>\n</example>\n\n<example>\nContext: User needs to find all usages of a function or type\nuser: "Find all places where EOAccountInfo is used"\nassistant: "I'll launch the codebase-navigator agent to search for all references to EOAccountInfo across the codebase."\n<commentary>\nSearching for usages across a codebase is a core use case for the codebase-navigator agent, which can use multiple search strategies in parallel.\n</commentary>\n</example>\n\n<example>\nContext: User wants to understand data flow\nuser: "Trace the transaction lifecycle from RPC submission to execution"\nassistant: "I'll use the codebase-navigator agent to trace through the code and map out the complete transaction flow."\n<commentary>\nTracing data flow through a system requires reading multiple files and following function calls. The codebase-navigator agent excels at this kind of deep exploration.\n</commentary>\n</example>
+description: >-
+  Use this agent when you need to explore, search, or understand a codebase.
+  This includes finding files, understanding code structure, tracing
+  implementations, locating definitions, analyzing dependencies, or getting
+  an overview of project architecture. Examples:
+
+
+  <example>
+
+  Context: User wants to understand how a feature is implemented
+
+  user: "How does the batch auction clearing price calculation work?"
+
+  assistant: "I'll use the codebase-navigator agent to trace through the implementation and find all relevant code."
+
+  <commentary>
+
+  Since the user wants to understand an implementation, use the codebase-navigator agent to search for relevant files, trace function calls, and build a comprehensive picture of how the feature works.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User needs to find where something is defined
+
+  user: "Where is the ExecutionWorker struct defined and what does it do?"
+
+  assistant: "Let me use the codebase-navigator agent to locate the definition and analyze its purpose."
+
+  <commentary>
+
+  The user is looking for a specific definition. Use the codebase-navigator agent to quickly locate the struct and understand its role in the codebase.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User wants to understand project structure
+
+  user: "Give me an overview of the node/src directory structure"
+
+  assistant: "I'll use the codebase-navigator agent to explore the directory and summarize its organization."
+
+  <commentary>
+
+  For understanding project structure and organization, the codebase-navigator agent can efficiently traverse directories and provide a clear overview.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User needs to find all usages of a function or type
+
+  user: "Find all places where EOAccountInfo is used"
+
+  assistant: "I'll launch the codebase-navigator agent to search for all references to EOAccountInfo across the codebase."
+
+  <commentary>
+
+  Searching for usages across a codebase is a core use case for the codebase-navigator agent, which can use multiple search strategies in parallel.
+
+  </commentary>
+
+  </example>
+
+
+  <example>
+
+  Context: User wants to understand data flow
+
+  user: "Trace the transaction lifecycle from RPC submission to execution"
+
+  assistant: "I'll use the codebase-navigator agent to trace through the code and map out the complete transaction flow."
+
+  <commentary>
+
+  Tracing data flow through a system requires reading multiple files and following function calls. The codebase-navigator agent excels at this kind of deep exploration.
+
+  </commentary>
+
+  </example>
 tools: Bash, Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, ListMcpResourcesTool, ReadMcpResourceTool, mcp__plugin_repomix-mcp_repomix__pack_codebase, mcp__plugin_repomix-mcp_repomix__pack_remote_repository, mcp__plugin_repomix-mcp_repomix__attach_packed_output, mcp__plugin_repomix-mcp_repomix__read_repomix_output, mcp__plugin_repomix-mcp_repomix__grep_repomix_output, mcp__plugin_repomix-mcp_repomix__file_system_read_file, mcp__plugin_repomix-mcp_repomix__file_system_read_directory, mcp__repomix__pack_codebase, mcp__repomix__pack_remote_repository, mcp__repomix__attach_packed_output, mcp__repomix__read_repomix_output, mcp__repomix__grep_repomix_output, mcp__repomix__file_system_read_file, mcp__repomix__file_system_read_directory, mcp__octocode-mcp__githubSearchCode, mcp__octocode-mcp__githubGetFileContent, mcp__octocode-mcp__githubViewRepoStructure, mcp__octocode-mcp__githubSearchRepositories, mcp__octocode-mcp__githubSearchPullRequests, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__rename_symbol, mcp__serena__write_memory, mcp__serena__read_memory, mcp__serena__list_memories, mcp__serena__delete_memory, mcp__serena__edit_memory, mcp__serena__check_onboarding_performed, mcp__serena__onboarding, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__serena__initial_instructions, Skill, SlashCommand
 model: sonnet
 color: blue

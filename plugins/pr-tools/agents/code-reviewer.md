@@ -1,6 +1,45 @@
 ---
 name: code-reviewer
-description: Use this agent when the user requests a deep, language-specific code review of a pull request, especially when they specify a programming language (Python, TypeScript, JavaScript, React, Rust) or pass a --language flag. This agent performs expert-level analysis using specialized devs skills to identify security vulnerabilities, logic errors, architectural issues, and code quality concerns. Examples: <example>Context: User wants to review a Python PR with expert analysis. user: "Review PR #45 in aaronbassett/api-service for Python code" assistant: "I'll use the pr-code-reviewer agent to perform a deep Python code review of that pull request." <commentary>The user explicitly requested a code review of a PR with a specific language (Python), which triggers this agent's specialized language-specific review capabilities.</commentary></example> <example>Context: Command invoked with language flag. user: "Can you review the code changes in PR #127 of myorg/backend --language rust" assistant: "I'll analyze that Rust PR with expert-level scrutiny." <commentary>The presence of the --language flag indicates the user wants language-specific analysis, which is exactly what this agent provides.</commentary></example> <example>Context: User wants comprehensive security and quality analysis. user: "I need a thorough review of PR #89 in frontend/dashboard focusing on TypeScript. Check for security issues, bugs, and architecture problems." assistant: "I'll use the pr-code-reviewer agent to conduct a comprehensive TypeScript code review covering security, bugs, and architectural concerns." <commentary>The request for thorough, multi-dimensional review (security, bugs, architecture) combined with a specific language perfectly matches this agent's capabilities.</commentary></example> <example>Context: Proactive suggestion during PR discussion. user: "This PR has some React components that need review before merging." assistant: "I can perform a deep expert review of those React components using language-specific best practices. Would you like me to analyze the PR?" <commentary>When discussing PR review needs with a specific language mentioned, the agent can proactively offer its specialized review capabilities.</commentary></example>
+description: >-
+  Use this agent when the user requests a deep, language-specific code review
+  of a pull request, especially when they specify a programming language
+  (Python, TypeScript, JavaScript, React, Rust) or pass a --language flag.
+  This agent performs expert-level analysis using specialized devs skills to
+  identify security vulnerabilities, logic errors, architectural issues, and
+  code quality concerns. Examples:
+
+  <example>Context: User wants to review a Python PR with expert analysis.
+  user: "Review PR #45 in aaronbassett/api-service for Python code"
+  assistant: "I'll use the pr-code-reviewer agent to perform a deep Python
+  code review of that pull request."
+  <commentary>The user explicitly requested a code review of a PR with a
+  specific language (Python), which triggers this agent's specialized
+  language-specific review capabilities.</commentary></example>
+
+  <example>Context: Command invoked with language flag.
+  user: "Can you review the code changes in PR #127 of myorg/backend
+  --language rust"
+  assistant: "I'll analyze that Rust PR with expert-level scrutiny."
+  <commentary>The presence of the --language flag indicates the user wants
+  language-specific analysis, which is exactly what this agent
+  provides.</commentary></example>
+
+  <example>Context: User wants comprehensive security and quality analysis.
+  user: "I need a thorough review of PR #89 in frontend/dashboard focusing
+  on TypeScript. Check for security issues, bugs, and architecture problems."
+  assistant: "I'll use the pr-code-reviewer agent to conduct a comprehensive
+  TypeScript code review covering security, bugs, and architectural concerns."
+  <commentary>The request for thorough, multi-dimensional review (security,
+  bugs, architecture) combined with a specific language perfectly matches
+  this agent's capabilities.</commentary></example>
+
+  <example>Context: Proactive suggestion during PR discussion.
+  user: "This PR has some React components that need review before merging."
+  assistant: "I can perform a deep expert review of those React components
+  using language-specific best practices. Would you like me to analyze the PR?"
+  <commentary>When discussing PR review needs with a specific language
+  mentioned, the agent can proactively offer its specialized review
+  capabilities.</commentary></example>
 model: opus
 color: blue
 tools: ["Bash", "Skill", "Read"]
