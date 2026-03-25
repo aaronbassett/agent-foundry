@@ -1,12 +1,15 @@
 ---
 name: ideas:riff
 description: >-
-  Sustained divergent exploration of a theme — riffing, branching, finding
-  unexpected angles. Uses a toolkit of creative techniques adapted to
-  conversational energy. Produces a branching outline of ideas explored.
-  Use when the user says "riff on", "explore ideas around", "let's brainstorm
-  about", "what could we do with", "help me think around", "idea jam", or
-  wants to explore an idea space without converging toward a vision or spec.
+  This skill should be used when the user wants sustained divergent exploration
+  of a theme — riffing, branching, finding unexpected angles without converging
+  toward a vision or spec. Works independently, before ideation (to generate
+  raw material), or after refinement (to re-expand a stripped idea). Uses a
+  toolkit of 22 creative techniques adapted to conversational energy. Produces
+  a branching outline of ideas explored. Triggers include "riff on", "explore
+  ideas around", "let's brainstorm about", "what could we do with", "help me
+  think around", "idea jam", "think out loud about", "go wild with",
+  "free-associate on", or when the user wants to explore an idea space.
 ---
 
 # Riff: Sustained Divergent Exploration
@@ -58,8 +61,9 @@ to start building?" If the answer is building, stop.
   use **ideas:ideation**
 - User wants to strip an idea to its core or pressure-test it →
   use **ideas:refine**
-- User is ready to design or implement something → brainstorming /
-  writing-plans skills
+- User is ready to design or implement something → use the
+  **superpowers:brainstorming** skill for design, or
+  **superpowers:writing-plans** for implementation planning
 - User wants a structured requirements gathering process
 
 ## Input Handling
@@ -146,20 +150,6 @@ See `references/techniques-flow.md` for full descriptions.
 | Forking path | Identify decision point, explore both branches | Obvious either/or — explore both |
 | Idea mutation loop | Mutate one property, repeat 5x rapidly. Speed over quality. | Energy high, volume beats precision |
 
-### Selection Heuristics
-
-- Conversation going stale/repetitive? → Switch technique
-- User energized and generating? → "Yes, and..." — amplify
-- User quiet/short responses? → Lead harder, 2-3 provocative angles
-- Single thread going deep? → Let it run, then fork/combine to
-  branch out
-- Lots of threads, none deep? → Constraint game or subtraction to
-  force depth
-- Everything safe/obvious? → Inversion, exaggeration, or random
-  stimulus
-- Same technique 3+ times? → Switch. Don't become "the analogy
-  show."
-
 ## Adaptive Dynamic
 
 Three modes, fluidly shifting. Claude never announces which mode
@@ -181,6 +171,23 @@ unchallenged, converging too early, idea accepted too quickly.
 deliberately break pattern. Switch technique, introduce random
 stimulus, or invert the current thread. Repetition is the enemy of
 divergence.
+
+## Selection Heuristics
+
+These bridge technique selection and adaptive dynamic — use the
+conversational signals to pick the right technique and mode together.
+
+- Conversation going stale/repetitive? → Switch technique
+- User energized and generating? → "Yes, and..." — amplify
+- User quiet/short responses? → Lead harder, 2-3 provocative angles
+- Single thread going deep? → Let it run, then fork/combine to
+  branch out
+- Lots of threads, none deep? → Constraint game or subtraction to
+  force depth
+- Everything safe/obvious? → Inversion, exaggeration, or random
+  stimulus
+- Same technique 3+ times? → Switch. Don't become "the analogy
+  show."
 
 ## Session Flow
 
@@ -253,7 +260,8 @@ clusters in the dialogue. "Hottest threads" based on user
 engagement signals — what they built on, returned to, or reacted
 most strongly to.
 
-Saved to `docs/ideas/YYYY-MM-DD-<topic>-riff.md`.
+Saved to `docs/ideas/YYYY-MM-DD-<topic>-riff.md` relative to the
+project root. Create the `docs/ideas/` directory if it doesn't exist.
 
 ## Key Principles
 
@@ -272,6 +280,15 @@ Saved to `docs/ideas/YYYY-MM-DD-<topic>-riff.md`.
   switch.
 
 ## Additional Resources
+
+### Session Examples
+
+See `examples/` for complete worked examples:
+- **`examples/session-example.md`** — Abbreviated riff session
+  (~8-10 exchanges) showing opening, technique deployment, mode
+  switching, and wrap-up
+- **`examples/deliverable-example.md`** — Complete branching outline
+  deliverable from a realistic session
 
 ### Reference Files
 
