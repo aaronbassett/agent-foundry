@@ -3,7 +3,7 @@
   "hooks": {
     "Stop": [
       {
-        "description": "Validate constitution compliance before stopping session",
+        "matcher": "*",
         "hooks": [
           {
             "type": "prompt",
@@ -15,7 +15,7 @@
     ],
     "SubagentStop": [
       {
-        "description": "Allow constitution reviewer to complete without triggering infinite loop",
+        "matcher": "*",
         "hooks": [
           {
             "type": "prompt",
