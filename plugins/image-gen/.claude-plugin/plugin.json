@@ -1,6 +1,6 @@
 {
   "name": "image-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-powered image generation using Google Gemini models via the nanobanana MCP server. Generate, edit, and manage images with intelligent model selection, aspect ratio control, and multi-model support.",
   "author": {
     "name": "Aaron Bassett",

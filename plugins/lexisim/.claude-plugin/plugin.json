@@ -1,6 +1,6 @@
 {
   "name": "lexisim",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Design writing voices from scratch or by emulating references, then generate a writer skill and writing assistant subagent",
   "author": {
     "name": "Aaron Bassett",
