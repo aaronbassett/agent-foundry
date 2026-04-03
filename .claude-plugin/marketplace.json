@@ -1,7 +1,7 @@
 {
   "name": "agent-foundry",
   "metadata": {
-    "version": "0.9.1",
+    "version": "0.10.0",
     "description": "Personal marketplace for Claude Code plugins, agents, and skills",
     "homepage": "https://github.com/aaronbassett/agent-foundry",
     "repository": "https://github.com/aaronbassett/agent-foundry.git",
@@ -85,6 +85,22 @@
     {
       "source": "./plugins/lexisim",
       "name": "lexisim"
+    },
+    {
+      "source": "./plugins/design-systems",
+      "name": "design-systems",
+      "description": "Create, implement, review, and visualize opinionated design systems that resist AI slop convergence",
+      "version": "0.1.0",
+      "keywords": [
+        "design-system",
+        "design-tokens",
+        "css",
+        "ui",
+        "frontend",
+        "anti-slop",
+        "review",
+        "specimen"
+      ]
     }
   ]
 }

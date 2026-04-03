@@ -1,6 +1,6 @@
 {
   "name": "constitution",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Create, validate, and enforce project constitutions with living governance",
   "author": {
     "name": "Aaron Bassett",

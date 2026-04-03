@@ -1,6 +1,6 @@
 {
   "name": "utils",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Utility skills for plugin management and diagnostics including dependency checking, scanning, plugin root resolution, and tokf output filtering",
   "author": {
     "name": "Aaron Bassett",
