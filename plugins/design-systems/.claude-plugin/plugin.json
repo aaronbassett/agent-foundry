@@ -1,0 +1,23 @@
+{
+  "name": "design-systems",
+  "version": "0.1.0",
+  "description": "Create, implement, review, and visualize opinionated design systems that resist AI slop convergence",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/design-systems",
+  "license": "MIT",
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "css",
+    "ui",
+    "frontend",
+    "anti-slop",
+    "review",
+    "specimen"
+  ]
+}
