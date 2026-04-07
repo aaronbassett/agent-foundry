@@ -1,66 +1,90 @@
 #!/usr/bin/env node
-
-// Generate popular-packages.json from live npm registry data.
+// Generate popular-packages.json from Socket.dev's curated popular packages list.
+// Source: https://socket.dev/npm/category/popular
 // Run: node scripts/data/generate-popular-packages.js
-// This fetches the top ~3000 npm packages by popularity and writes
-// their names to popular-packages.json for typosquat detection.
 
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
 
 const OUTPUT_FILE = path.join(__dirname, "popular-packages.json");
-const PAGE_SIZE = 250;
-const DELAY_MS = 500; // polite delay between requests (increase if hitting rate limits)
+const TOTAL_PAGES = 5;
+const DELAY_MS = 1000; // polite delay between requests
+const USER_AGENT = "supply-chain-defence/0.1.0 (popular-packages generator)";
 
-// Broad search terms to get wide coverage of popular packages.
-// The npm search API requires a non-empty text param, so we use common
-// keywords/terms that cover a large swath of the ecosystem. Each query
-// returns results sorted by popularity (popularity=1.0 boost).
-const SEARCH_TERMS = [
-  "keywords:javascript",
-  "keywords:node",
-  "keywords:typescript",
-  "keywords:react",
-  "keywords:cli",
-  "keywords:util",
-  "keywords:test",
-  "keywords:build",
-  "keywords:css",
-  "keywords:http",
-  "keywords:webpack",
-  "keywords:babel",
-  "keywords:eslint",
-  "keywords:express",
-  "keywords:api",
-];
+// Regex to extract package names from links like /npm/package/PACKAGE_NAME
+const PACKAGE_LINK_RE = /\/npm\/package\/([a-zA-Z0-9@._-][a-zA-Z0-9@._/-]*)/g;
 
-// Pages per search term — 4 pages * 250 = 1000 per term
-// With 15 terms and heavy overlap, expect ~2500-3500 unique packages
-const PAGES_PER_TERM = 4;
-
-function fetchPage(text, from) {
+function fetchPage(pageNum) {
   return new Promise((resolve, reject) => {
-    const encodedText = encodeURIComponent(text);
-    const url = `https://registry.npmjs.org/-/v1/search?text=${encodedText}&size=${PAGE_SIZE}&from=${from}&popularity=1.0&quality=0.0&maintenance=0.0`;
-    https
-      .get(url, (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch (e) {
-            reject(
+    const url = `https://socket.dev/npm/category/popular?page=${pageNum}`;
+
+    const doRequest = (requestUrl, redirectCount) => {
+      if (redirectCount > 5) {
+        return reject(new Error(`Too many redirects for page ${pageNum}`));
+      }
+
+      const parsedUrl = new URL(requestUrl);
+      const options = {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "GET",
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "text/html,application/xhtml+xml",
+        },
+      };
+
+      https
+        .request(options, (res) => {
+          if (
+            res.statusCode >= 301 &&
+            res.statusCode <= 308 &&
+            res.headers.location
+          ) {
+            // Follow redirect
+            const redirectUrl = res.headers.location.startsWith("http")
+              ? res.headers.location
+              : `https://${parsedUrl.hostname}${res.headers.location}`;
+            res.resume(); // discard response body
+            return doRequest(redirectUrl, redirectCount + 1);
+          }
+
+          if (res.statusCode !== 200) {
+            res.resume();
+            return reject(
               new Error(
-                `Failed to parse response for "${text}" at offset ${from}: ${e.message}`
+                `HTTP ${res.statusCode} for page ${pageNum} (${requestUrl})`
               )
             );
           }
-        });
-      })
-      .on("error", reject);
+
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => resolve(data));
+        })
+        .on("error", reject)
+        .end();
+    };
+
+    doRequest(url, 0);
   });
+}
+
+function extractPackageNames(html) {
+  const names = new Set();
+  let match;
+  // Reset lastIndex before each use since we reuse the regex
+  PACKAGE_LINK_RE.lastIndex = 0;
+  while ((match = PACKAGE_LINK_RE.exec(html)) !== null) {
+    const name = match[1];
+    // Exclude any path segments that look like sub-pages (e.g. /npm/package/foo/versions)
+    const baseName = name.split("/")[0];
+    if (baseName) {
+      names.add(baseName);
+    }
+  }
+  return names;
 }
 
 function sleep(ms) {
@@ -68,69 +92,45 @@ function sleep(ms) {
 }
 
 async function main() {
-  const totalRequests = SEARCH_TERMS.length * PAGES_PER_TERM;
   console.log(
-    `Fetching top npm packages via ${SEARCH_TERMS.length} search terms × ${PAGES_PER_TERM} pages each (${totalRequests} total requests)...\n`
+    `Fetching Socket.dev curated popular packages (${TOTAL_PAGES} pages)...\n`
   );
 
   const allNames = new Set();
-  let totalFetched = 0;
-  let requestCount = 0;
 
-  for (const term of SEARCH_TERMS) {
-    console.log(`  Term: ${term}`);
-    for (let page = 0; page < PAGES_PER_TERM; page++) {
-      const from = page * PAGE_SIZE;
-      requestCount++;
-      process.stdout.write(
-        `    Page ${page + 1}/${PAGES_PER_TERM} (offset ${from}) [${requestCount}/${totalRequests}]...`
-      );
+  for (let page = 1; page <= TOTAL_PAGES; page++) {
+    process.stdout.write(`  Fetching page ${page}/${TOTAL_PAGES}...`);
 
-      try {
-        const result = await fetchPage(term, from);
-        const objects = result.objects || [];
-        const names = objects
-          .map((obj) => obj.package && obj.package.name)
-          .filter(Boolean);
-        names.forEach((name) => allNames.add(name));
-        totalFetched += names.length;
-        console.log(
-          ` got ${names.length} (${allNames.size} unique so far)`
-        );
+    try {
+      const html = await fetchPage(page);
+      const names = extractPackageNames(html);
+      names.forEach((name) => allNames.add(name));
+      console.log(` found ${names.size} packages (${allNames.size} unique so far)`);
+    } catch (err) {
+      console.error(`\n  Error fetching page ${page}: ${err.message}`);
+      console.log("  Skipping page and continuing...");
+    }
 
-        if (names.length < PAGE_SIZE) {
-          console.log(`    (end of results for "${term}")`);
-          break;
-        }
-      } catch (err) {
-        console.error(`\n    Error: ${err.message}`);
-        console.log("    Skipping to next term...");
-        break;
-      }
-
+    if (page < TOTAL_PAGES) {
       await sleep(DELAY_MS);
     }
   }
 
-  console.log(`\nTotal fetched (with duplicates across terms): ${totalFetched}`);
-  console.log(`Unique package names before filtering: ${allNames.size}`);
+  console.log(`\nUnique package names before filtering: ${allNames.size}`);
 
-  // Filter out very short names (1-2 chars) to avoid false Levenshtein matches
+  // Filter out very short names (<= 2 chars) to avoid false Levenshtein matches
   const filtered = [...allNames].filter((name) => name.length > 2);
-
   const filteredOut = allNames.size - filtered.length;
-  console.log(
-    `Filtered out ${filteredOut} packages with names <= 2 characters`
-  );
+  console.log(`Filtered out ${filteredOut} packages with names <= 2 characters`);
 
-  // Sort alphabetically
-  filtered.sort((a, b) => a.localeCompare(b));
+  // Sort alphabetically (plain lexicographic, consistent with Array.prototype.sort default)
+  filtered.sort();
 
   // Write to output file
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(filtered, null, 2) + "\n");
 
   console.log(`\nSummary:`);
-  console.log(`  Total fetched:   ${totalFetched}`);
+  console.log(`  Pages fetched:   ${TOTAL_PAGES}`);
   console.log(`  Unique names:    ${allNames.size}`);
   console.log(`  Filtered out:    ${filteredOut} (length <= 2)`);
   console.log(`  Final count:     ${filtered.length}`);
