@@ -97,55 +97,200 @@ describe("ci-over-install", () => {
 describe("before-flag", () => {
   const check = require("../scripts/checks/before-flag");
 
-  it("blocks npm install <pkg> without --before", async () => {
-    const result = await check(
-      { tool_input: { command: "npm install lodash" } },
-      emptyState(),
-      config,
-      "/tmp"
-    );
-    assert.strictEqual(result.status, "block");
-    assert.ok(result.message.includes("--before"));
-  });
-
-  it("blocks pnpm add <pkg> without --before", async () => {
-    const result = await check(
-      { tool_input: { command: "pnpm add express" } },
-      emptyState(),
-      config,
-      "/tmp"
-    );
-    assert.strictEqual(result.status, "block");
-  });
-
-  it("passes when --before is present", async () => {
-    const result = await check(
-      { tool_input: { command: "npm install lodash --before 2026-04-01" } },
-      emptyState(),
-      config,
-      "/tmp"
-    );
-    assert.strictEqual(result.status, "pass");
+  it("passes for non-install commands", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check(
+        { tool_input: { command: "npm test" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it("passes for npm ci (not adding a package)", async () => {
-    const result = await check(
-      { tool_input: { command: "npm ci" } },
-      emptyState(),
-      config,
-      "/tmp"
-    );
-    assert.strictEqual(result.status, "pass");
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check(
+        { tool_input: { command: "npm ci" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
-  it("passes for non-install commands", async () => {
-    const result = await check(
-      { tool_input: { command: "npm test" } },
-      emptyState(),
-      config,
-      "/tmp"
-    );
-    assert.strictEqual(result.status, "pass");
+  // --- Case 3: Neither setting nor --before ---
+
+  it("blocks when no setting and no --before flag", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check(
+        { tool_input: { command: "npm install lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("min-release-age"));
+      assert.ok(result.message.includes("Axios"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  // --- Case 2: No setting, --before flag ---
+
+  it("passes when --before date is >= 5 days ago", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 3600 * 1000)
+      .toISOString()
+      .split("T")[0];
+    try {
+      const result = await check(
+        { tool_input: { command: `npm install lodash --before ${tenDaysAgo}` } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when --before date is < 5 days ago", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const yesterday = new Date(Date.now() - 1 * 24 * 3600 * 1000)
+      .toISOString()
+      .split("T")[0];
+    try {
+      const result = await check(
+        { tool_input: { command: `npm install lodash --before ${yesterday}` } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("below the recommended minimum"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("handles --before=DATE format (equals sign)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 3600 * 1000)
+      .toISOString()
+      .split("T")[0];
+    try {
+      const result = await check(
+        { tool_input: { command: `npm install lodash --before=${tenDaysAgo}` } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  // --- Case 1: Setting present ---
+
+  it("passes when min-release-age >= 5 in .npmrc", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".npmrc"), "min-release-age=7\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "npm install lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("7 days"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when min-release-age < 5 in .npmrc", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".npmrc"), "min-release-age=2\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "npm install lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("2 days"));
+      assert.ok(result.message.includes("below the recommended minimum"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when pnpm minimumReleaseAge >= 5 days in pnpm-workspace.yaml", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    // 7200 minutes = 5 days
+    fs.writeFileSync(path.join(tmpDir, "pnpm-workspace.yaml"), "minimumReleaseAge: 7200\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "pnpm add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when pnpm minimumReleaseAge < 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    // 1440 minutes = 1 day
+    fs.writeFileSync(path.join(tmpDir, "pnpm-workspace.yaml"), "minimumReleaseAge: 1440\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "pnpm add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("below the recommended minimum"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("prefers .npmrc over pnpm-workspace.yaml when both exist", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".npmrc"), "min-release-age=10\n");
+    fs.writeFileSync(path.join(tmpDir, "pnpm-workspace.yaml"), "minimumReleaseAge: 1440\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "npm install lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("10 days"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 
