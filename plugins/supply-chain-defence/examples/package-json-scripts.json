@@ -1,0 +1,7 @@
+{
+  "_comment": "Add these scripts to your package.json. Adapt the lockfile path and type for your package manager.",
+  "scripts": {
+    "preinstall": "npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https",
+    "audit:security": "pnpm audit && npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https"
+  }
+}
