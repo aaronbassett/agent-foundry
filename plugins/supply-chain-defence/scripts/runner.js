@@ -111,7 +111,36 @@ async function runCheck(checkName, input, state, config, cwd) {
 }
 
 // --- Output formatting ---
+//
+// Each hook event has its own decision control pattern per the docs:
+//
+// PreToolUse:
+//   hookSpecificOutput.permissionDecision (allow/deny/ask/defer)
+//   hookSpecificOutput.permissionDecisionReason (for deny: shown to Claude)
+//   hookSpecificOutput.additionalContext (added to Claude's context)
+//
+// SessionStart:
+//   hookSpecificOutput.additionalContext (added to Claude's context)
+//   systemMessage (warning shown to user, NOT Claude)
+//   Plain stdout text is also added as context for Claude
+//
+// PostToolUse:
+//   Top-level decision: "block" with reason (shown to Claude)
+//   hookSpecificOutput.additionalContext
+//
+// SubagentStart:
+//   hookSpecificOutput.additionalContext (added to subagent's context)
+//
+// Async hooks (any event):
+//   systemMessage and additionalContext delivered to Claude on next turn
+//   Cannot block — action already proceeded
+//
+// FileChanged, PreCompact, PostCompact:
+//   No decision control. Side effects only.
+//   systemMessage shown to user only (not Claude)
+//
 
+// PreToolUse: block-then-warn pattern
 function formatPreToolUseOutput(results, state, config) {
   // Find the first blocking result
   for (const r of results) {
@@ -120,6 +149,7 @@ function formatPreToolUseOutput(results, state, config) {
     const isBlocked = shouldBlock(r.checkName, r.checkKey, state, config);
     if (isBlocked) {
       recordBlock(r.checkName, r.checkKey, state);
+      // deny: permissionDecisionReason is shown to Claude
       return {
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
@@ -134,11 +164,12 @@ function formatPreToolUseOutput(results, state, config) {
     }
   }
 
-  // Collect warnings
+  // Collect warnings (checks that returned block but are within TTL)
   const warnings = results.filter(
     (r) => r.status === "warn" || r.status === "block"
   );
   if (warnings.length > 0) {
+    // allow: additionalContext is added to Claude's context
     return {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
@@ -150,10 +181,11 @@ function formatPreToolUseOutput(results, state, config) {
     };
   }
 
-  // All passed
+  // All passed — exit 0 with no output means allow
   return null;
 }
 
+// PreToolUse: always-block pattern (dep-direct-edit)
 function formatAlwaysBlockOutput(results) {
   for (const r of results) {
     if (r.status === "block") {
@@ -169,12 +201,10 @@ function formatAlwaysBlockOutput(results) {
   return null;
 }
 
+// SessionStart: additionalContext goes to Claude, systemMessage shown to user
 function formatSessionStartOutput(results) {
   const critical = results.filter(
     (r) => r.status === "block" || r.status === "warn"
-  );
-  const info = results.filter(
-    (r) => r.status === "pass" || r.status === "info"
   );
 
   const contextLines = results.map(
@@ -189,6 +219,7 @@ function formatSessionStartOutput(results) {
     },
   };
 
+  // systemMessage is shown to the user (not Claude) as a warning
   if (critical.length > 0) {
     output.systemMessage =
       "Supply chain issues detected:\n" +
@@ -198,12 +229,15 @@ function formatSessionStartOutput(results) {
   return output;
 }
 
+// Async hooks: systemMessage delivered to Claude on next turn
+// Used for deep audit, post-install-audit, npx-post-audit
 function formatAsyncOutput(results) {
   const issues = results.filter(
     (r) => r.status === "warn" || r.status === "block"
   );
   if (issues.length === 0) return null;
 
+  // For async hooks, systemMessage is delivered to Claude on next turn
   return {
     systemMessage:
       "Supply chain audit findings:\n" +
@@ -211,7 +245,8 @@ function formatAsyncOutput(results) {
   };
 }
 
-function formatContextOutput(results) {
+// SubagentStart: additionalContext injected into subagent's context
+function formatSubagentStartOutput(results) {
   const lines = results
     .filter((r) => r.message)
     .map((r) => r.message);
@@ -223,6 +258,25 @@ function formatContextOutput(results) {
       additionalContext: lines.join("\n"),
     },
   };
+}
+
+// PreCompact/FileChanged: no decision control, no hookSpecificOutput
+// These events only support side effects. systemMessage is shown to user only.
+// For PreCompact we write context to state file so SessionStart can re-inject it.
+function formatSideEffectOutput(results, state) {
+  const lines = results
+    .filter((r) => r.message)
+    .map((r) => r.message);
+
+  // Persist to state file so it survives compaction
+  if (lines.length > 0) {
+    state.lastSecuritySummary = lines.join("\n");
+  }
+
+  // systemMessage shown to user only — can't inject into Claude's context here
+  return lines.length > 0
+    ? { systemMessage: "Supply chain context preserved for next session." }
+    : null;
 }
 
 // --- Main ---
@@ -255,31 +309,48 @@ async function main() {
     results.push(result);
   }
 
-  // Format output based on hook event and profile
+  // Format output based on hook event name and profile.
+  // Use hook_event_name from stdin to pick the correct output format,
+  // with profile as a secondary signal for PreToolUse variants.
   let output = null;
 
-  if (args.profile === "edit-guard" || args.profile === "write-guard") {
-    // Always-block profiles
-    output = formatAlwaysBlockOutput(results);
-  } else if (args.profile === "bash-guard") {
-    output = formatPreToolUseOutput(results, state, config);
-  } else if (args.profile === "quick") {
-    output = formatSessionStartOutput(results);
-  } else if (
-    args.profile === "deep" ||
-    args.profile === "post-install-audit" ||
-    args.profile === "npx-post-audit" ||
-    args.profile === "file-changed"
-  ) {
-    output = formatAsyncOutput(results);
-  } else if (
-    args.profile === "pre-compact" ||
-    args.profile === "subagent-context"
-  ) {
-    output = formatContextOutput(results);
-  } else if (args.profile === "doctor" || args.profile === "review") {
-    // Doctor and review output all results for the skill/command to format
-    output = { results: results };
+  switch (hookEvent) {
+    case "PreToolUse":
+      if (args.profile === "edit-guard" || args.profile === "write-guard") {
+        output = formatAlwaysBlockOutput(results);
+      } else {
+        output = formatPreToolUseOutput(results, state, config);
+      }
+      break;
+
+    case "SessionStart":
+      output = formatSessionStartOutput(results);
+      break;
+
+    case "SubagentStart":
+      output = formatSubagentStartOutput(results);
+      break;
+
+    case "PreCompact":
+    case "FileChanged":
+      // No decision control — side effects only
+      output = formatSideEffectOutput(results, state);
+      break;
+
+    case "PostToolUse":
+      // All our PostToolUse hooks are async, so use async formatter
+      output = formatAsyncOutput(results);
+      break;
+
+    default:
+      // For doctor/review (called from skills/commands, not hooks)
+      // or any unknown event, return raw results
+      if (args.profile === "doctor" || args.profile === "review") {
+        output = { results: results };
+      } else {
+        output = formatAsyncOutput(results);
+      }
+      break;
   }
 
   // Write updated state
@@ -305,7 +376,8 @@ if (require.main === module) {
     formatAlwaysBlockOutput,
     formatSessionStartOutput,
     formatAsyncOutput,
-    formatContextOutput,
+    formatSubagentStartOutput,
+    formatSideEffectOutput,
     readState,
     writeState,
   };
