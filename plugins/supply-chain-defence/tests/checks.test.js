@@ -139,8 +139,29 @@ describe("before-flag", () => {
         tmpDir
       );
       assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("No release age protection configured"));
+      // Should include instructions for all PMs
       assert.ok(result.message.includes("min-release-age"));
-      assert.ok(result.message.includes("min-release-age"));
+      assert.ok(result.message.includes("minimumReleaseAge"));
+      assert.ok(result.message.includes("npmMinimumReleaseAge"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("shows detected PM instructions first when state has detectedPackageManager", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const state = emptyState();
+    state.detectedPackageManager = "pnpm";
+    try {
+      const result = await check(
+        { tool_input: { command: "pnpm add lodash" } },
+        state,
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("This project uses pnpm"));
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -390,6 +411,47 @@ describe("before-flag", () => {
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2b. before-flag: buildConfigInstructions
+// ---------------------------------------------------------------------------
+describe("buildConfigInstructions", () => {
+  const { buildConfigInstructions } = require("../scripts/checks/before-flag");
+
+  it("puts detected PM first when known", () => {
+    const result = buildConfigInstructions(5, "pnpm");
+    assert.ok(result.startsWith("This project uses pnpm"));
+    assert.ok(result.includes("minimumReleaseAge: 7200"));
+    // Should also include others
+    assert.ok(result.includes("min-release-age"));
+    assert.ok(result.includes("npmMinimumReleaseAge"));
+  });
+
+  it("puts npm first when detected", () => {
+    const result = buildConfigInstructions(5, "npm");
+    assert.ok(result.startsWith("This project uses npm"));
+    assert.ok(result.includes("min-release-age=5"));
+  });
+
+  it("puts yarn first when detected", () => {
+    const result = buildConfigInstructions(5, "yarn");
+    assert.ok(result.startsWith("This project uses yarn"));
+    assert.ok(result.includes('npmMinimumReleaseAge: "5d"'));
+  });
+
+  it("lists all PMs when none detected", () => {
+    const result = buildConfigInstructions(5, null);
+    assert.ok(result.startsWith("To configure for your package manager:"));
+    assert.ok(result.includes("min-release-age=5"));
+    assert.ok(result.includes("minimumReleaseAge: 7200"));
+    assert.ok(result.includes('npmMinimumReleaseAge: "5d"'));
+  });
+
+  it("uses correct day-to-minute conversion", () => {
+    const result = buildConfigInstructions(7, "pnpm");
+    assert.ok(result.includes("minimumReleaseAge: 10080")); // 7 * 1440
   });
 });
 

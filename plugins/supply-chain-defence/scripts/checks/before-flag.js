@@ -4,6 +4,75 @@ const fs = require("fs");
 const path = require("path");
 
 const MIN_DAYS = 5;
+const STATE_FILENAME = ".claude/agent-foundry/supply-chain-defence.local.json";
+
+const PM_INSTRUCTIONS = {
+  npm: {
+    name: "npm",
+    file: ".npmrc",
+    setting: "min-release-age",
+    example: (days) => `Add \`min-release-age=${days}\` to .npmrc`,
+  },
+  pnpm: {
+    name: "pnpm",
+    file: "pnpm-workspace.yaml",
+    setting: "minimumReleaseAge",
+    example: (days) =>
+      `Add \`minimumReleaseAge: ${days * 1440}\` to pnpm-workspace.yaml (value is in minutes)`,
+  },
+  yarn: {
+    name: "yarn",
+    file: ".yarnrc.yml",
+    setting: "npmMinimumReleaseAge",
+    example: (days) =>
+      `Add \`npmMinimumReleaseAge: "${days}d"\` to .yarnrc.yml`,
+  },
+};
+
+// Build PM-specific configuration instructions, with detected PM first
+function buildConfigInstructions(minDays, detectedPm) {
+  const allPms = ["npm", "pnpm", "yarn"];
+  const primary = detectedPm && PM_INSTRUCTIONS[detectedPm] ? detectedPm : null;
+  const others = allPms.filter((pm) => pm !== primary);
+
+  let instructions = "";
+
+  if (primary) {
+    const info = PM_INSTRUCTIONS[primary];
+    instructions +=
+      `This project uses ${info.name}. To configure:\n` +
+      `  ${info.example(minDays)}\n`;
+
+    if (others.length > 0) {
+      instructions += `\nIf you use a different package manager:\n`;
+      for (const pm of others) {
+        instructions += `  ${PM_INSTRUCTIONS[pm].example(minDays)}\n`;
+      }
+    }
+  } else {
+    instructions += `To configure for your package manager:\n`;
+    for (const pm of allPms) {
+      instructions += `  ${PM_INSTRUCTIONS[pm].example(minDays)}\n`;
+    }
+  }
+
+  return instructions;
+}
+
+// Read detected package manager from state file
+function getDetectedPm(cwd, state) {
+  // Prefer state passed by the runner (already loaded)
+  if (state?.detectedPackageManager) return state.detectedPackageManager;
+
+  // Fall back to reading state file directly
+  const statePath = path.join(cwd, STATE_FILENAME);
+  try {
+    const data = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    return data.detectedPackageManager || null;
+  } catch {
+    return null;
+  }
+}
 
 // Parse .npmrc for min-release-age (value in days for npm)
 function getNpmrcReleaseAge(cwd) {
@@ -82,6 +151,9 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
     return { status: "pass", message: "Not adding a package", details: {} };
   }
 
+  const detectedPm = getDetectedPm(cwd, state);
+  const configInstructions = buildConfigInstructions(minDays, detectedPm);
+
   // Check if a release-age setting exists in project config
   const npmrcAge = getNpmrcReleaseAge(cwd);
   const pnpmAge = getPnpmReleaseAge(cwd);
@@ -105,9 +177,9 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       status: "block",
       message:
         `Release age gating is configured but set to ${configuredAge} days, which is below the recommended minimum of ${minDays} days. ` +
-        `While high-profile attacks like the March 2026 Axios compromise are caught quickly, many malicious packages go undetected for days. ` +
-        `A ${minDays}-day window gives security tools and the community time to flag less-visible threats. ` +
-        `Increase \`min-release-age\` in .npmrc to at least ${minDays}, set \`minimumReleaseAge: ${minDays * 1440}\` in pnpm-workspace.yaml, or set \`npmMinimumReleaseAge: "${minDays}d"\` in .yarnrc.yml.`,
+        `While high-profile attacks are caught quickly, many malicious packages go undetected for days. ` +
+        `A ${minDays}-day window gives security tools and the community time to flag less-visible threats.\n\n` +
+        configInstructions,
       details: { key: `age-too-low-${configuredAge}`, configuredAge, minDays },
     };
   }
@@ -129,8 +201,10 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       status: "block",
       message:
         `--before ${beforeDateStr} is only ${Math.floor(age)} days ago, which is below the recommended minimum of ${minDays} days. ` +
-        `Consider using a date at least ${minDays} days in the past, or better yet, add \`min-release-age=${minDays}\` to .npmrc ` +
-        `so all installs are protected automatically.`,
+        `Consider using a date at least ${minDays} days in the past.\n\n` +
+        `Configuring a minimum release age in your package manager's settings is strongly preferred ` +
+        `as it protects all installs automatically.\n\n` +
+        configInstructions,
       details: { key: `before-too-recent-${beforeDateStr}`, age: Math.floor(age), minDays },
     };
   }
@@ -143,16 +217,16 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
   return {
     status: "block",
     message:
-      `No release age protection configured. Add \`min-release-age=${minDays}\` to .npmrc, ` +
-      `\`minimumReleaseAge: ${minDays * 1440}\` to pnpm-workspace.yaml, or ` +
-      `\`npmMinimumReleaseAge: "${minDays}d"\` to .yarnrc.yml to prevent installing ` +
-      `packages published in the last ${minDays} days.\n\n` +
-      `Why this matters: while high-profile attacks like the March 2026 Axios compromise are caught ` +
-      `quickly, many malicious packages go undetected for days or weeks. In 2025 alone, over 450,000 ` +
-      `malicious npm packages were published. A ${minDays}-day minimum gives security tools and the ` +
-      `community time to flag threats before they reach your project.\n\n` +
-      `As a workaround, you can add \`--before ${suggestedDate}\` to this command — but configuring ` +
-      `the setting in .npmrc is strongly preferred as it protects all installs automatically.`,
+      `No release age protection configured.\n\n` +
+      `Why this matters: while high-profile attacks are caught quickly, many malicious packages go ` +
+      `undetected for days or weeks. In 2025 alone, over 450,000 malicious npm packages were published. ` +
+      `A ${minDays}-day minimum gives security tools and the community time to flag threats before ` +
+      `they reach your project.\n\n` +
+      `Configuring a minimum release age in your package manager's settings is strongly preferred ` +
+      `as it protects all installs automatically.\n\n` +
+      configInstructions +
+      `\nAs a workaround for this specific command, you can add \`--before ${suggestedDate}\` — ` +
+      `but this only applies to a single install and must be repeated each time.`,
     details: { key: command, suggestedDate },
   };
 };
@@ -165,4 +239,5 @@ if (require.main !== module) {
   module.exports.parseDurationToDays = parseDurationToDays;
   module.exports.getBeforeDate = getBeforeDate;
   module.exports.daysAgo = daysAgo;
+  module.exports.buildConfigInstructions = buildConfigInstructions;
 }
