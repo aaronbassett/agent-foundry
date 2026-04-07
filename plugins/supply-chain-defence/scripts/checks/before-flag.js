@@ -105,7 +105,8 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       status: "block",
       message:
         `Release age gating is configured but set to ${configuredAge} days, which is below the recommended minimum of ${minDays} days. ` +
-        `The March 2026 Axios attack used a version that existed for only 39 minutes — a short window gives attackers room to operate. ` +
+        `While high-profile attacks like the March 2026 Axios compromise are caught quickly, many malicious packages go undetected for days. ` +
+        `A ${minDays}-day window gives security tools and the community time to flag less-visible threats. ` +
         `Increase \`min-release-age\` in .npmrc to at least ${minDays}, set \`minimumReleaseAge: ${minDays * 1440}\` in pnpm-workspace.yaml, or set \`npmMinimumReleaseAge: "${minDays}d"\` in .yarnrc.yml.`,
       details: { key: `age-too-low-${configuredAge}`, configuredAge, minDays },
     };
@@ -146,9 +147,10 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       `\`minimumReleaseAge: ${minDays * 1440}\` to pnpm-workspace.yaml, or ` +
       `\`npmMinimumReleaseAge: "${minDays}d"\` to .yarnrc.yml to prevent installing ` +
       `packages published in the last ${minDays} days.\n\n` +
-      `Why this matters: the March 2026 Axios supply chain attack compromised versions that existed ` +
-      `for only 39 minutes before being detected. A ${minDays}-day minimum gives the community time ` +
-      `to detect and remove malicious versions before they reach your project.\n\n` +
+      `Why this matters: while high-profile attacks like the March 2026 Axios compromise are caught ` +
+      `quickly, many malicious packages go undetected for days or weeks. In 2025 alone, over 450,000 ` +
+      `malicious npm packages were published. A ${minDays}-day minimum gives security tools and the ` +
+      `community time to flag threats before they reach your project.\n\n` +
       `As a workaround, you can add \`--before ${suggestedDate}\` to this command — but configuring ` +
       `the setting in .npmrc is strongly preferred as it protects all installs automatically.`,
     details: { key: command, suggestedDate },

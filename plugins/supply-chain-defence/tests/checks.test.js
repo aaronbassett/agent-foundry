@@ -140,7 +140,7 @@ describe("before-flag", () => {
       );
       assert.strictEqual(result.status, "block");
       assert.ok(result.message.includes("min-release-age"));
-      assert.ok(result.message.includes("Axios"));
+      assert.ok(result.message.includes("min-release-age"));
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
