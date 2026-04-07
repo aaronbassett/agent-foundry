@@ -48,6 +48,28 @@ Protect npm/pnpm/yarn projects from supply chain attacks through deterministic h
 
 Prefers **pnpm** for new projects. Detects and adapts to existing projects using npm, yarn, or bun.
 
+## How It Works
+
+### Block-Then-Warn
+
+Most checks (typosquatting, Socket presence, `ci`-over-`install`, `--before` flag, lifecycle scripts) **block the first time** to force awareness, then **warn on subsequent attempts** within an 8-hour window. This prevents alert fatigue while ensuring you see every issue at least once. The dependency direct-edit check always blocks — there is no override.
+
+State is tracked per-project in `.claude/agent-foundry/supply-chain-defence.local.json`.
+
+### Script Architecture
+
+All hooks are deterministic Node.js scripts — no prompt-based hooks. A central `runner.js` loads check profiles from `config.json` and executes modular check scripts from `scripts/checks/`. Scripts ship in the plugin and sync to `${CLAUDE_PLUGIN_DATA}` at session start.
+
+## Testing
+
+Run the test suite with Node's built-in test runner:
+
+```bash
+node --test plugins/supply-chain-defence/tests/*.test.js
+```
+
+68 tests covering all check scripts and runner internals (severity logic, output formatting, state management).
+
 ## Plugin Dependencies
 
 Requires the `devs` plugin for `devs:deps-core` (package manager command reference).
