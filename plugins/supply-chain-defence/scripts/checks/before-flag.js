@@ -25,6 +25,36 @@ function getPnpmReleaseAge(cwd) {
   return parseInt(match[1], 10) / 1440;
 }
 
+// Parse .yarnrc.yml for npmMinimumReleaseAge
+// Accepts minutes (integer) or duration strings ("7d", "1w", "168h")
+function getYarnReleaseAge(cwd) {
+  const yarnrcPath = path.join(cwd, ".yarnrc.yml");
+  if (!fs.existsSync(yarnrcPath)) return null;
+  const content = fs.readFileSync(yarnrcPath, "utf8");
+  const match = content.match(/npmMinimumReleaseAge\s*:\s*["']?(\S+?)["']?\s*$/m);
+  if (!match) return null;
+  return parseDurationToDays(match[1]);
+}
+
+// Parse a duration value to days
+// Supports: plain minutes (integer), or suffixed strings: "5d", "1w", "168h", "10080m"
+function parseDurationToDays(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return null;
+
+  // Plain integer = minutes
+  if (/^\d+$/.test(value)) return num / 1440;
+
+  const suffix = value.replace(/^\d+/, "");
+  switch (suffix) {
+    case "m": return num / 1440;
+    case "h": return num / 24;
+    case "d": return num;
+    case "w": return num * 7;
+    default: return num / 1440; // Default to minutes
+  }
+}
+
 // Extract --before date from command string
 function getBeforeDate(command) {
   // Matches --before=2026-04-01 or --before 2026-04-01
@@ -55,7 +85,8 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
   // Check if a release-age setting exists in project config
   const npmrcAge = getNpmrcReleaseAge(cwd);
   const pnpmAge = getPnpmReleaseAge(cwd);
-  const configuredAge = npmrcAge ?? pnpmAge;
+  const yarnAge = getYarnReleaseAge(cwd);
+  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge;
 
   const beforeDateStr = getBeforeDate(command);
 
@@ -75,7 +106,7 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       message:
         `Release age gating is configured but set to ${configuredAge} days, which is below the recommended minimum of ${minDays} days. ` +
         `The March 2026 Axios attack used a version that existed for only 39 minutes — a short window gives attackers room to operate. ` +
-        `Increase \`min-release-age\` in .npmrc to at least ${minDays}, or set \`minimumReleaseAge: ${minDays * 1440}\` in pnpm-workspace.yaml.`,
+        `Increase \`min-release-age\` in .npmrc to at least ${minDays}, set \`minimumReleaseAge: ${minDays * 1440}\` in pnpm-workspace.yaml, or set \`npmMinimumReleaseAge: "${minDays}d"\` in .yarnrc.yml.`,
       details: { key: `age-too-low-${configuredAge}`, configuredAge, minDays },
     };
   }
@@ -111,8 +142,9 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
   return {
     status: "block",
     message:
-      `No release age protection configured. Add \`min-release-age=${minDays}\` to .npmrc ` +
-      `(or \`minimumReleaseAge: ${minDays * 1440}\` in pnpm-workspace.yaml) to prevent installing ` +
+      `No release age protection configured. Add \`min-release-age=${minDays}\` to .npmrc, ` +
+      `\`minimumReleaseAge: ${minDays * 1440}\` to pnpm-workspace.yaml, or ` +
+      `\`npmMinimumReleaseAge: "${minDays}d"\` to .yarnrc.yml to prevent installing ` +
       `packages published in the last ${minDays} days.\n\n` +
       `Why this matters: the March 2026 Axios supply chain attack compromised versions that existed ` +
       `for only 39 minutes before being detected. A ${minDays}-day minimum gives the community time ` +
@@ -127,6 +159,8 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
 if (require.main !== module) {
   module.exports.getNpmrcReleaseAge = getNpmrcReleaseAge;
   module.exports.getPnpmReleaseAge = getPnpmReleaseAge;
+  module.exports.getYarnReleaseAge = getYarnReleaseAge;
+  module.exports.parseDurationToDays = parseDurationToDays;
   module.exports.getBeforeDate = getBeforeDate;
   module.exports.daysAgo = daysAgo;
 }
