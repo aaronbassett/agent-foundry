@@ -13,7 +13,8 @@ const {
   formatAlwaysBlockOutput,
   formatSessionStartOutput,
   formatAsyncOutput,
-  formatContextOutput,
+  formatSubagentStartOutput,
+  formatSideEffectOutput,
   readState,
   writeState,
 } = require("../scripts/runner");
@@ -246,14 +247,15 @@ describe("formatAsyncOutput", () => {
   });
 });
 
-// --- formatContextOutput ---
+// --- formatSubagentStartOutput ---
 
-describe("formatContextOutput", () => {
-  it("returns additionalContext from messages", () => {
+describe("formatSubagentStartOutput", () => {
+  it("returns additionalContext for SubagentStart", () => {
     const results = [
       { status: "info", message: "Package manager: pnpm" },
     ];
-    const output = formatContextOutput(results);
+    const output = formatSubagentStartOutput(results);
+    assert.strictEqual(output.hookSpecificOutput.hookEventName, "SubagentStart");
     assert.ok(output.hookSpecificOutput.additionalContext.includes("pnpm"));
   });
 
@@ -261,8 +263,38 @@ describe("formatContextOutput", () => {
     const results = [
       { status: "info", message: "" },
     ];
-    const output = formatContextOutput(results);
-    // message is empty string which is falsy, so filtered out
+    const output = formatSubagentStartOutput(results);
+    assert.strictEqual(output, null);
+  });
+});
+
+// --- formatSideEffectOutput ---
+
+describe("formatSideEffectOutput", () => {
+  it("persists security summary to state", () => {
+    const state = emptyState();
+    const results = [
+      { status: "info", message: "Package manager: pnpm" },
+    ];
+    formatSideEffectOutput(results, state);
+    assert.ok(state.lastSecuritySummary.includes("pnpm"));
+  });
+
+  it("returns systemMessage for user", () => {
+    const state = emptyState();
+    const results = [
+      { status: "info", message: "Some context" },
+    ];
+    const output = formatSideEffectOutput(results, state);
+    assert.ok(output.systemMessage);
+  });
+
+  it("returns null for empty messages", () => {
+    const state = emptyState();
+    const results = [
+      { status: "info", message: "" },
+    ];
+    const output = formatSideEffectOutput(results, state);
     assert.strictEqual(output, null);
   });
 });
