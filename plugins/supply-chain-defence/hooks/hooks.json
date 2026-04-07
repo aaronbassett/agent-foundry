@@ -1,0 +1,165 @@
+{
+  "description": "Supply chain defence hooks — deterministic Node.js scripts guarding npm/pnpm/yarn operations",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/sync.sh",
+            "timeout": 10,
+            "statusMessage": "Syncing supply chain scripts"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile quick",
+            "timeout": 30,
+            "statusMessage": "Supply chain health check"
+          }
+        ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile deep",
+            "async": true,
+            "timeout": 300,
+            "statusMessage": "Deep supply chain audit"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(npm *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Bash(pnpm *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Bash(yarn *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Bash(npx *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(**/package.json)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile edit-guard",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(**/package.json)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile write-guard",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(npm *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile post-install-audit",
+            "async": true,
+            "timeout": 180
+          },
+          {
+            "type": "command",
+            "if": "Bash(pnpm *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile post-install-audit",
+            "async": true,
+            "timeout": 180
+          },
+          {
+            "type": "command",
+            "if": "Bash(yarn *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile post-install-audit",
+            "async": true,
+            "timeout": 180
+          },
+          {
+            "type": "command",
+            "if": "Bash(npx *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile npx-post-audit",
+            "async": true,
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "FileChanged": [
+      {
+        "matcher": "package-lock.json|pnpm-lock.yaml|yarn.lock|.npmrc",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile file-changed",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto|manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile pre-compact",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile subagent-context",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
