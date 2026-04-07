@@ -291,7 +291,22 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  process.exit(1);
-});
+// Export internals for testing
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err.message);
+    process.exit(1);
+  });
+} else {
+  module.exports = {
+    shouldBlock,
+    recordBlock,
+    formatPreToolUseOutput,
+    formatAlwaysBlockOutput,
+    formatSessionStartOutput,
+    formatAsyncOutput,
+    formatContextOutput,
+    readState,
+    writeState,
+  };
+}
