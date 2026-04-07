@@ -1,0 +1,88 @@
+{
+  "profiles": {
+    "quick": [
+      "npmrc-hardened",
+      "socket-present",
+      "package-manager",
+      "lockfile-present",
+      "typosquat-bulk"
+    ],
+    "deep": [
+      "npm-audit",
+      "lockfile-integrity",
+      "socket-scan",
+      "install-scripts-bulk",
+      "before-flag-config",
+      "sbom-freshness"
+    ],
+    "bash-guard": [
+      "ci-over-install",
+      "before-flag",
+      "typosquat-local",
+      "socket-present",
+      "install-scripts"
+    ],
+    "edit-guard": [
+      "dep-direct-edit"
+    ],
+    "write-guard": [
+      "dep-direct-edit"
+    ],
+    "post-install-audit": [
+      "lockfile-integrity",
+      "lockfile-drift"
+    ],
+    "npx-post-audit": [
+      "typosquat-local",
+      "npx-audit"
+    ],
+    "file-changed": [
+      "lockfile-drift",
+      "npmrc-changed"
+    ],
+    "doctor": [
+      "node-version",
+      "pm-detected",
+      "socket-installed",
+      "lockfile-lint-installed",
+      "cyclonedx-installed",
+      "jq-installed",
+      "scripts-synced"
+    ],
+    "review": [
+      "registry-metadata",
+      "dependency-tree",
+      "maintainer-history",
+      "typosquat-local",
+      "socket-scan",
+      "install-scripts",
+      "provenance-check"
+    ],
+    "pre-compact": [
+      "security-summary"
+    ],
+    "subagent-context": [
+      "security-summary"
+    ]
+  },
+  "severity": {
+    "dep-direct-edit": "always-block",
+    "ci-over-install": "block-then-warn",
+    "before-flag": "block-then-warn",
+    "typosquat-local": "block-then-warn",
+    "typosquat-bulk": "report",
+    "socket-present": "block-then-warn",
+    "install-scripts": "block-then-warn",
+    "npmrc-hardened": "report",
+    "lockfile-integrity": "report",
+    "lockfile-drift": "report",
+    "npm-audit": "report",
+    "lockfile-present": "report",
+    "package-manager": "report"
+  },
+  "thresholds": {
+    "typosquatMaxDistance": 2,
+    "beforeFlagDays": 5,
+    "blockThenWarnTTLHours": 8
+  }
+}

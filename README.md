@@ -19,6 +19,7 @@ Build. Ship. Repeat. A collection of Claude Code plugins for devs.
 | [sdd](plugins/sdd) | Specification-Driven Development: specs, plans, tasks, codebase mapping, and quality gates |
 | [settings-presets](plugins/settings-presets) | Powerline status line and attribution configuration presets |
 | [spec-writer](plugins/spec-writer) | Guided discovery process for writing complete feature specifications |
+| [supply-chain-defence](plugins/supply-chain-defence) | Protect npm/pnpm/yarn projects from supply chain attacks with deterministic hook-based guards |
 | [utils](plugins/utils) | Plugin management utilities: dependency checking, scanning, and root resolution |
 | [worktrees](plugins/worktrees) | Git worktree workflows for parallel AI development |
 

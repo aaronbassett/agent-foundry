@@ -1,7 +1,7 @@
 {
   "name": "agent-foundry",
   "metadata": {
-    "version": "0.10.0",
+    "version": "0.11.0",
     "description": "Personal marketplace for Claude Code plugins, agents, and skills",
     "homepage": "https://github.com/aaronbassett/agent-foundry",
     "repository": "https://github.com/aaronbassett/agent-foundry.git",
@@ -101,6 +101,10 @@
         "review",
         "specimen"
       ]
+    },
+    {
+      "name": "supply-chain-defence",
+      "source": "./plugins/supply-chain-defence"
     }
   ]
 }
