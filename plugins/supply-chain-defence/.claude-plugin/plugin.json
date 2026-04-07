@@ -1,0 +1,23 @@
+{
+  "name": "supply-chain-defence",
+  "version": "0.1.0",
+  "description": "Protect npm/pnpm/yarn projects from supply chain attacks. Deterministic hook-based guards for typosquatting, dependency confusion, lifecycle script exploitation, and lockfile tampering. Orchestrates Socket.dev, lockfile-lint, and npm audit.",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/supply-chain-defence",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "supply-chain",
+    "npm",
+    "pnpm",
+    "typosquatting",
+    "lockfile",
+    "socket-dev",
+    "hooks"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "devs": {
+      "version": "^0.7.0",
+      "help": "Required for dependency management commands (devs:deps-core).\n\nInstall from agent-foundry:\n/plugin marketplace add aaronbassett/agent-foundry\n/plugin install devs@agent-foundry"
+    }
+  },
+  "optionalDependencies": {},
+  "systemDependencies": {},
+  "optionalSystemDependencies": {}
+}
