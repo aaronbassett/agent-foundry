@@ -9,6 +9,7 @@ const CI_COMMANDS = {
 
 module.exports = async function ciOverInstall(input, state, config, cwd) {
   const command = (input.tool_input?.command || "").trim();
+  const commandLower = command.toLowerCase();
   const pm = state.detectedPackageManager || "npm";
 
   const patterns = [
@@ -30,17 +31,17 @@ module.exports = async function ciOverInstall(input, state, config, cwd) {
   ];
 
   const isBareInstall =
-    patterns.some((p) => p.test(command)) ||
-    patternsWithFlags.some((p) => p.test(command));
+    patterns.some((p) => p.test(commandLower)) ||
+    patternsWithFlags.some((p) => p.test(commandLower));
 
   if (!isBareInstall) {
     return { status: "pass", message: "Not a bare install command", details: {} };
   }
 
   if (
-    /\bnpm\s+ci\b/.test(command) ||
-    /--frozen-lockfile/.test(command) ||
-    /--immutable/.test(command)
+    /\bnpm\s+ci\b/.test(commandLower) ||
+    /--frozen-lockfile/.test(commandLower) ||
+    /--immutable/.test(commandLower)
   ) {
     return { status: "pass", message: "Already using clean install", details: {} };
   }

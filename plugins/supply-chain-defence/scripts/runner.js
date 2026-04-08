@@ -24,6 +24,7 @@ function parseArgs(argv) {
 // --- Stdin reading ---
 
 async function readStdin() {
+  if (process.stdin.isTTY) return {};
   return new Promise((resolve) => {
     let data = "";
     process.stdin.setEncoding("utf8");
@@ -35,8 +36,6 @@ async function readStdin() {
         resolve({});
       }
     });
-    // If stdin is not piped (e.g. running manually), resolve empty after timeout
-    setTimeout(() => resolve({}), 100);
   });
 }
 
@@ -175,7 +174,7 @@ function formatPreToolUseOutput(results, state, config) {
         hookEventName: "PreToolUse",
         permissionDecision: "allow",
         additionalContext:
-          "Supply chain warnings (previously blocked, now allowed):\n" +
+          "Supply chain warnings:\n" +
           warnings.map((w) => `- ${w.message}`).join("\n"),
       },
     };
