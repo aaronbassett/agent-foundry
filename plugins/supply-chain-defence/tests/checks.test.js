@@ -1329,3 +1329,93 @@ describe("dep-direct-edit (Write file path)", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// bun-lockb-detected
+// ---------------------------------------------------------------------------
+describe("bun-lockb-detected", () => {
+  const check = require("../scripts/checks/bun-lockb-detected");
+
+  it("passes when no bun.lockb exists", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when bun.lockb exists without bunfig setting", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("unsupported"));
+      assert.ok(result.message.includes("Bun 1.2 (January 2025)"));
+      assert.ok(result.message.includes("--save-text-lockfile"));
+      assert.ok(result.message.includes("Delete bun.lockb"));
+      assert.ok(!result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns with bunfig removal step when saveBinaryLockfile is set", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nsaveBinaryLockfile = true\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("saveBinaryLockfile"));
+      assert.ok(result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not warn when saveBinaryLockfile is false", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nsaveBinaryLockfile = false\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(!result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bun-gaps
+// ---------------------------------------------------------------------------
+describe("bun-gaps", () => {
+  const check = require("../scripts/checks/bun-gaps");
+
+  it("returns info with guidance when bun is detected", async () => {
+    const state = emptyState();
+    state.detectedPackageManager = "bun";
+    const result = await check({}, state, config, "/tmp");
+    assert.strictEqual(result.status, "info");
+    assert.ok(result.message.includes("Bun detected"));
+    assert.ok(result.message.includes("lockfile-lint"));
+    assert.ok(result.message.includes("bun pm ls"));
+    assert.ok(result.message.includes("npm audit signatures"));
+  });
+
+  it("passes silently when PM is not bun", async () => {
+    const state = emptyState();
+    state.detectedPackageManager = "npm";
+    const result = await check({}, state, config, "/tmp");
+    assert.strictEqual(result.status, "pass");
+  });
+
+  it("passes silently when no PM detected", async () => {
+    const result = await check({}, emptyState(), config, "/tmp");
+    assert.strictEqual(result.status, "pass");
+  });
+});
