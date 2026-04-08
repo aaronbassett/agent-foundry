@@ -2,17 +2,20 @@
 set -euo pipefail
 
 # sync.sh — The ONLY script that uses CLAUDE_PLUGIN_ROOT.
-# Copies scripts/ from plugin root to CLAUDE_PLUGIN_DATA if version mismatch.
+# Generates VERSION from plugin.json, then copies scripts/ to CLAUDE_PLUGIN_DATA if version mismatch.
 
-SOURCE_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+SOURCE_DIR="${PLUGIN_ROOT}/scripts"
 TARGET_DIR="${CLAUDE_PLUGIN_DATA}/scripts"
 
-# Read source version
-if [[ ! -f "${SOURCE_DIR}/VERSION" ]]; then
-  echo "ERROR: ${SOURCE_DIR}/VERSION not found" >&2
+# Generate VERSION from plugin.json (canonical source)
+PLUGIN_JSON="${PLUGIN_ROOT}/.claude-plugin/plugin.json"
+if [[ ! -f "${PLUGIN_JSON}" ]]; then
+  echo "ERROR: ${PLUGIN_JSON} not found" >&2
   exit 0  # Non-blocking — don't break session start
 fi
-SOURCE_VERSION=$(cat "${SOURCE_DIR}/VERSION")
+VERSION=$(node -p "require('${PLUGIN_JSON}').version")
+echo "${VERSION}" > "${SOURCE_DIR}/VERSION"
 
 # Read target version (may not exist yet)
 TARGET_VERSION=""
@@ -21,7 +24,7 @@ if [[ -f "${TARGET_DIR}/VERSION" ]]; then
 fi
 
 # Compare and sync if needed
-if [[ "${SOURCE_VERSION}" != "${TARGET_VERSION}" ]]; then
+if [[ "${VERSION}" != "${TARGET_VERSION}" ]]; then
   mkdir -p "${TARGET_DIR}"
   # Remove old scripts to avoid stale files
   rm -rf "${TARGET_DIR:?}/"*
