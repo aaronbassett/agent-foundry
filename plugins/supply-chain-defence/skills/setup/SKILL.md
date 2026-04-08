@@ -69,7 +69,7 @@ npm install -g lockfile-lint
 
 ### 3. State File
 
-Create `.claude/agent-foundry/supply-chain-defence.local.json` if it doesn't exist. Read `${CLAUDE_SKILL_DIR}/../../examples/supply-chain-defence.local.json` for the expected structure. The initial state should be:
+Create `.claude/agent-foundry/supply-chain-defence.local.json` if it doesn't exist. Read `${CLAUDE_SKILL_DIR}/examples/supply-chain-defence.local.json` for the expected structure. The initial state should be:
 
 ```json
 {

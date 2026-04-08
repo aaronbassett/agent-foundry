@@ -14,7 +14,7 @@ Generate or update project configuration files for supply chain security. This s
 
 ## Reference Examples
 
-Example config files are shipped with this plugin. To locate them from this skill, the path is `${CLAUDE_SKILL_DIR}/../../examples/` (CLAUDE_SKILL_DIR resolves to the skill's own directory within the plugin). Read the relevant example file as a template before generating each config. Adapt the template for the project's detected package manager and lockfile.
+Example config files are in `${CLAUDE_SKILL_DIR}/examples/`. Read the relevant example file as a template before generating each config. Adapt the template for the project's detected package manager and lockfile.
 
 ## Step 1: Detect Package Manager
 
@@ -31,17 +31,17 @@ Check for lockfiles in the project root:
 
 Based on the detected package manager, read the corresponding example template and generate the config:
 
-- **npm:** Read `${CLAUDE_SKILL_DIR}/../../examples/.npmrc` as template. Create or update the project's `.npmrc`. Preserve any existing settings that don't conflict (e.g., auth tokens, scoped registry entries). Only add/update the security-relevant settings from the template.
-- **pnpm:** Read `${CLAUDE_SKILL_DIR}/../../examples/pnpm-workspace.yaml` as template. Add `minimumReleaseAge` to the project's existing `pnpm-workspace.yaml`. Preserve existing `packages` and other settings.
-- **yarn:** Read `${CLAUDE_SKILL_DIR}/../../examples/.yarnrc.yml` as template. Add `npmMinimumReleaseAge` to the project's existing `.yarnrc.yml`. Preserve existing settings.
+- **npm:** Read `${CLAUDE_SKILL_DIR}/examples/.npmrc` as template. Create or update the project's `.npmrc`. Preserve any existing settings that don't conflict (e.g., auth tokens, scoped registry entries). Only add/update the security-relevant settings from the template.
+- **pnpm:** Read `${CLAUDE_SKILL_DIR}/examples/pnpm-workspace.yaml` as template. Add `minimumReleaseAge` to the project's existing `pnpm-workspace.yaml`. Preserve existing `packages` and other settings.
+- **yarn:** Read `${CLAUDE_SKILL_DIR}/examples/.yarnrc.yml` as template. Add `npmMinimumReleaseAge` to the project's existing `.yarnrc.yml`. Preserve existing settings.
 
 ## Step 3: Lockfile-Lint Config
 
-Read `${CLAUDE_SKILL_DIR}/../../examples/.lockfile-lintrc` as template. Create `.lockfile-lintrc` in the project root, substituting `path` and `type` for the detected lockfile and package manager.
+Read `${CLAUDE_SKILL_DIR}/examples/.lockfile-lintrc` as template. Create `.lockfile-lintrc` in the project root, substituting `path` and `type` for the detected lockfile and package manager.
 
 ## Step 4: package.json Security Scripts
 
-Read `${CLAUDE_SKILL_DIR}/../../examples/package-json-scripts.json` as template. Add the `preinstall` and `audit:security` scripts to the project's `package.json`, adapting lockfile path and package manager commands.
+Read `${CLAUDE_SKILL_DIR}/examples/package-json-scripts.json` as template. Add the `preinstall` and `audit:security` scripts to the project's `package.json`, adapting lockfile path and package manager commands.
 
 Use the package manager to add the scripts where possible (e.g., `npm pkg set`). If that's not feasible, edit `package.json` directly — but only the `scripts` field, never dependency fields.
 
@@ -49,7 +49,7 @@ Use the package manager to add the scripts where possible (e.g., `npm pkg set`).
 
 Ask the user if they want a CI security workflow. If yes:
 
-Read `${CLAUDE_SKILL_DIR}/../../examples/github-actions/supply-chain-check.yml` as template. Create `.github/workflows/supply-chain-check.yml`, adapting for the detected package manager.
+Read `${CLAUDE_SKILL_DIR}/examples/github-actions/supply-chain-check.yml` as template. Create `.github/workflows/supply-chain-check.yml`, adapting for the detected package manager.
 
 ## Verification
 
