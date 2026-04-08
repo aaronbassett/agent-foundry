@@ -227,7 +227,7 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
       configInstructions +
       `\nAs a workaround for this specific command, you can add \`--before ${suggestedDate}\` — ` +
       `but this only applies to a single install and must be repeated each time.`,
-    details: { key: command, suggestedDate },
+    details: { key: "no-release-age-configured", suggestedDate },
   };
 };
 

@@ -69,7 +69,7 @@ module.exports = async function provenanceCheck(input, state, config, cwd) {
     const output = err.stdout?.toString() || err.stderr?.toString() || "";
 
     // npm audit signatures returns non-zero when issues found
-    if (output.includes("invalid")) {
+    if (/\d+\s+packages?\s+have\s+invalid/.test(output)) {
       return {
         status: "warn",
         message: "Provenance check found invalid signatures. Run `npm audit signatures` for details.",
