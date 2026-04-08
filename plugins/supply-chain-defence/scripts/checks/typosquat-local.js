@@ -83,6 +83,31 @@ module.exports = async function typosquatLocal(input, state, config, cwd) {
     }
   }
 
+  // Scope-substitution check: same bare name as a popular scoped package, different scope
+  if (suspects.length === 0) {
+    for (const pkg of packageNames) {
+      if (!pkg.startsWith("@")) continue;
+      if (popularPackages.includes(pkg)) continue;
+
+      const [pkgScope, pkgBare] = pkg.slice(1).split("/");
+      if (!pkgBare) continue;
+
+      for (const popular of popularPackages) {
+        if (!popular.startsWith("@")) continue;
+        const [popScope, popBare] = popular.slice(1).split("/");
+        if (pkgBare === popBare && pkgScope !== popScope) {
+          suspects.push({
+            pkg,
+            similarTo: popular,
+            distance: 0,
+            reason: "scope substitution — same package name under a different scope",
+          });
+          break;
+        }
+      }
+    }
+  }
+
   if (suspects.length === 0) {
     return {
       status: "pass",
@@ -93,7 +118,9 @@ module.exports = async function typosquatLocal(input, state, config, cwd) {
 
   const lines = suspects.map(
     (s) =>
-      `"${s.pkg}" is suspiciously similar to "${s.similarTo}" (edit distance: ${s.distance})`
+      s.reason
+        ? `"${s.pkg}" looks like "${s.similarTo}" (${s.reason})`
+        : `"${s.pkg}" is suspiciously similar to "${s.similarTo}" (edit distance: ${s.distance})`
   );
 
   return {
