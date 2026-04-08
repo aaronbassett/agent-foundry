@@ -7,7 +7,7 @@ const LOCKFILES = [
   "pnpm-lock.yaml",
   "package-lock.json",
   "yarn.lock",
-  "bun.lockb",
+  "bun.lock",
 ];
 
 module.exports = async function lockfilePresent(input, state, config, cwd) {

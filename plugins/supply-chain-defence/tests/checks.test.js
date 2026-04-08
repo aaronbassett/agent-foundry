@@ -740,6 +740,33 @@ describe("package-manager", () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("detects bun from bun.lock", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lock"), "{}");
+    try {
+      const state = emptyState();
+      const result = await check({}, state, config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.strictEqual(result.details.pm, "bun");
+      assert.strictEqual(state.detectedPackageManager, "bun");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects bun from bun.lockb (fallback)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    try {
+      const state = emptyState();
+      const result = await check({}, state, config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.strictEqual(result.details.pm, "bun");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -775,6 +802,18 @@ describe("lockfile-present", () => {
     try {
       const result = await check({}, emptyState(), config, tmpDir);
       assert.strictEqual(result.status, "info");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects bun.lock", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lock"), "{}");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("bun.lock"));
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
