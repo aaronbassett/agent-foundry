@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-defence",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Protect npm/pnpm/yarn projects from supply chain attacks. Deterministic hook-based guards for typosquatting, dependency confusion, lifecycle script exploitation, and lockfile tampering. Orchestrates Socket.dev, lockfile-lint, and npm audit.",
   "author": {
     "name": "Aaron Bassett",
