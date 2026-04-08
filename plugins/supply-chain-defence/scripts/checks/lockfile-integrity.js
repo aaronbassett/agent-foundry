@@ -1,6 +1,6 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
@@ -9,6 +9,7 @@ function detectLockfile(cwd) {
     { file: "pnpm-lock.yaml", type: "pnpm" },
     { file: "package-lock.json", type: "npm" },
     { file: "yarn.lock", type: "yarn" },
+    { file: "bun.lock", type: "bun" },
   ];
   for (const { file, type } of lockfiles) {
     if (fs.existsSync(path.join(cwd, file))) {
@@ -28,13 +29,12 @@ module.exports = async function lockfileIntegrity(input, state, config, cwd) {
     };
   }
 
-  try {
-    execSync("npx lockfile-lint --version", {
-      cwd,
-      stdio: "pipe",
-      timeout: 10000,
-    });
-  } catch {
+  const versionCheck = spawnSync("npx", ["lockfile-lint", "--version"], {
+    cwd,
+    stdio: "pipe",
+    timeout: 10000,
+  });
+  if (versionCheck.status !== 0 || versionCheck.error) {
     return {
       status: "warn",
       message:
@@ -43,23 +43,24 @@ module.exports = async function lockfileIntegrity(input, state, config, cwd) {
     };
   }
 
-  try {
-    const result = execSync(
-      `npx lockfile-lint --path ${lockfile.file} --type ${lockfile.type} --allowed-hosts npm --validate-https`,
-      { cwd, stdio: "pipe", timeout: 30000, encoding: "utf8" }
-    );
+  const result = spawnSync(
+    "npx",
+    ["lockfile-lint", "--path", lockfile.file, "--type", lockfile.type, "--allowed-hosts", "npm", "--validate-https"],
+    { cwd, stdio: "pipe", timeout: 30000, encoding: "utf8" }
+  );
 
+  if (result.status === 0) {
     return {
       status: "pass",
       message: `Lockfile integrity check passed (${lockfile.file})`,
-      details: { output: result.trim() },
-    };
-  } catch (err) {
-    const stderr = err.stderr?.toString() || err.stdout?.toString() || "";
-    return {
-      status: "warn",
-      message: `Lockfile integrity issues found in ${lockfile.file}:\n${stderr.trim()}`,
-      details: { output: stderr.trim() },
+      details: { output: (result.stdout || "").trim() },
     };
   }
+
+  const stderr = (result.stderr || result.stdout || "").trim();
+  return {
+    status: "warn",
+    message: `Lockfile integrity issues found in ${lockfile.file}:\n${stderr}`,
+    details: { output: stderr },
+  };
 };

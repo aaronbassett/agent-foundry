@@ -42,3 +42,6 @@ docs/
 discovery/
 .sdd/
 .env
+
+# Midnight expert plugin local settings
+.midnight-expert/

@@ -1,20 +1,13 @@
 "use strict";
-
-const { execSync } = require("child_process");
+const { spawnSync } = require("child_process");
 
 module.exports = async function socketPresent(input, state, config, cwd) {
-  try {
-    execSync("socket --version", {
-      cwd,
-      stdio: "pipe",
-      timeout: 5000,
-    });
-    return {
-      status: "pass",
-      message: "Socket.dev CLI is installed",
-      details: {},
-    };
-  } catch {
+  const result = spawnSync("socket", ["--version"], {
+    cwd,
+    stdio: "pipe",
+    timeout: 5000,
+  });
+  if (result.status !== 0 || result.error) {
     return {
       status: "block",
       message:
@@ -22,4 +15,9 @@ module.exports = async function socketPresent(input, state, config, cwd) {
       details: { key: "_" },
     };
   }
+  return {
+    status: "pass",
+    message: "Socket.dev CLI is installed",
+    details: {},
+  };
 };

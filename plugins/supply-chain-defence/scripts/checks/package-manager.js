@@ -7,6 +7,7 @@ const LOCKFILE_MAP = [
   { file: "pnpm-lock.yaml", pm: "pnpm" },
   { file: "package-lock.json", pm: "npm" },
   { file: "yarn.lock", pm: "yarn" },
+  { file: "bun.lock", pm: "bun" },
   { file: "bun.lockb", pm: "bun" },
 ];
 

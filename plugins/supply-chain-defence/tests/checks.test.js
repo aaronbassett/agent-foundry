@@ -412,6 +412,58 @@ describe("before-flag", () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("passes when bunfig.toml has minimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 432000\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when bunfig.toml has minimumReleaseAge < 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 86400\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("below the recommended minimum"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks bun add with no release age config and no --before suggestion", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const state = emptyState();
+      state.detectedPackageManager = "bun";
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        state,
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("bunfig.toml"));
+      assert.ok(!result.message.includes("--before"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -452,6 +504,13 @@ describe("buildConfigInstructions", () => {
   it("uses correct day-to-minute conversion", () => {
     const result = buildConfigInstructions(7, "pnpm");
     assert.ok(result.includes("minimumReleaseAge: 10080")); // 7 * 1440
+  });
+
+  it("puts bun first when detected", () => {
+    const result = buildConfigInstructions(5, "bun");
+    assert.ok(result.startsWith("This project uses bun"));
+    assert.ok(result.includes("bunfig.toml"));
+    assert.ok(result.includes("432000"));
   });
 });
 
@@ -740,6 +799,33 @@ describe("package-manager", () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("detects bun from bun.lock", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lock"), "{}");
+    try {
+      const state = emptyState();
+      const result = await check({}, state, config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.strictEqual(result.details.pm, "bun");
+      assert.strictEqual(state.detectedPackageManager, "bun");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects bun from bun.lockb (fallback)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    try {
+      const state = emptyState();
+      const result = await check({}, state, config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.strictEqual(result.details.pm, "bun");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -775,6 +861,18 @@ describe("lockfile-present", () => {
     try {
       const result = await check({}, emptyState(), config, tmpDir);
       assert.strictEqual(result.status, "info");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects bun.lock", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lock"), "{}");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("bun.lock"));
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -999,6 +1097,17 @@ describe("before-flag-config", () => {
   it("passes when .yarnrc.yml has npmMinimumReleaseAge >= 5 days", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
     fs.writeFileSync(path.join(tmpDir, ".yarnrc.yml"), "npmMinimumReleaseAge: 7d\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when bunfig.toml has minimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 432000\n");
     try {
       const result = await check({}, emptyState(), config, tmpDir);
       assert.strictEqual(result.status, "pass");
@@ -1288,5 +1397,95 @@ describe("dep-direct-edit (Write file path)", () => {
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bun-lockb-detected
+// ---------------------------------------------------------------------------
+describe("bun-lockb-detected", () => {
+  const check = require("../scripts/checks/bun-lockb-detected");
+
+  it("passes when no bun.lockb exists", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when bun.lockb exists without bunfig setting", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("unsupported"));
+      assert.ok(result.message.includes("Bun 1.2 (January 2025)"));
+      assert.ok(result.message.includes("--save-text-lockfile"));
+      assert.ok(result.message.includes("Delete bun.lockb"));
+      assert.ok(!result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns with bunfig removal step when saveBinaryLockfile is set", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nsaveBinaryLockfile = true\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("saveBinaryLockfile"));
+      assert.ok(result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not warn when saveBinaryLockfile is false", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lockb"), "");
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nsaveBinaryLockfile = false\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(!result.message.includes("Remove the"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bun-gaps
+// ---------------------------------------------------------------------------
+describe("bun-gaps", () => {
+  const check = require("../scripts/checks/bun-gaps");
+
+  it("returns info with guidance when bun is detected", async () => {
+    const state = emptyState();
+    state.detectedPackageManager = "bun";
+    const result = await check({}, state, config, "/tmp");
+    assert.strictEqual(result.status, "info");
+    assert.ok(result.message.includes("Bun detected"));
+    assert.ok(result.message.includes("lockfile-lint"));
+    assert.ok(result.message.includes("bun pm ls"));
+    assert.ok(result.message.includes("npm audit signatures"));
+  });
+
+  it("passes silently when PM is not bun", async () => {
+    const state = emptyState();
+    state.detectedPackageManager = "npm";
+    const result = await check({}, state, config, "/tmp");
+    assert.strictEqual(result.status, "pass");
+  });
+
+  it("passes silently when no PM detected", async () => {
+    const result = await check({}, emptyState(), config, "/tmp");
+    assert.strictEqual(result.status, "pass");
   });
 });

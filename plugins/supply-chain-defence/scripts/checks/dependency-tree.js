@@ -1,13 +1,13 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const LS_COMMANDS = {
-  npm: "npm ls --all --json 2>/dev/null",
-  pnpm: "pnpm ls --depth Infinity --json 2>/dev/null",
-  yarn: "yarn info --all --json 2>/dev/null",
+  npm: ["npm", ["ls", "--all", "--json"]],
+  pnpm: ["pnpm", ["ls", "--depth", "Infinity", "--json"]],
+  yarn: ["yarn", ["info", "--all", "--json"]],
 };
 
 function countDeps(tree) {
@@ -32,52 +32,59 @@ module.exports = async function dependencyTree(input, state, config, cwd) {
   }
 
   const pm = state.detectedPackageManager || "npm";
-  const cmd = LS_COMMANDS[pm] || LS_COMMANDS.npm;
+  const cmdEntry = LS_COMMANDS[pm] || LS_COMMANDS.npm;
 
-  try {
-    const output = execSync(cmd, {
-      cwd,
-      stdio: "pipe",
-      timeout: 30000,
-      encoding: "utf8",
-    });
-
-    let tree;
-    try {
-      tree = JSON.parse(output);
-      // pnpm returns an array
-      if (Array.isArray(tree)) tree = tree[0] || {};
-    } catch {
-      return {
-        status: "info",
-        message: "Dependency tree output not parseable",
-        details: {},
-      };
-    }
-
-    const directDeps = Object.keys(tree.dependencies || {}).length;
-    const totalDeps = countDeps(tree);
-
-    const concerns = [];
-    if (totalDeps > 500) {
-      concerns.push(`Large dependency tree (${totalDeps} total packages) increases attack surface`);
-    }
-    if (totalDeps > 1000) {
-      concerns.push("Consider auditing whether all dependencies are necessary");
-    }
-
-    return {
-      status: concerns.length > 0 ? "warn" : "pass",
-      message:
-        `Dependency tree: ${directDeps} direct, ${totalDeps} total (including transitive)` +
-        (concerns.length > 0 ? "\n" + concerns.join("\n") : ""),
-      details: { directDeps, totalDeps, concerns },
-    };
-  } catch (err) {
+  if (!cmdEntry) {
     return {
       status: "info",
-      message: `Could not analyze dependency tree: ${err.message?.slice(0, 100) || "unknown error"}`,
+      message: `Dependency tree analysis not supported for ${pm}. Run \`${pm === "bun" ? "bun pm ls --all" : pm + " ls"}\` manually.`,
       details: {},
     };
   }
+
+  const result = spawnSync(cmdEntry[0], cmdEntry[1], {
+    cwd,
+    stdio: ["pipe", "pipe", "ignore"],
+    timeout: 30000,
+    encoding: "utf8",
+  });
+
+  if (result.error || (result.status !== 0 && !result.stdout)) {
+    return {
+      status: "info",
+      message: `Could not analyze dependency tree: ${result.error?.message || "command failed"}`,
+      details: {},
+    };
+  }
+
+  let tree;
+  try {
+    tree = JSON.parse(result.stdout);
+    if (Array.isArray(tree)) tree = tree[0] || {};
+  } catch {
+    return {
+      status: "info",
+      message: "Dependency tree output not parseable",
+      details: {},
+    };
+  }
+
+  const directDeps = Object.keys(tree.dependencies || {}).length;
+  const totalDeps = countDeps(tree);
+
+  const concerns = [];
+  if (totalDeps > 500) {
+    concerns.push(`Large dependency tree (${totalDeps} total packages) increases attack surface`);
+  }
+  if (totalDeps > 1000) {
+    concerns.push("Consider auditing whether all dependencies are necessary");
+  }
+
+  return {
+    status: concerns.length > 0 ? "warn" : "pass",
+    message:
+      `Dependency tree: ${directDeps} direct, ${totalDeps} total (including transitive)` +
+      (concerns.length > 0 ? "\n" + concerns.join("\n") : ""),
+    details: { directDeps, totalDeps, concerns },
+  };
 };
