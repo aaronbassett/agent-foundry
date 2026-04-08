@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const { extractPackageNames } = require("../utils");
 
 function levenshtein(a, b) {
   const m = a.length;
@@ -19,33 +20,10 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
-function extractPackageNames(command) {
-  const parts = command.split(/\s+/);
-  const packages = [];
-  let pastCommand = false;
-
-  for (const part of parts) {
-    if (!pastCommand) {
-      if (
-        part === "install" ||
-        part === "add" ||
-        part === "i"
-      ) {
-        pastCommand = true;
-      }
-      continue;
-    }
-    if (part.startsWith("-")) continue;
-    const name = part.split("@")[0] || part;
-    if (name) packages.push(part.includes("@") && part.startsWith("@") ? part.split("@").slice(0, 2).join("@") : name);
-  }
-
-  return packages;
-}
-
 module.exports = async function typosquatLocal(input, state, config, cwd) {
   const command = input.tool_input?.command || "";
-  const packageNames = extractPackageNames(command);
+  const packages = extractPackageNames(command);
+  const packageNames = packages.map((p) => p.name);
 
   if (packageNames.length === 0) {
     return { status: "pass", message: "No package names to check", details: {} };
@@ -65,7 +43,9 @@ module.exports = async function typosquatLocal(input, state, config, cwd) {
 
   const maxDist = config.thresholds.typosquatMaxDistance || 2;
   const suspects = [];
+  const alreadyFlagged = new Set();
 
+  // Levenshtein distance check
   for (const pkg of packageNames) {
     if (popularPackages.includes(pkg)) continue;
 
@@ -78,32 +58,32 @@ module.exports = async function typosquatLocal(input, state, config, cwd) {
       const dist = levenshtein(bare, popularBare);
       if (dist > 0 && dist <= maxDist) {
         suspects.push({ pkg, similarTo: popular, distance: dist });
+        alreadyFlagged.add(pkg);
         break;
       }
     }
   }
 
-  // Scope-substitution check: same bare name as a popular scoped package, different scope
-  if (suspects.length === 0) {
-    for (const pkg of packageNames) {
-      if (!pkg.startsWith("@")) continue;
-      if (popularPackages.includes(pkg)) continue;
+  // Scope-substitution check — always runs, not conditional on suspects being empty
+  for (const pkg of packageNames) {
+    if (!pkg.startsWith("@")) continue;
+    if (popularPackages.includes(pkg)) continue;
+    if (alreadyFlagged.has(pkg)) continue;
 
-      const [pkgScope, pkgBare] = pkg.slice(1).split("/");
-      if (!pkgBare) continue;
+    const [pkgScope, pkgBare] = pkg.slice(1).split("/");
+    if (!pkgBare) continue;
 
-      for (const popular of popularPackages) {
-        if (!popular.startsWith("@")) continue;
-        const [popScope, popBare] = popular.slice(1).split("/");
-        if (pkgBare === popBare && pkgScope !== popScope) {
-          suspects.push({
-            pkg,
-            similarTo: popular,
-            distance: 0,
-            reason: "scope substitution — same package name under a different scope",
-          });
-          break;
-        }
+    for (const popular of popularPackages) {
+      if (!popular.startsWith("@")) continue;
+      const [popScope, popBare] = popular.slice(1).split("/");
+      if (pkgBare === popBare && pkgScope !== popScope) {
+        suspects.push({
+          pkg,
+          similarTo: popular,
+          distance: 0,
+          reason: "scope substitution — same package name under a different scope",
+        });
+        break;
       }
     }
   }

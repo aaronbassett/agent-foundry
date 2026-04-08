@@ -1216,3 +1216,77 @@ describe("ci-over-install (case insensitivity)", () => {
     assert.strictEqual(result.status, "block");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 17. typosquat-local: combined Levenshtein + scope-substitution
+// ---------------------------------------------------------------------------
+describe("typosquat-local (combined attacks)", () => {
+  const check = require("../scripts/checks/typosquat-local");
+
+  it("detects both Levenshtein typosquat and scope-substitution in same command", async () => {
+    // axois triggers Levenshtein, @attacker/code-frame triggers scope-substitution
+    const result = await check(
+      { tool_input: { command: "npm install axois @attacker/code-frame" } },
+      emptyState(),
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "block");
+    // Should flag both, not just the first
+    assert.ok(result.details.suspects.length >= 2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 18. dep-direct-edit Write path: file_path guard
+// ---------------------------------------------------------------------------
+describe("dep-direct-edit (Write file path)", () => {
+  const check = require("../scripts/checks/dep-direct-edit");
+
+  it("allows Write to non-package.json files even with dependency-like content", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const configFile = path.join(tmpDir, "config.json");
+    fs.writeFileSync(configFile, JSON.stringify({ dependencies: { foo: "1.0.0" } }));
+    try {
+      const result = await check(
+        {
+          tool_name: "Write",
+          tool_input: {
+            file_path: configFile,
+            content: JSON.stringify({ dependencies: { bar: "2.0.0" } }),
+          },
+        },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("Not writing package.json"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks Write to package.json that changes dependencies", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const pkgFile = path.join(tmpDir, "package.json");
+    fs.writeFileSync(pkgFile, JSON.stringify({ dependencies: { lodash: "^4.17.21" } }));
+    try {
+      const result = await check(
+        {
+          tool_name: "Write",
+          tool_input: {
+            file_path: pkgFile,
+            content: JSON.stringify({ dependencies: { express: "^4.18.0" } }),
+          },
+        },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});

@@ -56,6 +56,13 @@ module.exports = async function depDirectEdit(input, state, config, cwd) {
 
   if (toolName === "Write") {
     const filePath = toolInput.file_path || "";
+    if (!filePath.endsWith("package.json")) {
+      return {
+        status: "pass",
+        message: "Not writing package.json",
+        details: {},
+      };
+    }
     const newContent = toolInput.content || "";
 
     let currentContent = "{}";

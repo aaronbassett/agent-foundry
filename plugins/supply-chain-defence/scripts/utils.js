@@ -3,6 +3,28 @@
 const { spawnSync } = require("child_process");
 
 /**
+ * Validate that a string looks like a valid npm package name.
+ * Rejects path traversal, shell metacharacters, and other invalid input.
+ * Allows version specifiers (e.g., lodash@4.17.21, @babel/core@^7.0.0).
+ */
+function isValidPackageName(name) {
+  // Strip version specifier for validation
+  let bare = name;
+  if (name.startsWith("@")) {
+    // Scoped: @scope/pkg or @scope/pkg@version
+    const match = name.match(/^(@[^@]+\/[^@]+)(?:@.+)?$/);
+    bare = match ? match[1] : name;
+  } else {
+    const atIdx = name.indexOf("@");
+    if (atIdx > 0) bare = name.slice(0, atIdx);
+  }
+
+  // npm package names: lowercase, alphanumeric, hyphens, dots, underscores, tildes
+  // Scoped: @scope/name where scope and name follow the same rules
+  return /^(@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/.test(bare);
+}
+
+/**
  * Safely query npm view for a package, avoiding shell injection.
  * Uses spawnSync with array args — never invokes a shell.
  *
@@ -13,6 +35,10 @@ const { spawnSync } = require("child_process");
  * @returns {{ ok: boolean, data: any, error?: string }}
  */
 function npmView(pkg, fields, cwd, timeout = 15000) {
+  // Defence-in-depth: reject obviously invalid package names
+  if (!pkg || !isValidPackageName(pkg)) {
+    return { ok: false, data: null, error: `Invalid package name: ${pkg}` };
+  }
   const args = ["view", pkg, ...fields];
   const result = spawnSync("npm", args, {
     cwd,
@@ -93,4 +119,4 @@ function extractPackageNames(command) {
   return packages;
 }
 
-module.exports = { npmView, extractPackageNames };
+module.exports = { npmView, extractPackageNames, isValidPackageName };

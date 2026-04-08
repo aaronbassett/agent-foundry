@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { extractPackageNames, npmView } = require("../scripts/utils");
+const { extractPackageNames, npmView, isValidPackageName } = require("../scripts/utils");
 
 describe("extractPackageNames", () => {
   it("extracts simple package names", () => {
@@ -142,5 +142,67 @@ describe("extractNpxPackage", () => {
   it("returns null for bare npx", () => {
     const result = extractNpxPackage("npx");
     assert.strictEqual(result, null);
+  });
+});
+
+describe("isValidPackageName", () => {
+  it("accepts simple package names", () => {
+    assert.strictEqual(isValidPackageName("lodash"), true);
+    assert.strictEqual(isValidPackageName("express"), true);
+    assert.strictEqual(isValidPackageName("is-number"), true);
+  });
+
+  it("accepts scoped packages", () => {
+    assert.strictEqual(isValidPackageName("@babel/core"), true);
+    assert.strictEqual(isValidPackageName("@types/node"), true);
+  });
+
+  it("accepts packages with version specifiers", () => {
+    assert.strictEqual(isValidPackageName("lodash@4.17.21"), true);
+    assert.strictEqual(isValidPackageName("@babel/core@^7.0.0"), true);
+  });
+
+  it("rejects path traversal", () => {
+    assert.strictEqual(isValidPackageName("../../../etc/passwd"), false);
+    assert.strictEqual(isValidPackageName("./local-file"), false);
+  });
+
+  it("rejects shell metacharacters", () => {
+    assert.strictEqual(isValidPackageName("pkg;rm -rf /"), false);
+    assert.strictEqual(isValidPackageName("pkg|cat /etc/passwd"), false);
+    assert.strictEqual(isValidPackageName("$(echo hack)"), false);
+    assert.strictEqual(isValidPackageName("`echo hack`"), false);
+  });
+
+  it("rejects empty strings", () => {
+    assert.strictEqual(isValidPackageName(""), false);
+  });
+
+  it("rejects uppercase names", () => {
+    // npm package names must be lowercase
+    assert.strictEqual(isValidPackageName("MyPackage"), false);
+  });
+
+  it("rejects names with spaces", () => {
+    assert.strictEqual(isValidPackageName("my package"), false);
+  });
+});
+
+describe("npmView rejects invalid package names", () => {
+  it("rejects path traversal before spawning process", () => {
+    const result = npmView("../../../etc/passwd", ["--json"], "/tmp", 5000);
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.error.includes("Invalid package name"));
+  });
+
+  it("rejects shell injection before spawning process", () => {
+    const result = npmView("pkg;rm -rf /", ["--json"], "/tmp", 5000);
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.error.includes("Invalid package name"));
+  });
+
+  it("rejects empty string", () => {
+    const result = npmView("", ["--json"], "/tmp", 5000);
+    assert.strictEqual(result.ok, false);
   });
 });
