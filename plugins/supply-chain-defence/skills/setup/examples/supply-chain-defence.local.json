@@ -1,0 +1,22 @@
+{
+  "detectedPackageManager": "pnpm",
+  "lastDeepAudit": 1712505600,
+  "lastSecuritySummary": "Package manager: pnpm",
+  "blocked": {
+    "typosquat-local": {
+      "axois": 1712505600
+    },
+    "install-scripts": {
+      "suspicious-pkg": 1712505600
+    },
+    "ci-over-install": {
+      "_": 1712505600
+    },
+    "before-flag": {
+      "pnpm add some-package": 1712505600
+    },
+    "socket-present": {
+      "_": 1712505600
+    }
+  }
+}

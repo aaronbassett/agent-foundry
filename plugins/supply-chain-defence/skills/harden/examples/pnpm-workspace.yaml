@@ -1,0 +1,13 @@
+# Supply chain defence — hardened pnpm configuration
+#
+# Add minimumReleaseAge to your existing pnpm-workspace.yaml.
+# Value is in minutes: 7200 = 5 days.
+#
+# pnpm 10.16+ defaults minimumReleaseAge to 1440 (1 day). We recommend
+# increasing to at least 7200 (5 days) to give the community more time
+# to detect and report malicious packages.
+
+packages:
+  - "packages/*"
+
+minimumReleaseAge: 7200

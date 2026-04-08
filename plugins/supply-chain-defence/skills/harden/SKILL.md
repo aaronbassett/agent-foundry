@@ -12,87 +12,48 @@ description: >-
 
 Generate or update project configuration files for supply chain security. This skill writes config files — it does not install tools (use `setup` for that).
 
-## 1. .npmrc
+## Reference Examples
 
-Check if `.npmrc` exists in the project root. Create or update with these settings:
+Example config files are in `${CLAUDE_SKILL_DIR}/examples/`. Read the relevant example file as a template before generating each config. Adapt the template for the project's detected package manager and lockfile.
 
-```ini
-# Supply chain defence — hardened npm configuration
-ignore-scripts=true
-package-lock=true
-registry=https://registry.npmjs.org/
-strict-ssl=true
-audit-level=low
-npx-auto-install=false
-save-exact=true
-min-release-age=5
-```
+## Step 1: Detect Package Manager
 
-**Important:** Preserve any existing settings the user has that don't conflict (e.g., custom `//registry.npmjs.org/:_authToken` lines, `@scope:registry` entries). Only add/update the security-relevant settings listed above.
+Check for lockfiles in the project root:
 
-## 2. .lockfile-lintrc
+| Lock file | Package manager | Config file |
+|---|---|---|
+| `pnpm-lock.yaml` | pnpm | `pnpm-workspace.yaml` |
+| `package-lock.json` | npm | `.npmrc` |
+| `yarn.lock` | yarn | `.yarnrc.yml` |
+| None | pnpm (default) | `pnpm-workspace.yaml` |
 
-Create `.lockfile-lintrc` in the project root if `lockfile-lint` is installed:
+## Step 2: Package Manager Config
 
-```json
-{
-  "path": "<detected-lockfile>",
-  "type": "<detected-pm>",
-  "allowed-hosts": ["npm"],
-  "validate-https": true,
-  "validate-integrity": true
-}
-```
+Based on the detected package manager, read the corresponding example template and generate the config:
 
-Set `path` and `type` based on the detected package manager and lockfile.
+- **npm:** Read `${CLAUDE_SKILL_DIR}/examples/.npmrc` as template. Create or update the project's `.npmrc`. Preserve any existing settings that don't conflict (e.g., auth tokens, scoped registry entries). Only add/update the security-relevant settings from the template.
+- **pnpm:** Read `${CLAUDE_SKILL_DIR}/examples/pnpm-workspace.yaml` as template. Add `minimumReleaseAge` to the project's existing `pnpm-workspace.yaml`. Preserve existing `packages` and other settings.
+- **yarn:** Read `${CLAUDE_SKILL_DIR}/examples/.yarnrc.yml` as template. Add `npmMinimumReleaseAge` to the project's existing `.yarnrc.yml`. Preserve existing settings.
 
-## 3. package.json Scripts
+## Step 3: Lockfile-Lint Config
 
-Add or update security-related scripts in `package.json`. Use the package manager (not direct file editing) where possible. For scripts that must be added to `package.json`, use `npm pkg set` or equivalent:
+Read `${CLAUDE_SKILL_DIR}/examples/.lockfile-lintrc` as template. Create `.lockfile-lintrc` in the project root, substituting `path` and `type` for the detected lockfile and package manager.
 
-**preinstall script:**
-```bash
-npm pkg set scripts.preinstall="npx lockfile-lint --path <lockfile> --type <pm> --allowed-hosts npm --validate-https"
-```
+## Step 4: package.json Security Scripts
 
-**audit script:**
-```bash
-npm pkg set scripts.audit:security="npm audit && npx lockfile-lint --path <lockfile> --type <pm> --allowed-hosts npm --validate-https"
-```
+Read `${CLAUDE_SKILL_DIR}/examples/package-json-scripts.json` as template. Add the `preinstall` and `audit:security` scripts to the project's `package.json`, adapting lockfile path and package manager commands.
 
-Adapt commands for the detected package manager (pnpm/yarn equivalents).
+Use the package manager to add the scripts where possible (e.g., `npm pkg set`). If that's not feasible, edit `package.json` directly — but only the `scripts` field, never dependency fields.
 
-## 4. CI Workflow Snippet (GitHub Actions)
+## Step 5: CI Workflow (GitHub Actions)
 
-Offer to create `.github/workflows/supply-chain-check.yml`:
+Ask the user if they want a CI security workflow. If yes:
 
-```yaml
-name: Supply Chain Check
-on: [push, pull_request]
-
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm ci
-      - name: Audit
-        run: npm audit
-      - name: Lockfile lint
-        run: npx lockfile-lint --path package-lock.json --type npm --allowed-hosts npm --validate-https
-      - name: Audit signatures
-        run: npm audit signatures
-```
-
-Adapt for the detected package manager.
+Read `${CLAUDE_SKILL_DIR}/examples/github-actions/supply-chain-check.yml` as template. Create `.github/workflows/supply-chain-check.yml`, adapting for the detected package manager.
 
 ## Verification
 
 After making changes, summarise what was created/updated and remind the user to:
 1. Review the changes
 2. Commit the new config files
-3. Restart Claude Code if hooks need to pick up new `.npmrc` settings
+3. Restart Claude Code if hooks need to pick up new config settings

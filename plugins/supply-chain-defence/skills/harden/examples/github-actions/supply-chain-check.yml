@@ -1,0 +1,31 @@
+# Supply chain defence — GitHub Actions workflow
+#
+# Add to .github/workflows/supply-chain-check.yml
+# Adapt the package manager commands for your project (this example uses pnpm).
+
+name: Supply Chain Check
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit
+
+      - name: Lint lockfile
+        run: npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https
+
+      - name: Verify provenance signatures
+        run: npm audit signatures
