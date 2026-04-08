@@ -206,3 +206,34 @@ describe("npmView rejects invalid package names", () => {
     assert.strictEqual(result.ok, false);
   });
 });
+
+describe("levenshtein", () => {
+  const { levenshtein } = require("../scripts/utils");
+
+  it("returns 0 for identical strings", () => {
+    assert.strictEqual(levenshtein("abc", "abc"), 0);
+  });
+
+  it("returns length for empty vs non-empty", () => {
+    assert.strictEqual(levenshtein("", "abc"), 3);
+    assert.strictEqual(levenshtein("abc", ""), 3);
+  });
+
+  it("returns 1 for single substitution", () => {
+    assert.strictEqual(levenshtein("cat", "car"), 1);
+  });
+
+  it("returns 1 for single insertion", () => {
+    assert.strictEqual(levenshtein("cat", "cats"), 1);
+  });
+
+  it("returns 1 for single deletion", () => {
+    assert.strictEqual(levenshtein("cats", "cat"), 1);
+  });
+
+  it("returns correct distance for typosquat examples", () => {
+    assert.strictEqual(levenshtein("axois", "axios"), 2);
+    assert.strictEqual(levenshtein("chalkk", "chalk"), 1);
+    assert.strictEqual(levenshtein("loadash", "lodash"), 1);
+  });
+});
