@@ -412,6 +412,58 @@ describe("before-flag", () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("passes when bunfig.toml has minimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 432000\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when bunfig.toml has minimumReleaseAge < 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 86400\n");
+    try {
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        emptyState(),
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("below the recommended minimum"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks bun add with no release age config and no --before suggestion", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const state = emptyState();
+      state.detectedPackageManager = "bun";
+      const result = await check(
+        { tool_input: { command: "bun add lodash" } },
+        state,
+        config,
+        tmpDir
+      );
+      assert.strictEqual(result.status, "block");
+      assert.ok(result.message.includes("bunfig.toml"));
+      assert.ok(!result.message.includes("--before"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -452,6 +504,13 @@ describe("buildConfigInstructions", () => {
   it("uses correct day-to-minute conversion", () => {
     const result = buildConfigInstructions(7, "pnpm");
     assert.ok(result.includes("minimumReleaseAge: 10080")); // 7 * 1440
+  });
+
+  it("puts bun first when detected", () => {
+    const result = buildConfigInstructions(5, "bun");
+    assert.ok(result.startsWith("This project uses bun"));
+    assert.ok(result.includes("bunfig.toml"));
+    assert.ok(result.includes("432000"));
   });
 });
 
@@ -1038,6 +1097,17 @@ describe("before-flag-config", () => {
   it("passes when .yarnrc.yml has npmMinimumReleaseAge >= 5 days", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
     fs.writeFileSync(path.join(tmpDir, ".yarnrc.yml"), "npmMinimumReleaseAge: 7d\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when bunfig.toml has minimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bunfig.toml"), "[install]\nminimumReleaseAge = 432000\n");
     try {
       const result = await check({}, emptyState(), config, tmpDir);
       assert.strictEqual(result.status, "pass");

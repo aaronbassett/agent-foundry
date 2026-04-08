@@ -27,11 +27,18 @@ const PM_INSTRUCTIONS = {
     example: (days) =>
       `Add \`npmMinimumReleaseAge: "${days}d"\` to .yarnrc.yml`,
   },
+  bun: {
+    name: "bun",
+    file: "bunfig.toml",
+    setting: "minimumReleaseAge",
+    example: (days) =>
+      `Add \`minimumReleaseAge = ${days * 86400}\` under [install] in bunfig.toml (value is in seconds)`,
+  },
 };
 
 // Build PM-specific configuration instructions, with detected PM first
 function buildConfigInstructions(minDays, detectedPm) {
-  const allPms = ["npm", "pnpm", "yarn"];
+  const allPms = ["npm", "pnpm", "yarn", "bun"];
   const primary = detectedPm && PM_INSTRUCTIONS[detectedPm] ? detectedPm : null;
   const others = allPms.filter((pm) => pm !== primary);
 
@@ -105,6 +112,16 @@ function getYarnReleaseAge(cwd) {
   return parseDurationToDays(match[1]);
 }
 
+// Parse bunfig.toml for minimumReleaseAge (value in seconds for bun)
+function getBunfigReleaseAge(cwd) {
+  const bunfigPath = path.join(cwd, "bunfig.toml");
+  if (!fs.existsSync(bunfigPath)) return null;
+  const content = fs.readFileSync(bunfigPath, "utf8");
+  const match = content.match(/minimumReleaseAge\s*=\s*(\d+)/);
+  if (!match) return null;
+  return parseInt(match[1], 10) / 86400;
+}
+
 // Parse a duration value to days
 // Supports: plain minutes (integer), or suffixed strings: "5d", "1w", "168h", "10080m"
 function parseDurationToDays(value) {
@@ -158,7 +175,8 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
   const npmrcAge = getNpmrcReleaseAge(cwd);
   const pnpmAge = getPnpmReleaseAge(cwd);
   const yarnAge = getYarnReleaseAge(cwd);
-  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge;
+  const bunAge = getBunfigReleaseAge(cwd);
+  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge ?? bunAge;
 
   const beforeDateStr = getBeforeDate(command);
 
@@ -214,19 +232,24 @@ module.exports = async function beforeFlag(input, state, config, cwd) {
     .toISOString()
     .split("T")[0];
 
+  const baseMessage =
+    `No release age protection configured.\n\n` +
+    `Why this matters: while high-profile attacks are caught quickly, many malicious packages go ` +
+    `undetected for days or weeks. In 2025 alone, over 450,000 malicious npm packages were published. ` +
+    `A ${minDays}-day minimum gives security tools and the community time to flag threats before ` +
+    `they reach your project.\n\n` +
+    `Configuring a minimum release age in your package manager's settings is strongly preferred ` +
+    `as it protects all installs automatically.\n\n` +
+    configInstructions;
+
+  const beforeWorkaround = detectedPm === "bun"
+    ? ""
+    : `\nAs a workaround for this specific command, you can add \`--before ${suggestedDate}\` — ` +
+      `but this only applies to a single install and must be repeated each time.`;
+
   return {
     status: "block",
-    message:
-      `No release age protection configured.\n\n` +
-      `Why this matters: while high-profile attacks are caught quickly, many malicious packages go ` +
-      `undetected for days or weeks. In 2025 alone, over 450,000 malicious npm packages were published. ` +
-      `A ${minDays}-day minimum gives security tools and the community time to flag threats before ` +
-      `they reach your project.\n\n` +
-      `Configuring a minimum release age in your package manager's settings is strongly preferred ` +
-      `as it protects all installs automatically.\n\n` +
-      configInstructions +
-      `\nAs a workaround for this specific command, you can add \`--before ${suggestedDate}\` — ` +
-      `but this only applies to a single install and must be repeated each time.`,
+    message: baseMessage + beforeWorkaround,
     details: { key: "no-release-age-configured", suggestedDate },
   };
 };
@@ -236,6 +259,7 @@ if (require.main !== module) {
   module.exports.getNpmrcReleaseAge = getNpmrcReleaseAge;
   module.exports.getPnpmReleaseAge = getPnpmReleaseAge;
   module.exports.getYarnReleaseAge = getYarnReleaseAge;
+  module.exports.getBunfigReleaseAge = getBunfigReleaseAge;
   module.exports.parseDurationToDays = parseDurationToDays;
   module.exports.getBeforeDate = getBeforeDate;
   module.exports.daysAgo = daysAgo;

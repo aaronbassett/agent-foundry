@@ -4,13 +4,15 @@ const {
   getNpmrcReleaseAge,
   getPnpmReleaseAge,
   getYarnReleaseAge,
+  getBunfigReleaseAge,
 } = require("./before-flag");
 
 module.exports = async function beforeFlagConfig(input, state, config, cwd) {
   const npmrcAge = getNpmrcReleaseAge(cwd);
   const pnpmAge = getPnpmReleaseAge(cwd);
   const yarnAge = getYarnReleaseAge(cwd);
-  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge;
+  const bunAge = getBunfigReleaseAge(cwd);
+  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge ?? bunAge;
 
   if (configuredAge === null) {
     return {
@@ -18,7 +20,7 @@ module.exports = async function beforeFlagConfig(input, state, config, cwd) {
       message:
         "No release age gating configured in any package manager config. " +
         "Add min-release-age to .npmrc, minimumReleaseAge to pnpm-workspace.yaml, " +
-        "or npmMinimumReleaseAge to .yarnrc.yml.",
+        "npmMinimumReleaseAge to .yarnrc.yml, or minimumReleaseAge under [install] in bunfig.toml.",
       details: {},
     };
   }
