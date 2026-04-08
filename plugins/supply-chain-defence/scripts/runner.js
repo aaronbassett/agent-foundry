@@ -51,10 +51,14 @@ function readState(cwd) {
 }
 
 function writeState(cwd, state) {
-  const statePath = path.join(cwd, STATE_FILENAME);
-  const stateDir = path.dirname(statePath);
-  fs.mkdirSync(stateDir, { recursive: true });
-  fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+  try {
+    const statePath = path.join(cwd, STATE_FILENAME);
+    const stateDir = path.dirname(statePath);
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+  } catch {
+    // Non-blocking — state persistence is best-effort
+  }
 }
 
 // --- Severity logic ---
