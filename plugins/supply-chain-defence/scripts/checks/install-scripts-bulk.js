@@ -1,6 +1,6 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { npmView } = require("../utils");
 const fs = require("fs");
 const path = require("path");
 
@@ -22,6 +22,8 @@ module.exports = async function installScriptsBulk(input, state, config, cwd) {
   const allDeps = Object.keys({
     ...(pkg.dependencies || {}),
     ...(pkg.devDependencies || {}),
+    ...(pkg.peerDependencies || {}),
+    ...(pkg.optionalDependencies || {}),
   });
 
   if (allDeps.length === 0) {
@@ -31,22 +33,14 @@ module.exports = async function installScriptsBulk(input, state, config, cwd) {
   const flagged = [];
 
   for (const dep of allDeps) {
-    try {
-      const output = execSync(`npm view ${dep} scripts --json 2>/dev/null`, {
-        cwd,
-        stdio: "pipe",
-        timeout: 10000,
-        encoding: "utf8",
-      });
+    const result = npmView(dep, ["scripts", "--json"], cwd, 10000);
+    if (!result.ok) continue;
 
-      const scripts = JSON.parse(output || "{}");
-      const found = DANGEROUS_SCRIPTS.filter((s) => s in scripts);
+    const scripts = result.data || {};
+    const found = DANGEROUS_SCRIPTS.filter((s) => s in scripts);
 
-      if (found.length > 0) {
-        flagged.push({ dep, scripts: found });
-      }
-    } catch {
-      // Registry lookup failed — skip silently
+    if (found.length > 0) {
+      flagged.push({ dep, scripts: found });
     }
   }
 

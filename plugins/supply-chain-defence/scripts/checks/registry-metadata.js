@@ -1,89 +1,23 @@
 "use strict";
 
-const { execSync } = require("child_process");
-
-function extractPackageNames(command) {
-  const parts = command.split(/\s+/);
-  const packages = [];
-  let pastCommand = false;
-
-  for (const part of parts) {
-    if (!pastCommand) {
-      if (part === "install" || part === "add" || part === "i") {
-        pastCommand = true;
-      }
-      continue;
-    }
-    if (part.startsWith("-")) continue;
-    const name = part.replace(/@[\d^~>=<.*]+$/, "");
-    if (name) packages.push(name);
-  }
-  return packages;
-}
+const { npmView, extractPackageNames } = require("../utils");
 
 module.exports = async function registryMetadata(input, state, config, cwd) {
   const command = input.tool_input?.command || "";
-  const packageNames = extractPackageNames(command);
+  const packages = extractPackageNames(command);
 
-  if (packageNames.length === 0) {
+  if (packages.length === 0) {
     return { status: "info", message: "No package names to check", details: {} };
   }
 
   const results = [];
 
-  for (const pkg of packageNames) {
-    try {
-      const output = execSync(`npm view ${pkg} --json 2>/dev/null`, {
-        cwd,
-        stdio: "pipe",
-        timeout: 15000,
-        encoding: "utf8",
-      });
+  for (const pkg of packages) {
+    const result = npmView(pkg.full, ["--json"], cwd, 15000);
 
-      const meta = JSON.parse(output);
-      const versions = meta.versions || [];
-      const maintainers = meta.maintainers || [];
-      const license = meta.license || "unknown";
-      const latestVersion = meta.version || meta["dist-tags"]?.latest || "unknown";
-
-      // Check publish date of latest version
-      const time = meta.time || {};
-      const latestTime = time[latestVersion];
-      let ageMessage = "";
-      if (latestTime) {
-        const ageDays = Math.floor(
-          (Date.now() - new Date(latestTime).getTime()) / (24 * 3600 * 1000)
-        );
-        ageMessage = `published ${ageDays} days ago`;
-        if (ageDays < (config.thresholds.beforeFlagDays || 5)) {
-          ageMessage += " (RECENT — within minimum release age window)";
-        }
-      }
-
+    if (!result.ok) {
       results.push({
-        pkg,
-        version: latestVersion,
-        versions: versions.length,
-        maintainers: maintainers.length,
-        license,
-        ageMessage,
-        concerns: [],
-      });
-
-      // Flag concerns
-      if (maintainers.length <= 1) {
-        results[results.length - 1].concerns.push(
-          `Single maintainer — higher risk of account takeover`
-        );
-      }
-      if (versions.length <= 1) {
-        results[results.length - 1].concerns.push(
-          `Only 1 published version — very new package`
-        );
-      }
-    } catch {
-      results.push({
-        pkg,
+        pkg: pkg.name,
         version: "unknown",
         versions: 0,
         maintainers: 0,
@@ -91,7 +25,46 @@ module.exports = async function registryMetadata(input, state, config, cwd) {
         ageMessage: "",
         concerns: ["Could not fetch registry metadata"],
       });
+      continue;
     }
+
+    const meta = result.data;
+    const versions = meta.versions || [];
+    const maintainers = meta.maintainers || [];
+    const license = meta.license || "unknown";
+    const latestVersion = meta.version || "unknown";
+
+    const time = meta.time || {};
+    const latestTime = time[latestVersion];
+    let ageMessage = "";
+    if (latestTime) {
+      const ageDays = Math.floor(
+        (Date.now() - new Date(latestTime).getTime()) / (24 * 3600 * 1000)
+      );
+      ageMessage = `published ${ageDays} days ago`;
+      if (ageDays < (config.thresholds.beforeFlagDays || 5)) {
+        ageMessage += " (RECENT — within minimum release age window)";
+      }
+    }
+
+    const entry = {
+      pkg: pkg.name,
+      version: latestVersion,
+      versions: versions.length,
+      maintainers: maintainers.length,
+      license,
+      ageMessage,
+      concerns: [],
+    };
+
+    if (maintainers.length <= 1) {
+      entry.concerns.push("Single maintainer — higher risk of account takeover");
+    }
+    if (versions.length <= 1) {
+      entry.concerns.push("Only 1 published version — very new package");
+    }
+
+    results.push(entry);
   }
 
   const hasConcerns = results.some((r) => r.concerns.length > 0);

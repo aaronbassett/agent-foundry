@@ -1,54 +1,28 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { npmView, extractPackageNames } = require("../utils");
 
-function extractPackageNames(command) {
-  const parts = command.split(/\s+/);
-  const packages = [];
-  let pastCommand = false;
-
-  for (const part of parts) {
-    if (!pastCommand) {
-      if (part === "install" || part === "add" || part === "i") {
-        pastCommand = true;
-      }
-      continue;
-    }
-    if (part.startsWith("-")) continue;
-    const name = part.replace(/@[\d^~>=<.*]+$/, "");
-    if (name) packages.push(name);
-  }
-  return packages;
-}
+const DANGEROUS_SCRIPTS = ["preinstall", "postinstall", "install", "prepare"];
 
 module.exports = async function installScripts(input, state, config, cwd) {
   const command = (input.tool_input?.command || "").trim();
-  const packageNames = extractPackageNames(command);
+  const packages = extractPackageNames(command);
 
-  if (packageNames.length === 0) {
+  if (packages.length === 0) {
     return { status: "pass", message: "No packages to check", details: {} };
   }
 
   const flagged = [];
 
-  for (const pkg of packageNames) {
-    try {
-      const output = execSync(`npm view ${pkg} scripts --json 2>/dev/null`, {
-        cwd,
-        stdio: "pipe",
-        timeout: 10000,
-        encoding: "utf8",
-      });
+  for (const pkg of packages) {
+    const result = npmView(pkg.full, ["scripts", "--json"], cwd, 10000);
+    if (!result.ok) continue;
 
-      const scripts = JSON.parse(output || "{}");
-      const dangerous = ["preinstall", "postinstall", "install", "prepare"];
-      const found = dangerous.filter((s) => s in scripts);
+    const scripts = result.data || {};
+    const found = DANGEROUS_SCRIPTS.filter((s) => s in scripts);
 
-      if (found.length > 0) {
-        flagged.push({ pkg, scripts: found });
-      }
-    } catch {
-      // Registry lookup failed — skip silently
+    if (found.length > 0) {
+      flagged.push({ pkg: pkg.name, scripts: found });
     }
   }
 
