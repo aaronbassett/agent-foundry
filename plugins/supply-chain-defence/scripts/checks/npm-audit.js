@@ -8,6 +8,7 @@ const AUDIT_COMMANDS = {
   npm: "npm audit --json",
   pnpm: "pnpm audit --json",
   yarn: "yarn npm audit --json",
+  bun: null, // bun has no audit command
 };
 
 module.exports = async function npmAudit(input, state, config, cwd) {
@@ -16,7 +17,15 @@ module.exports = async function npmAudit(input, state, config, cwd) {
   }
 
   const pm = state.detectedPackageManager || "npm";
-  const cmd = AUDIT_COMMANDS[pm] || AUDIT_COMMANDS.npm;
+  const cmd = pm in AUDIT_COMMANDS ? AUDIT_COMMANDS[pm] : AUDIT_COMMANDS.npm;
+
+  if (!cmd) {
+    return {
+      status: "info",
+      message: `${pm} does not have a built-in audit command. Run \`npm audit\` manually for vulnerability scanning.`,
+      details: {},
+    };
+  }
 
   try {
     const output = execSync(cmd, {

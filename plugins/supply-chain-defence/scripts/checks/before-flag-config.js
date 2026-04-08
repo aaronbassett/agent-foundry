@@ -1,15 +1,41 @@
 "use strict";
-const fs = require("fs");
-const path = require("path");
+
+const {
+  getNpmrcReleaseAge,
+  getPnpmReleaseAge,
+  getYarnReleaseAge,
+} = require("./before-flag");
 
 module.exports = async function beforeFlagConfig(input, state, config, cwd) {
-  const npmrcPath = path.join(cwd, ".npmrc");
-  if (!fs.existsSync(npmrcPath)) {
-    return { status: "warn", message: "No .npmrc — min-release-age not configured", details: {} };
+  const npmrcAge = getNpmrcReleaseAge(cwd);
+  const pnpmAge = getPnpmReleaseAge(cwd);
+  const yarnAge = getYarnReleaseAge(cwd);
+  const configuredAge = npmrcAge ?? pnpmAge ?? yarnAge;
+
+  if (configuredAge === null) {
+    return {
+      status: "warn",
+      message:
+        "No release age gating configured in any package manager config. " +
+        "Add min-release-age to .npmrc, minimumReleaseAge to pnpm-workspace.yaml, " +
+        "or npmMinimumReleaseAge to .yarnrc.yml.",
+      details: {},
+    };
   }
-  const content = fs.readFileSync(npmrcPath, "utf8");
-  if (/min-release-age\s*=/.test(content)) {
-    return { status: "pass", message: "min-release-age is configured in .npmrc", details: {} };
+
+  const minDays = config.thresholds.beforeFlagDays || 5;
+  if (configuredAge >= minDays) {
+    return {
+      status: "pass",
+      message: `Release age gating configured (${configuredAge} days)`,
+      details: { configuredAge },
+    };
   }
-  return { status: "warn", message: "min-release-age not set in .npmrc. Add min-release-age=5 to prevent installing freshly published packages.", details: {} };
+
+  return {
+    status: "warn",
+    message:
+      `Release age gating set to ${configuredAge} days, below recommended minimum of ${minDays} days.`,
+    details: { configuredAge, minDays },
+  };
 };

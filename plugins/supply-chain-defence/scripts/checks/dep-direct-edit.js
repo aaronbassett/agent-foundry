@@ -20,6 +20,14 @@ module.exports = async function depDirectEdit(input, state, config, cwd) {
   const toolInput = input.tool_input || {};
 
   if (toolName === "Edit") {
+    const filePath = toolInput.file_path || "";
+    if (!filePath.endsWith("package.json")) {
+      return {
+        status: "pass",
+        message: "Not editing package.json",
+        details: {},
+      };
+    }
     const oldStr = toolInput.old_string || "";
     const newStr = toolInput.new_string || "";
     const combined = oldStr + "\n" + newStr;
