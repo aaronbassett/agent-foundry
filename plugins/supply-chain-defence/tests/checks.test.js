@@ -944,3 +944,275 @@ describe("typosquat-bulk", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// 11. before-flag-config
+// ---------------------------------------------------------------------------
+describe("before-flag-config", () => {
+  const check = require("../scripts/checks/before-flag-config");
+
+  it("warns when no config files exist", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("No release age gating"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when .npmrc has min-release-age >= 5", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".npmrc"), "min-release-age=7\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when .npmrc has min-release-age < 5", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".npmrc"), "min-release-age=2\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("below"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when pnpm-workspace.yaml has minimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "pnpm-workspace.yaml"), "minimumReleaseAge: 7200\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when .yarnrc.yml has npmMinimumReleaseAge >= 5 days", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, ".yarnrc.yml"), "npmMinimumReleaseAge: 7d\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. dep-direct-edit (file path check)
+// ---------------------------------------------------------------------------
+describe("dep-direct-edit (file path check)", () => {
+  const check = require("../scripts/checks/dep-direct-edit");
+
+  it("allows Edit to non-package.json files even with dependency-like content", async () => {
+    const result = await check(
+      {
+        tool_name: "Edit",
+        tool_input: {
+          file_path: "/project/README.md",
+          old_string: '"dependencies": { "lodash": "^4.17.21" }',
+          new_string: '"dependencies": { "lodash": "^4.18.0" }',
+        },
+      },
+      emptyState(),
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "pass");
+    assert.ok(result.message.includes("Not editing package.json"));
+  });
+
+  it("blocks Edit to package.json in a subdirectory", async () => {
+    const result = await check(
+      {
+        tool_name: "Edit",
+        tool_input: {
+          file_path: "/project/packages/api/package.json",
+          old_string: '"dependencies": {}',
+          new_string: '"dependencies": { "express": "^4.18.0" }',
+        },
+      },
+      emptyState(),
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "block");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 13. sbom-freshness
+// ---------------------------------------------------------------------------
+describe("sbom-freshness", () => {
+  const check = require("../scripts/checks/sbom-freshness");
+
+  it("returns info when no SBOM file exists", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "info");
+      assert.ok(result.message.includes("No SBOM"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when sbom.json is fresh", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "sbom.json"), "{}");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "pass");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when sbom.json is stale (>30 days)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const sbomPath = path.join(tmpDir, "sbom.json");
+    fs.writeFileSync(sbomPath, "{}");
+    // Set mtime to 60 days ago
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 3600 * 1000);
+    fs.utimesSync(sbomPath, sixtyDaysAgo, sixtyDaysAgo);
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("days old"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. typosquat-local (scope substitution)
+// ---------------------------------------------------------------------------
+describe("typosquat-local (scope substitution)", () => {
+  const check = require("../scripts/checks/typosquat-local");
+
+  it("detects scope-substitution attack", async () => {
+    // @babel/code-frame is in the popular list, @attacker/code-frame should be flagged
+    const result = await check(
+      { tool_input: { command: "npm install @attacker/code-frame" } },
+      emptyState(),
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "block");
+    assert.ok(result.message.includes("scope substitution"));
+  });
+
+  it("passes for the actual popular scoped package", async () => {
+    const result = await check(
+      { tool_input: { command: "npm install @babel/code-frame" } },
+      emptyState(),
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "pass");
+  });
+});
+
+describe("typosquat-bulk (scope substitution)", () => {
+  const check = require("../scripts/checks/typosquat-bulk");
+
+  it("detects scope-substitution in existing deps", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(
+      path.join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { "@attacker/core": "^1.0.0" } })
+    );
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "warn");
+      assert.ok(result.message.includes("scope substitution") || result.message.includes("@attacker/core"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15. scripts-synced
+// ---------------------------------------------------------------------------
+describe("scripts-synced", () => {
+  const check = require("../scripts/checks/scripts-synced");
+
+  it("returns info when CLAUDE_PLUGIN_DATA not set", async () => {
+    const origEnv = process.env.CLAUDE_PLUGIN_DATA;
+    delete process.env.CLAUDE_PLUGIN_DATA;
+    try {
+      const result = await check({}, emptyState(), config, "/tmp");
+      assert.strictEqual(result.status, "info");
+    } finally {
+      if (origEnv !== undefined) process.env.CLAUDE_PLUGIN_DATA = origEnv;
+    }
+  });
+
+  it("warns when VERSION file missing from CLAUDE_PLUGIN_DATA", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    const origEnv = process.env.CLAUDE_PLUGIN_DATA;
+    process.env.CLAUDE_PLUGIN_DATA = tmpDir;
+    try {
+      const result = await check({}, emptyState(), config, "/tmp");
+      assert.strictEqual(result.status, "warn");
+    } finally {
+      process.env.CLAUDE_PLUGIN_DATA = origEnv;
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes when VERSION file exists", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.mkdirSync(path.join(tmpDir, "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, "scripts", "VERSION"), "0.1.1");
+    const origEnv = process.env.CLAUDE_PLUGIN_DATA;
+    process.env.CLAUDE_PLUGIN_DATA = tmpDir;
+    try {
+      const result = await check({}, emptyState(), config, "/tmp");
+      assert.strictEqual(result.status, "pass");
+      assert.ok(result.message.includes("0.1.1"));
+    } finally {
+      process.env.CLAUDE_PLUGIN_DATA = origEnv;
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16. ci-over-install (case insensitivity)
+// ---------------------------------------------------------------------------
+describe("ci-over-install (case insensitivity)", () => {
+  const check = require("../scripts/checks/ci-over-install");
+
+  it("blocks NPM install (uppercase)", async () => {
+    const result = await check(
+      { tool_input: { command: "NPM install" } },
+      { detectedPackageManager: "npm" },
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "block");
+  });
+
+  it("blocks Npm Install (mixed case)", async () => {
+    const result = await check(
+      { tool_input: { command: "Npm Install" } },
+      { detectedPackageManager: "npm" },
+      config,
+      "/tmp"
+    );
+    assert.strictEqual(result.status, "block");
+  });
+});
