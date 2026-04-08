@@ -64,6 +64,12 @@
             "if": "Bash(npx *)",
             "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Bash(bun *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
+            "timeout": 30
           }
         ]
       },
@@ -121,18 +127,35 @@
             "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile npx-post-audit",
             "async": true,
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "if": "Bash(bun *)",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile post-install-audit",
+            "async": true,
+            "timeout": 180
           }
         ]
       }
     ],
     "FileChanged": [
       {
-        "matcher": "package-lock.json|pnpm-lock.yaml|yarn.lock|.npmrc",
+        "matcher": "package-lock.json|pnpm-lock.yaml|yarn.lock|bun.lock|.npmrc",
         "hooks": [
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile file-changed",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "bun.lockb",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bun-lockb-migration",
+            "timeout": 5
           }
         ]
       }
