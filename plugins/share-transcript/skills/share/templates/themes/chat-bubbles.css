@@ -1,0 +1,253 @@
+/* ── chat-bubbles.css ────────────────────────────────────────────────────────
+   Rounded message bubbles, user right / assistant left.
+   Avatar initials via ::before pseudo-elements. Softer pastel palette.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Dark defaults — softer, pastel-leaning dark palette */
+:root {
+  --bg:            #1a1625;
+  --fg:            #e2dff0;
+  --bg-secondary:  #221d30;
+  --fg-muted:      #8a84a8;
+  --border:        #352d4a;
+  --accent:        #8b7cf8;
+  --code-bg:       #1e1a2e;
+  --user-bg:       #2d2450;
+  --assistant-bg:  #221d30;
+
+  /* Avatar colors */
+  --avatar-user-bg:       #8b7cf8;
+  --avatar-user-fg:       #ffffff;
+  --avatar-assistant-bg:  #3d3560;
+  --avatar-assistant-fg:  #c9c4e8;
+}
+
+/* Light overrides — warm pastel light palette */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:            #faf9ff;
+    --fg:            #2d2650;
+    --bg-secondary:  #f0eeff;
+    --fg-muted:      #8880a8;
+    --border:        #d8d2f0;
+    --accent:        #6b5ce7;
+    --code-bg:       #f0eeff;
+    --user-bg:       #e8e3ff;
+    --assistant-bg:  #f5f4ff;
+
+    --avatar-user-bg:       #6b5ce7;
+    --avatar-user-fg:       #ffffff;
+    --avatar-assistant-bg:  #d8d2f0;
+    --avatar-assistant-fg:  #4a4070;
+  }
+}
+
+/* ── Container ───────────────────────────────────────────────────────────── */
+#transcript {
+  max-width: 860px;
+  padding: 24px 20px 60px;
+}
+
+/* ── Base message: reset card, add spacing for avatar ───────────────────── */
+.message {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 20px;
+  overflow: visible;
+  position: relative;
+  padding: 0;
+}
+
+/* ── Avatar circles via ::before on message-header ──────────────────────── */
+.message-header {
+  position: relative;
+  background: transparent;
+  border-bottom: none;
+  padding: 0;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Shared avatar base */
+.user-message .message-header::before,
+.assistant-message .message-header::before {
+  content: '';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* User avatar: "U" */
+.user-message .message-header::before {
+  content: 'U';
+  background: var(--avatar-user-bg);
+  color: var(--avatar-user-fg);
+}
+
+/* Assistant avatar: "C" */
+.assistant-message .message-header::before {
+  content: 'C';
+  background: var(--avatar-assistant-bg);
+  color: var(--avatar-assistant-fg);
+}
+
+/* ── Role label ──────────────────────────────────────────────────────────── */
+.message-role {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg);
+}
+
+.user-message .message-role {
+  color: var(--accent);
+}
+
+.assistant-message .message-role {
+  color: var(--fg-muted);
+}
+
+/* ── Timestamp ───────────────────────────────────────────────────────────── */
+.message-timestamp {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-left: auto;
+}
+
+/* ── Bubble body: rounded, user right / assistant left ───────────────────── */
+.message-body {
+  border-radius: 18px;
+  padding: 14px 18px;
+  line-height: 1.7;
+  max-width: 80%;
+}
+
+/* User bubble: right-aligned accent tint */
+.user-message {
+  margin-left: 10%;
+  align-items: flex-end;
+}
+
+.user-message .message-header {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.user-message .message-header::before {
+  /* Keep avatar on left of label even when row is reversed */
+  order: -1;
+}
+
+.user-message .message-role {
+  order: 0;
+}
+
+.user-message .message-timestamp {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.user-message .message-body {
+  background: var(--user-bg);
+  border: 1px solid var(--accent);
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+}
+
+/* Assistant bubble: left-aligned secondary background */
+.assistant-message {
+  margin-right: 10%;
+}
+
+.assistant-message .message-body {
+  background: var(--assistant-bg);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  margin-right: auto;
+}
+
+/* ── Code inside bubbles ─────────────────────────────────────────────────── */
+pre,
+.md-content pre code,
+.tool-call-body pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 13px;
+}
+
+/* ── Tool calls: pill-style inside bubble ────────────────────────────────── */
+.tool-call {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+}
+
+.tool-call summary {
+  background: var(--code-bg);
+  border-radius: 12px 12px 0 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.tool-call[open] summary {
+  border-radius: 12px 12px 0 0;
+}
+
+.tool-call summary:hover {
+  background: var(--bg-secondary);
+  color: var(--fg);
+}
+
+.tool-call-body {
+  background: var(--bg);
+  padding: 12px 14px;
+  border-radius: 0 0 12px 12px;
+}
+
+/* ── Subagent blocks ─────────────────────────────────────────────────────── */
+.subagent {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--fg-muted);
+  border-radius: 12px;
+}
+
+.subagent summary {
+  background: var(--bg-secondary);
+  border-radius: 12px 12px 0 0;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.subagent-body {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  border-radius: 0 0 12px 12px;
+}

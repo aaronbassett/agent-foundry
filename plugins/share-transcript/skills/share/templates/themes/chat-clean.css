@@ -1,0 +1,181 @@
+/* ── chat-clean.css ──────────────────────────────────────────────────────────
+   Alternating left/right aligned blocks, no bubbles, clear speaker labels.
+   User messages lean right, assistant messages lean left.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Dark defaults */
+:root {
+  --bg:            #13151a;
+  --fg:            #dde1ea;
+  --bg-secondary:  #1a1d24;
+  --fg-muted:      #7b8494;
+  --border:        #282d38;
+  --accent:        #5b9cf6;
+  --code-bg:       #1e2230;
+  --user-bg:       #1a2035;
+  --assistant-bg:  #1c1f28;
+}
+
+/* Light overrides */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:            #f5f5f7;
+    --fg:            #1c1c1e;
+    --bg-secondary:  #e8e8ed;
+    --fg-muted:      #6e6e73;
+    --border:        #c7c7cc;
+    --accent:        #0a84ff;
+    --code-bg:       #ebebf0;
+    --user-bg:       #e8eefb;
+    --assistant-bg:  #f0f0f5;
+  }
+}
+
+/* ── Container ───────────────────────────────────────────────────────────── */
+#transcript {
+  max-width: 920px;
+  padding: 24px 20px 60px;
+}
+
+/* ── Base message: no shared card border ─────────────────────────────────── */
+.message {
+  border: none;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  max-width: 800px;
+  padding: 0;
+  overflow: visible;
+}
+
+/* ── User messages lean right ─────────────────────────────────────────────── */
+.user-message {
+  margin-left: 15%;
+  margin-right: 0;
+}
+
+/* ── Assistant messages lean left ─────────────────────────────────────────── */
+.assistant-message {
+  margin-right: 15%;
+  margin-left: 0;
+}
+
+/* ── Message headers: no background, role label prominent ───────────────── */
+.message-header {
+  background: transparent;
+  border-bottom: none;
+  padding: 0 0 6px 0;
+  gap: 8px;
+}
+
+/* ── Bold role labels above each message ─────────────────────────────────── */
+.message-role {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg);
+}
+
+.user-message .message-role {
+  color: var(--accent);
+}
+
+.assistant-message .message-role {
+  color: var(--fg-muted);
+}
+
+/* ── Timestamp ───────────────────────────────────────────────────────────── */
+.message-timestamp {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+/* ── Message bodies: alternating subtle tints ────────────────────────────── */
+.message-body {
+  padding: 14px 16px;
+  border-radius: 6px;
+  line-height: 1.7;
+}
+
+.user-message .message-body {
+  background: var(--user-bg);
+  border: 1px solid var(--border);
+}
+
+.assistant-message .message-body {
+  background: var(--assistant-bg);
+  border: 1px solid var(--border);
+}
+
+/* ── Code: monospace, clear background ───────────────────────────────────── */
+pre,
+.md-content pre code,
+.tool-call-body pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 13px;
+}
+
+/* ── Tool calls: indented, left-rule ─────────────────────────────────────── */
+.tool-call {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+}
+
+.tool-call summary {
+  background: var(--code-bg);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.tool-call summary:hover {
+  background: var(--bg-secondary);
+  color: var(--fg);
+}
+
+.tool-call-body {
+  background: var(--bg);
+  padding: 10px 12px;
+}
+
+/* ── Subagent blocks ─────────────────────────────────────────────────────── */
+.subagent {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--fg-muted);
+  border-radius: 4px;
+}
+
+.subagent summary {
+  background: var(--bg-secondary);
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.subagent-body {
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ── Controls: unchanged from base, fits the clean header ───────────────── */
+.controls {
+  gap: 6px;
+}

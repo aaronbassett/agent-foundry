@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{SESSION_NAME}}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    /* ── CSS Custom Properties (dark mode defaults) ─────────────────────────── */
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --bg-secondary: #161b22;
+      --fg-muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --code-bg: #1c2128;
+      --user-bg: #1c2128;
+      --assistant-bg: #161b22;
+
+      --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+      --header-height: 64px;
+      --radius: 6px;
+      --transition: 150ms ease;
+    }
+
+    /* ── Light mode overrides ───────────────────────────────────────────────── */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff;
+        --fg: #1f2328;
+        --bg-secondary: #f6f8fa;
+        --fg-muted: #656d76;
+        --border: #d0d7de;
+        --accent: #0969da;
+        --code-bg: #f6f8fa;
+        --user-bg: #f0f6ff;
+        --assistant-bg: #f6f8fa;
+      }
+    }
+
+    /* ── Reset & base ───────────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 15px;
+      line-height: 1.6;
+      padding-top: var(--header-height);
+      min-height: 100vh;
+    }
+
+    /* ── Fixed header bar ───────────────────────────────────────────────────── */
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 20px;
+      gap: 6px;
+    }
+
+    #header-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    #session-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    #session-info {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--fg-muted);
+      flex-shrink: 0;
+    }
+
+    #session-info span {
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .ctrl-btn {
+      font-family: var(--font-body);
+      font-size: 12px;
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--fg);
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+      white-space: nowrap;
+      line-height: 1.5;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--bg-secondary);
+      border-color: var(--accent);
+    }
+
+    .ctrl-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .ctrl-select {
+      font-family: var(--font-body);
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--fg);
+      cursor: pointer;
+      line-height: 1.5;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 22px;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+    }
+
+    .ctrl-select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    #search-input {
+      font-family: var(--font-body);
+      font-size: 12px;
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--fg);
+      width: 160px;
+      line-height: 1.5;
+      transition: border-color var(--transition), width var(--transition);
+    }
+
+    #search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      width: 200px;
+    }
+
+    #search-input::placeholder {
+      color: var(--fg-muted);
+    }
+
+    #search-count {
+      font-size: 11px;
+      color: var(--fg-muted);
+      white-space: nowrap;
+    }
+
+    /* ── Transcript container ────────────────────────────────────────────────── */
+    #transcript {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+
+    /* ── Message blocks ─────────────────────────────────────────────────────── */
+    .message {
+      margin-bottom: 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .message.hidden {
+      display: none;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .message-role {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .user-message .message-role {
+      color: var(--accent);
+    }
+
+    .assistant-message .message-role {
+      color: #a371f7;
+    }
+
+    .message-timestamp {
+      font-size: 11px;
+      color: var(--fg-muted);
+      margin-left: auto;
+    }
+
+    .message-body {
+      padding: 14px;
+      background: var(--bg);
+    }
+
+    .user-message .message-body {
+      background: var(--user-bg);
+    }
+
+    .assistant-message .message-body {
+      background: var(--assistant-bg);
+    }
+
+    /* ── Markdown-rendered content ──────────────────────────────────────────── */
+    .md-content p {
+      margin-bottom: 10px;
+    }
+
+    .md-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .md-content strong {
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    .md-content code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+
+    .md-content pre {
+      margin: 10px 0;
+      border-radius: var(--radius);
+      overflow-x: auto;
+    }
+
+    .md-content pre code {
+      display: block;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* ── Tool calls ─────────────────────────────────────────────────────────── */
+    .tool-call {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .tool-call summary {
+      cursor: pointer;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      background: var(--code-bg);
+      color: var(--fg-muted);
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition);
+    }
+
+    .tool-call summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .tool-call summary:hover {
+      background: var(--bg-secondary);
+      color: var(--fg);
+    }
+
+    .tool-call summary .tool-chevron {
+      font-size: 10px;
+      transition: transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    .tool-call[open] summary .tool-chevron {
+      transform: rotate(90deg);
+    }
+
+    .tool-call-name {
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .tool-call-preview {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 400px;
+    }
+
+    .tool-call-body {
+      padding: 12px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .tool-call-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+
+    .tool-call-section-label:first-child {
+      margin-top: 0;
+    }
+
+    .tool-call-body pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.5;
+      color: var(--fg);
+    }
+
+    /* ── Subagent blocks ────────────────────────────────────────────────────── */
+    .subagent {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--fg-muted);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .subagent summary {
+      cursor: pointer;
+      padding: 7px 12px;
+      font-size: 13px;
+      background: var(--bg-secondary);
+      color: var(--fg-muted);
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition);
+    }
+
+    .subagent summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .subagent summary:hover {
+      background: var(--bg-secondary);
+      color: var(--fg);
+    }
+
+    .subagent summary .tool-chevron {
+      font-size: 10px;
+      transition: transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    .subagent[open] summary .tool-chevron {
+      transform: rotate(90deg);
+    }
+
+    .subagent-label {
+      font-weight: 500;
+    }
+
+    .subagent-body {
+      padding: 12px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .subagent.hidden {
+      display: none;
+    }
+
+    /* ── Pre and code outside tool calls ────────────────────────────────────── */
+    pre {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    /* ── Search highlight ───────────────────────────────────────────────────── */
+    .search-match {
+      background: #f0b429;
+      color: #1a1a1a;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    /* ── Empty state ────────────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--fg-muted);
+      padding: 48px 20px;
+      font-size: 14px;
+    }
+
+    {{THEME_CSS}}
+  </style>
+</head>
+<body>
+  <header id="header">
+    <div id="header-top">
+      <h1 id="session-name">Loading…</h1>
+      <div id="session-info">
+        <span id="info-date"></span>
+        <span id="info-branch"></span>
+        <span id="info-model"></span>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn" onclick="expandAll()" title="Expand all tool calls and subagents">Expand All</button>
+        <button class="ctrl-btn" onclick="collapseAll()" title="Collapse all tool calls and subagents">Collapse All</button>
+        <select class="ctrl-select" onchange="filterByType(this.value)" title="Filter messages by type" aria-label="Filter messages">
+          <option value="all">All Messages</option>
+          <option value="user">User Only</option>
+          <option value="assistant">Assistant Only</option>
+        </select>
+        <button class="ctrl-btn" id="toggle-subagents-btn" onclick="toggleSubagents()" title="Show or hide subagent blocks">Hide Subagents</button>
+        <input type="search" id="search-input" placeholder="Search transcript…" oninput="searchTranscript(this.value)" aria-label="Search transcript" />
+        <span id="search-count" aria-live="polite"></span>
+      </div>
+    </div>
+  </header>
+
+  <main id="transcript">
+    <div class="empty-state">Loading transcript…</div>
+  </main>
+
+  <script>
+    // ── Transcript data ──────────────────────────────────────────────────────
+    const TRANSCRIPT = {{TRANSCRIPT_DATA}};
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let _subagentsVisible = true;
+    let _currentFilter = 'all';
+
+    // ── Security: safe text insertion helpers ────────────────────────────────
+
+    /**
+     * Escape a string for safe use as HTML text content.
+     * Used only for creating textNode content via DOM APIs.
+     */
+    function safeText(str) {
+      return String(str ?? '');
+    }
+
+    /**
+     * Create a text node.
+     */
+    function textNode(str) {
+      return document.createTextNode(safeText(str));
+    }
+
+    // ── Simple markdown renderer (DOM-based, no innerHTML from user content) ─
+
+    /**
+     * Parse a single line of inline markdown into an array of DOM nodes.
+     * Handles: **bold**, `code`, plain text.
+     * NEVER uses innerHTML with user content.
+     */
+    function parseInline(line) {
+      const nodes = [];
+      // Tokenize by bold (**...**) and inline code (`...`)
+      const re = /(\*\*([^*]+)\*\*|`([^`]+)`)/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = re.exec(line)) !== null) {
+        // Text before match
+        if (match.index > lastIndex) {
+          nodes.push(textNode(line.slice(lastIndex, match.index)));
+        }
+
+        if (match[0].startsWith('**')) {
+          const strong = document.createElement('strong');
+          strong.textContent = match[2];
+          nodes.push(strong);
+        } else {
+          // inline code
+          const code = document.createElement('code');
+          code.textContent = match[3];
+          nodes.push(code);
+        }
+
+        lastIndex = re.lastIndex;
+      }
+
+      // Remaining text
+      if (lastIndex < line.length) {
+        nodes.push(textNode(line.slice(lastIndex)));
+      }
+
+      return nodes;
+    }
+
+    /**
+     * Render a markdown string into a container element.
+     * Handles: fenced code blocks, paragraphs, **bold**, `code`.
+     * All user content is inserted via textContent / DOM construction.
+     *
+     * @param {string} text
+     * @returns {HTMLElement} A <div class="md-content"> element
+     */
+    function renderMarkdown(text) {
+      const container = document.createElement('div');
+      container.className = 'md-content';
+
+      if (!text || !text.trim()) {
+        return container;
+      }
+
+      const lines = text.split('\n');
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Fenced code block: ```[lang]
+        const fenceMatch = line.match(/^```(\w*)$/);
+        if (fenceMatch) {
+          const lang = fenceMatch[1] || '';
+          const codeLines = [];
+          i++;
+          while (i < lines.length && !lines[i].match(/^```\s*$/)) {
+            codeLines.push(lines[i]);
+            i++;
+          }
+          i++; // consume closing ```
+
+          const pre = document.createElement('pre');
+          const code = document.createElement('code');
+          if (lang) code.dataset.lang = lang;
+          code.textContent = codeLines.join('\n');
+          pre.appendChild(code);
+          container.appendChild(pre);
+          continue;
+        }
+
+        // Blank line → paragraph separator (skip)
+        if (!line.trim()) {
+          i++;
+          continue;
+        }
+
+        // Collect consecutive non-blank, non-fence lines into a paragraph
+        const paraLines = [];
+        while (i < lines.length && lines[i].trim() && !lines[i].match(/^```/)) {
+          paraLines.push(lines[i]);
+          i++;
+        }
+
+        if (paraLines.length > 0) {
+          const p = document.createElement('p');
+          // Combine lines with space, then parse inline markdown
+          const combined = paraLines.join(' ');
+          const inlineNodes = parseInline(combined);
+          for (const node of inlineNodes) {
+            p.appendChild(node);
+          }
+          container.appendChild(p);
+        }
+      }
+
+      return container;
+    }
+
+    // ── Tool call preview helper ─────────────────────────────────────────────
+
+    /**
+     * Extract a short preview string from a tool call's input object.
+     * For Read tool: shows file_path. For others: first string value.
+     *
+     * @param {string} toolName
+     * @param {object} input
+     * @returns {string}
+     */
+    function toolPreview(toolName, input) {
+      if (!input || typeof input !== 'object') return '';
+
+      // Read tool: show file path
+      if (toolName === 'Read' && input.file_path) {
+        return safeText(input.file_path).slice(0, 80);
+      }
+
+      // Otherwise: first string-valued key
+      for (const val of Object.values(input)) {
+        if (typeof val === 'string' && val.trim()) {
+          return safeText(val).slice(0, 80);
+        }
+      }
+
+      return '';
+    }
+
+    // ── DOM builders ─────────────────────────────────────────────────────────
+
+    /**
+     * Build a <details class="tool-call"> element for a single tool call.
+     *
+     * @param {object} call — { id, name, input, result }
+     * @returns {HTMLElement}
+     */
+    function buildToolCallElement(call) {
+      const details = document.createElement('details');
+      details.className = 'tool-call';
+
+      const summary = document.createElement('summary');
+
+      const chevron = document.createElement('span');
+      chevron.className = 'tool-chevron';
+      chevron.textContent = '▶';
+      summary.appendChild(chevron);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'tool-call-name';
+      nameSpan.textContent = safeText(call.name);
+      summary.appendChild(nameSpan);
+
+      const preview = toolPreview(call.name, call.input);
+      if (preview) {
+        const sep = textNode(' — ');
+        summary.appendChild(sep);
+        const previewSpan = document.createElement('span');
+        previewSpan.className = 'tool-call-preview';
+        previewSpan.textContent = preview;
+        summary.appendChild(previewSpan);
+      }
+
+      details.appendChild(summary);
+
+      // Body: input + result
+      const body = document.createElement('div');
+      body.className = 'tool-call-body';
+
+      // Input section
+      const inputLabel = document.createElement('div');
+      inputLabel.className = 'tool-call-section-label';
+      inputLabel.textContent = 'Input';
+      body.appendChild(inputLabel);
+
+      const inputPre = document.createElement('pre');
+      inputPre.textContent = JSON.stringify(call.input ?? {}, null, 2);
+      body.appendChild(inputPre);
+
+      // Result section
+      if (call.result !== null && call.result !== undefined) {
+        const resultLabel = document.createElement('div');
+        resultLabel.className = 'tool-call-section-label';
+        resultLabel.textContent = 'Result';
+        body.appendChild(resultLabel);
+
+        const resultPre = document.createElement('pre');
+        resultPre.textContent = safeText(call.result);
+        body.appendChild(resultPre);
+      }
+
+      details.appendChild(body);
+      return details;
+    }
+
+    /**
+     * Build a <details class="subagent"> element for a subagent reference.
+     *
+     * @param {object} call — { id, name, input, result, subagentId }
+     * @returns {HTMLElement}
+     */
+    function buildSubagentElement(call) {
+      const details = document.createElement('details');
+      details.className = 'subagent';
+
+      const summary = document.createElement('summary');
+
+      const chevron = document.createElement('span');
+      chevron.className = 'tool-chevron';
+      chevron.textContent = '▶';
+      summary.appendChild(chevron);
+
+      const label = document.createElement('span');
+      label.className = 'subagent-label';
+      const description = call.input?.description ?? call.input?.prompt ?? 'Subagent';
+      label.textContent = 'Agent: ' + safeText(description);
+      summary.appendChild(label);
+
+      details.appendChild(summary);
+
+      const body = document.createElement('div');
+      body.className = 'subagent-body';
+
+      if (call.result) {
+        // Strip the agentId marker line from display
+        const resultText = safeText(call.result).replace(/agentId:\s*\S+[\s.,;)]*(\s|$)/g, '').trim();
+        if (resultText) {
+          const pre = document.createElement('pre');
+          pre.textContent = resultText;
+          body.appendChild(pre);
+        } else {
+          body.appendChild(textNode('(No result text)'));
+        }
+      } else {
+        body.appendChild(textNode('(Result not available)'));
+      }
+
+      details.appendChild(body);
+      return details;
+    }
+
+    /**
+     * Build a .message element for a user message.
+     *
+     * @param {object} msg — { id, type, content, timestamp }
+     * @returns {HTMLElement}
+     */
+    function buildUserMessage(msg) {
+      const article = document.createElement('article');
+      article.className = 'message user-message';
+      article.dataset.messageId = safeText(msg.id);
+      article.dataset.messageType = 'user';
+
+      const header = document.createElement('div');
+      header.className = 'message-header';
+
+      const role = document.createElement('span');
+      role.className = 'message-role';
+      role.textContent = 'User';
+      header.appendChild(role);
+
+      if (msg.timestamp) {
+        const ts = document.createElement('span');
+        ts.className = 'message-timestamp';
+        ts.textContent = formatTimestamp(msg.timestamp);
+        header.appendChild(ts);
+      }
+
+      article.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'message-body';
+      body.appendChild(renderMarkdown(msg.content ?? ''));
+      article.appendChild(body);
+
+      return article;
+    }
+
+    /**
+     * Build a .message element for an assistant message.
+     *
+     * @param {object} msg — { id, type, content, textContent, toolCalls, timestamp }
+     * @returns {HTMLElement}
+     */
+    function buildAssistantMessage(msg) {
+      const article = document.createElement('article');
+      article.className = 'message assistant-message';
+      article.dataset.messageId = safeText(msg.id);
+      article.dataset.messageType = 'assistant';
+
+      const header = document.createElement('div');
+      header.className = 'message-header';
+
+      const role = document.createElement('span');
+      role.className = 'message-role';
+      role.textContent = 'Claude';
+      header.appendChild(role);
+
+      if (msg.timestamp) {
+        const ts = document.createElement('span');
+        ts.className = 'message-timestamp';
+        ts.textContent = formatTimestamp(msg.timestamp);
+        header.appendChild(ts);
+      }
+
+      article.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'message-body';
+
+      // Text content (IR uses 'content' field from parser output)
+      const textContent = msg.content ?? msg.textContent ?? '';
+      if (textContent.trim()) {
+        body.appendChild(renderMarkdown(textContent));
+      }
+
+      // Tool calls
+      if (Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0) {
+        for (const call of msg.toolCalls) {
+          if (call.name === 'Agent') {
+            const el = buildSubagentElement(call);
+            if (!_subagentsVisible) {
+              el.classList.add('hidden');
+            }
+            body.appendChild(el);
+          } else {
+            body.appendChild(buildToolCallElement(call));
+          }
+        }
+      }
+
+      article.appendChild(body);
+      return article;
+    }
+
+    // ── Date/time formatting ─────────────────────────────────────────────────
+
+    /**
+     * Format an ISO timestamp string for display.
+     *
+     * @param {string} isoString
+     * @returns {string}
+     */
+    function formatTimestamp(isoString) {
+      if (!isoString) return '';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleString(undefined, {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch {
+        return isoString;
+      }
+    }
+
+    /**
+     * Format an ISO date string to a short date for the header.
+     *
+     * @param {string} isoString
+     * @returns {string}
+     */
+    function formatDate(isoString) {
+      if (!isoString) return '';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleDateString(undefined, {
+          year: 'numeric', month: 'short', day: 'numeric'
+        });
+      } catch {
+        return isoString;
+      }
+    }
+
+    // ── Main render function ─────────────────────────────────────────────────
+
+    /**
+     * Render the TRANSCRIPT IR object into the page.
+     * Reads TRANSCRIPT.metadata for the header, iterates TRANSCRIPT.sections
+     * where included === true, and builds message elements.
+     */
+    function renderTranscript() {
+      // ── Populate header ──────────────────────────────────────────────────
+
+      const meta = TRANSCRIPT.metadata ?? {};
+
+      const sessionNameEl = document.getElementById('session-name');
+      sessionNameEl.textContent = safeText(meta.sessionName ?? meta.sessionId ?? 'Transcript');
+
+      document.title = safeText(meta.sessionName ?? meta.sessionId ?? 'Transcript');
+
+      const infoDate = document.getElementById('info-date');
+      if (meta.startTime) {
+        infoDate.textContent = formatDate(meta.startTime);
+      }
+
+      const infoBranch = document.getElementById('info-branch');
+      if (meta.gitBranch) {
+        infoBranch.textContent = meta.gitBranch;
+      }
+
+      const infoModel = document.getElementById('info-model');
+      if (meta.model) {
+        infoModel.textContent = meta.model;
+      }
+
+      // ── Render sections ──────────────────────────────────────────────────
+
+      const transcriptEl = document.getElementById('transcript');
+      transcriptEl.innerHTML = '';
+
+      const sections = TRANSCRIPT.sections ?? [];
+      const includedSections = sections.filter(s => s.included === true);
+
+      if (includedSections.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'No messages to display.';
+        transcriptEl.appendChild(empty);
+        return;
+      }
+
+      for (const section of includedSections) {
+        for (const msg of section.messages ?? []) {
+          let el;
+          if (msg.type === 'user') {
+            el = buildUserMessage(msg);
+          } else if (msg.type === 'assistant') {
+            el = buildAssistantMessage(msg);
+          } else {
+            continue;
+          }
+
+          // Apply current filter state
+          if (_currentFilter !== 'all' && msg.type !== _currentFilter) {
+            el.classList.add('hidden');
+          }
+
+          transcriptEl.appendChild(el);
+        }
+      }
+    }
+
+    // ── Control functions ────────────────────────────────────────────────────
+
+    /**
+     * Open all <details> elements in the transcript.
+     */
+    function expandAll() {
+      document.querySelectorAll('#transcript details').forEach(d => {
+        d.open = true;
+      });
+    }
+
+    /**
+     * Close all <details> elements in the transcript.
+     */
+    function collapseAll() {
+      document.querySelectorAll('#transcript details').forEach(d => {
+        d.open = false;
+      });
+    }
+
+    /**
+     * Show/hide messages by type.
+     *
+     * @param {'all'|'user'|'assistant'} type
+     */
+    function filterByType(type) {
+      _currentFilter = type;
+      document.querySelectorAll('#transcript .message').forEach(el => {
+        const msgType = el.dataset.messageType;
+        if (type === 'all' || msgType === type) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+
+    /**
+     * Toggle visibility of subagent blocks.
+     */
+    function toggleSubagents() {
+      _subagentsVisible = !_subagentsVisible;
+      const btn = document.getElementById('toggle-subagents-btn');
+
+      document.querySelectorAll('#transcript .subagent').forEach(el => {
+        if (_subagentsVisible) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      btn.textContent = _subagentsVisible ? 'Hide Subagents' : 'Show Subagents';
+      btn.classList.toggle('active', !_subagentsVisible);
+    }
+
+    /**
+     * Highlight all text nodes in the transcript that match the query.
+     * Removes previous highlights before applying new ones.
+     * Updates the search count display.
+     *
+     * @param {string} query
+     */
+    function searchTranscript(query) {
+      // Remove existing highlights
+      document.querySelectorAll('#transcript .search-match').forEach(el => {
+        const parent = el.parentNode;
+        parent.replaceChild(document.createTextNode(el.textContent), el);
+        parent.normalize();
+      });
+
+      const countEl = document.getElementById('search-count');
+
+      if (!query || query.trim().length < 2) {
+        countEl.textContent = '';
+        return;
+      }
+
+      const term = query.trim();
+      let matchCount = 0;
+
+      // Walk all text nodes in the transcript
+      const walker = document.createTreeWalker(
+        document.getElementById('transcript'),
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode(node) {
+            // Skip nodes inside <script> or already-highlighted spans
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            if (parent.tagName === 'SCRIPT') return NodeFilter.FILTER_REJECT;
+            if (parent.classList.contains('search-match')) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
+      );
+
+      const nodesToProcess = [];
+      let node;
+      while ((node = walker.nextNode())) {
+        nodesToProcess.push(node);
+      }
+
+      const termLower = term.toLowerCase();
+
+      for (const textNode of nodesToProcess) {
+        const text = textNode.textContent;
+        const lower = text.toLowerCase();
+        if (!lower.includes(termLower)) continue;
+
+        const fragment = document.createDocumentFragment();
+        let lastIdx = 0;
+        let idx;
+
+        while ((idx = lower.indexOf(termLower, lastIdx)) !== -1) {
+          if (idx > lastIdx) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIdx, idx)));
+          }
+          const mark = document.createElement('mark');
+          mark.className = 'search-match';
+          mark.textContent = text.slice(idx, idx + term.length);
+          fragment.appendChild(mark);
+          matchCount++;
+          lastIdx = idx + term.length;
+        }
+
+        if (lastIdx < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIdx)));
+        }
+
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+
+      if (matchCount === 0) {
+        countEl.textContent = 'No matches';
+      } else if (matchCount === 1) {
+        countEl.textContent = '1 match';
+      } else {
+        countEl.textContent = matchCount + ' matches';
+      }
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', renderTranscript);
+  </script>
+</body>
+</html>

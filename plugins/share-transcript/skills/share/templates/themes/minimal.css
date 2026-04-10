@@ -1,0 +1,179 @@
+/* ── minimal.css ─────────────────────────────────────────────────────────────
+   Clean sans-serif, generous whitespace, GitHub-rendered-markdown feel.
+   Thin borders, no decorations, no avatars. Generous line-height.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Dark defaults (matches base.html dark palette — refined for minimal feel) */
+:root {
+  --bg:            #0d1117;
+  --fg:            #e6edf3;
+  --bg-secondary:  #111519;
+  --fg-muted:      #7d8590;
+  --border:        #21262d;
+  --accent:        #4493f8;
+  --code-bg:       #161b22;
+  --user-bg:       #0d1117;
+  --assistant-bg:  #0d1117;
+}
+
+/* Light overrides */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:            #ffffff;
+    --fg:            #1f2328;
+    --bg-secondary:  #f6f8fa;
+    --fg-muted:      #636c76;
+    --border:        #d0d7de;
+    --accent:        #0969da;
+    --code-bg:       #f6f8fa;
+    --user-bg:       #ffffff;
+    --assistant-bg:  #ffffff;
+  }
+}
+
+/* ── Wider transcript container ──────────────────────────────────────────── */
+#transcript {
+  max-width: 1000px;
+  padding: 32px 28px 64px;
+}
+
+/* ── Message blocks: generous padding, subtle bottom divider, no card look ─ */
+.message {
+  margin-bottom: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0;
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message-header {
+  background: transparent;
+  border-bottom: none;
+  padding: 1.5rem 0 0.25rem;
+}
+
+.message-body {
+  background: transparent !important;
+  padding: 0 0 1.5rem;
+}
+
+.user-message .message-body,
+.assistant-message .message-body {
+  background: transparent;
+}
+
+/* ── Role labels: understated, small-caps feel ───────────────────────────── */
+.message-role {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+
+.user-message .message-role {
+  color: var(--accent);
+}
+
+.assistant-message .message-role {
+  color: var(--fg-muted);
+}
+
+/* ── Timestamp: right-aligned, muted ────────────────────────────────────── */
+.message-timestamp {
+  font-size: 11px;
+  color: var(--fg-muted);
+  opacity: 0.7;
+}
+
+/* ── Generous line-height throughout ─────────────────────────────────────── */
+.message-body,
+.md-content p,
+.subagent-body {
+  line-height: 1.8;
+}
+
+/* ── Code and pre: minimal, well-spaced ─────────────────────────────────── */
+pre,
+.md-content pre code,
+.tool-call-body pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px 16px;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 13px;
+}
+
+/* ── Tool calls: thin left rule only ─────────────────────────────────────── */
+.tool-call {
+  border: none;
+  border-left: 2px solid var(--border);
+  border-radius: 0;
+  margin-top: 14px;
+}
+
+.tool-call summary {
+  background: transparent;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.tool-call summary:hover {
+  background: transparent;
+  color: var(--fg);
+}
+
+.tool-call-body {
+  background: transparent;
+  padding: 10px 12px;
+}
+
+/* ── Subagent blocks: same thin-rule treatment ───────────────────────────── */
+.subagent {
+  border: none;
+  border-left: 2px solid var(--border);
+  border-radius: 0;
+  margin-top: 14px;
+}
+
+.subagent summary {
+  background: transparent;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.subagent summary:hover {
+  background: transparent;
+  color: var(--fg);
+}
+
+.subagent-body {
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* ── Controls: minimal header feel ──────────────────────────────────────── */
+.ctrl-btn {
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.ctrl-btn:hover {
+  background: var(--bg-secondary);
+}

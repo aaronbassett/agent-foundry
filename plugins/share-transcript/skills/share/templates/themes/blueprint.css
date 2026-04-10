@@ -1,0 +1,269 @@
+/* ── blueprint.css ───────────────────────────────────────────────────────────
+   Engineering blueprint aesthetic — grid background, technical font,
+   blue/white primary scheme, sharp corners, uppercase labels.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Dark defaults — classic blueprint blue */
+:root {
+  --bg:            #0a1628;
+  --fg:            #b8d4f0;
+  --bg-secondary:  #0d1e38;
+  --fg-muted:      #4a7aaa;
+  --border:        #1e3a5f;
+  --accent:        #4da6ff;
+  --code-bg:       #071020;
+  --user-bg:       #0d1e38;
+  --assistant-bg:  #0a1628;
+
+  /* Blueprint grid colors */
+  --grid-line:     rgba(30, 80, 140, 0.35);
+  --grid-line-major: rgba(30, 80, 140, 0.55);
+}
+
+/* Light overrides — reversed: white paper with blue ink */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:            #f0f4fa;
+    --fg:            #0a2244;
+    --bg-secondary:  #dce8f8;
+    --fg-muted:      #4a6a99;
+    --border:        #9ab8d8;
+    --accent:        #0052cc;
+    --code-bg:       #dce8f8;
+    --user-bg:       #d0e4f8;
+    --assistant-bg:  #e8f0fa;
+
+    --grid-line:     rgba(0, 82, 204, 0.12);
+    --grid-line-major: rgba(0, 82, 204, 0.22);
+  }
+}
+
+/* ── Monospace font throughout ───────────────────────────────────────────── */
+body {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Blueprint grid background ───────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  background-image:
+    /* Minor grid lines every 20px */
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    /* Major grid lines every 100px */
+    linear-gradient(var(--grid-line-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-major) 1px, transparent 1px);
+  background-size:
+    20px 20px,
+    20px 20px,
+    100px 100px,
+    100px 100px;
+  background-position:
+    -1px -1px,
+    -1px -1px,
+    -1px -1px,
+    -1px -1px;
+}
+
+/* ── Header: blueprint bar ───────────────────────────────────────────────── */
+#header {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
+  font-family: var(--font-mono);
+}
+
+/* ── Container ───────────────────────────────────────────────────────────── */
+#transcript {
+  max-width: 1060px;
+  padding: 24px 24px 60px;
+}
+
+/* ── Message blocks: sharp corners, box-drawn borders ────────────────────── */
+.message {
+  border: 2px solid var(--border);
+  border-radius: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.user-message {
+  border-color: var(--accent);
+}
+
+.assistant-message {
+  border-color: var(--border);
+}
+
+/* ── Message header: blueprint section heading ───────────────────────────── */
+.message-header {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+}
+
+.user-message .message-header {
+  border-bottom-color: var(--accent);
+}
+
+/* ── Role labels: uppercase, letter-spaced ───────────────────────────────── */
+.message-role {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--fg-muted);
+  font-variant: small-caps;
+}
+
+.user-message .message-role {
+  color: var(--accent);
+}
+
+.assistant-message .message-role {
+  color: var(--fg-muted);
+}
+
+/* ── Timestamp ───────────────────────────────────────────────────────────── */
+.message-timestamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── Message body ────────────────────────────────────────────────────────── */
+.message-body {
+  padding: 14px 16px;
+  line-height: 1.6;
+}
+
+.user-message .message-body {
+  background: var(--user-bg);
+}
+
+.assistant-message .message-body {
+  background: var(--assistant-bg);
+}
+
+/* ── Code: technical block style ─────────────────────────────────────────── */
+pre,
+.md-content pre code,
+.tool-call-body pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--code-bg);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  padding: 12px 14px;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0 4px;
+}
+
+/* ── Tool calls: sharp, blueprint-annotated ──────────────────────────────── */
+.tool-call {
+  margin-top: 12px;
+  border: 2px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 0;
+}
+
+.tool-call summary {
+  background: var(--code-bg);
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tool-call summary:hover {
+  background: var(--bg-secondary);
+  color: var(--fg);
+}
+
+.tool-call-body {
+  background: var(--bg);
+  padding: 12px;
+  border-top: 2px solid var(--border);
+}
+
+.tool-call-section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Subagent blocks: sharp ──────────────────────────────────────────────── */
+.subagent {
+  margin-top: 12px;
+  border: 2px solid var(--border);
+  border-left: 4px solid var(--fg-muted);
+  border-radius: 0;
+}
+
+.subagent summary {
+  background: var(--bg-secondary);
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subagent-body {
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  border-top: 2px solid var(--border);
+}
+
+/* ── Controls: blueprint bar feel ───────────────────────────────────────── */
+.ctrl-btn,
+.ctrl-select,
+#search-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: 0;
+  border-width: 2px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ctrl-btn:hover {
+  border-color: var(--accent);
+}
+
+/* ── Section headings: small-caps ─────────────────────────────────────────── */
+#session-name {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant: small-caps;
+}
+
+#session-info {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
