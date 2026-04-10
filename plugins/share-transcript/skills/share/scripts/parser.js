@@ -97,11 +97,11 @@ export function parseJSONL(filePath) {
     e => e.type === 'user' || e.type === 'assistant'
   );
 
-  // ── Build a lookup map: uuid → entry (for tool result pairing) ──────────────
+  // ── Build a lookup map: parentUuid → entry (for O(1) tool result pairing) ────
 
-  const byUuid = {};
+  const byParentUuid = {};
   for (const entry of conversationEntries) {
-    if (entry.uuid) byUuid[entry.uuid] = entry;
+    if (entry.parentUuid) byParentUuid[entry.parentUuid] = entry;
   }
 
   // ── Process assistant messages: extract text, tool calls, and tool results ───
@@ -110,12 +110,10 @@ export function parseJSONL(filePath) {
    * Given an assistant entry, find the next user entry (by parentUuid chain)
    * that contains tool results, and return a map of tool_use_id → result text.
    */
-  function getToolResults(asstEntry, allEntries) {
+  function getToolResults(asstEntry) {
     const resultMap = {};
     // The next user message should have parentUuid === asstEntry.uuid
-    const nextUser = allEntries.find(
-      e => e.type === 'user' && e.parentUuid === asstEntry.uuid
-    );
+    const nextUser = byParentUuid[asstEntry.uuid];
     if (!nextUser) return resultMap;
     const content = nextUser.message?.content;
     if (!Array.isArray(content)) return resultMap;
@@ -143,20 +141,20 @@ export function parseJSONL(filePath) {
    */
   function extractSubagentId(resultText) {
     if (!resultText) return null;
-    const match = resultText.match(/agentId:\s*(\S+)/);
+    const match = resultText.match(/agentId:\s*(\S+?)[\s.,;)]*(?:\s|$)/);
     return match ? match[1] : null;
   }
 
   /**
    * Process an assistant entry into a structured message object.
    */
-  function processAssistantEntry(entry, allEntries) {
+  function processAssistantEntry(entry) {
     const content = entry.message?.content ?? [];
     const textContent = Array.isArray(content)
       ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
       : (typeof content === 'string' ? content : '');
 
-    const toolResultMap = getToolResults(entry, allEntries);
+    const toolResultMap = getToolResults(entry);
 
     const toolCalls = [];
     if (Array.isArray(content)) {
@@ -190,10 +188,11 @@ export function parseJSONL(filePath) {
    * handled implicitly through tool result pairing on assistant messages).
    */
   function processUserEntry(entry) {
+    const raw = entry.message?.content ?? '';
     return {
       id: entry.uuid,
       type: 'user',
-      content: entry.message?.content ?? '',
+      content: typeof raw === 'string' ? raw : '',
       timestamp: entry.timestamp,
     };
   }
@@ -227,7 +226,7 @@ export function parseJSONL(filePath) {
           messages: [],
         };
       }
-      currentSection.messages.push(processAssistantEntry(entry, conversationEntries));
+      currentSection.messages.push(processAssistantEntry(entry));
     }
   }
 
