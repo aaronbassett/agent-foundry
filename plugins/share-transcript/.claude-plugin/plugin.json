@@ -1,0 +1,22 @@
+{
+  "name": "share-transcript",
+  "version": "0.1.0",
+  "description": "Convert Claude Code session transcripts (JSONL) into shareable Markdown or HTML files with interactive session selection, section filtering, tiered redaction, and themed rendering.",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/share-transcript",
+  "license": "MIT",
+  "keywords": [
+    "transcript",
+    "sharing",
+    "markdown",
+    "html",
+    "redaction",
+    "session",
+    "export"
+  ]
+}
