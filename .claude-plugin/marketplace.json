@@ -1,7 +1,7 @@
 {
   "name": "agent-foundry",
   "metadata": {
-    "version": "0.14.0",
+    "version": "0.14.1",
     "description": "Personal marketplace for Claude Code plugins, agents, and skills",
     "homepage": "https://github.com/aaronbassett/agent-foundry",
     "repository": "https://github.com/aaronbassett/agent-foundry.git",
