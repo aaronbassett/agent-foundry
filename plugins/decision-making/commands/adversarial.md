@@ -1,6 +1,6 @@
 ---
 description: Lightweight one-shot adversarial deliberation. Spawns steelmanned advocates for each option in parallel, then renders a verdict. Use for quick tiebreaks on reversible decisions.
-argument-hint: [decision description and N≥2 options]
+argument-hint: "[decision description and N≥2 options]"
 ---
 
 # /decision-making:adversarial

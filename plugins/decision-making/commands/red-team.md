@@ -1,6 +1,6 @@
 ---
 description: Stress-tests a proposed plan, answer, design, or artifact by spawning a committed adversarial subagent that finds the strongest reasons it will fail. Verdict is accept | revise | reject.
-argument-hint: [the plan/answer/artifact to red-team + relevant context]
+argument-hint: "[the plan/answer/artifact to red-team + relevant context]"
 ---
 
 # /decision-making:red-team

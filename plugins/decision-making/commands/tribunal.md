@@ -1,6 +1,6 @@
 ---
 description: Heavyweight adversarial deliberation with fact-finding, parallel advocates, rebuttals, judge questions, and up to 10 iteration rounds. Use for load-bearing, hard-to-reverse decisions.
-argument-hint: [decision description and options, or a fuzzy question]
+argument-hint: "[decision description and options, or a fuzzy question]"
 ---
 
 # /decision-making:tribunal
