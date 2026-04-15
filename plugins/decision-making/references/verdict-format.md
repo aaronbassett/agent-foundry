@@ -20,6 +20,25 @@ The exact shape of the verdict line depends on which technique produced it:
 
 The `Unable to decide — [reason]` verdict shape is available **only to `tribunal`** in v1. The other six techniques commit to a verdict — adversarial picks a winner, red-team returns one of its three labels, pre-mortem names a concrete failure mode, council synthesizes, ladder-of-abstraction either reframes or affirms the current framing, and calibration always produces an estimate and interval. Callers who want an honest "cannot decide" escape hatch escalate to `tribunal`.
 
+### Verdict-line matching guidance for plan steps
+
+Not every verdict line is equally match-friendly. Plan steps that branch on a command's verdict should understand which technique produces which shape of match target:
+
+- **`red-team` — enum match.** The verdict line starts with one of three literal tokens: `accept`, `revise`, or `reject`. Plan steps branch with a simple first-word or prefix comparison. This is the gold standard for plan-step branching.
+- **`calibration` — suffix anchor.** The verdict line always ends with a bracketed interval `[low-high]`, preceded by a point estimate that is either a unit'd quantity (e.g., `6 weeks`) or a percentage (e.g., `42%`). Plan steps match the `[low-high]` suffix or parse the leading value.
+- **`ladder-of-abstraction` — literal sentinel vs. free-form.** The verdict line is EITHER exactly the literal sentinel `framing is correct at current altitude` (lowercase, no trailing punctuation) OR a free-form reframed question. Plan steps match on the sentinel; any other content means a reframe was produced. Subagents must emit the sentinel verbatim — no capitalisation drift, no trailing period.
+- **`tribunal` — prefix anchor (for the escape hatch) or caller-known option names.** When `tribunal` cannot decide, the verdict line begins with the literal prefix `Unable to decide`. The separator and reason after the prefix are free-form (`—`, `-`, `:`, or anything else), so plan steps match on the `Unable to decide` prefix only. When `tribunal` does decide, the verdict line is one of the option names the caller passed in — plan steps match against that known candidate list.
+- **`adversarial` — caller-known option names.** Same as `tribunal`'s deciding case: the verdict line echoes one of the option names the caller passed in. Plan steps match against the known candidate list.
+- **`pre-mortem` — presence-only.** The verdict line is a free-form concrete sentence naming a failure mode. There is no stable anchor to match on — plan steps should branch on *presence* (the command returned successfully and produced a non-empty verdict) rather than content, and read the Reasoning section to decide what to do about it.
+- **`council` — presence-only.** Same as pre-mortem: the synthesis position is free-form prose. Plan steps branch on presence and read the Reasoning section for detail.
+
+Two consequences of this guidance:
+
+1. **`tribunal` and `adversarial` require the caller to already know their option-name candidate list** when writing the branching plan step. This is unavoidable — the contract can't enumerate option sets it doesn't know.
+2. **`pre-mortem` and `council` are "presence-only"** from a plan-step perspective. If a plan step needs more than "did this technique run?", it must read the Reasoning section, not the Verdict line. That's by design — both techniques produce value from synthesis the main thread can't collapse into a single token.
+
+This file is placed at the plugin root under `references/` rather than nested inside a skill because it is shared across all seven commands and the routing skill. Future contributors: the location is intentional, not a drift from sibling-plugin convention.
+
 ## Confidence
 
 One of three verbal levels:
