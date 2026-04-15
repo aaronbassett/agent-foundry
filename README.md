@@ -16,6 +16,7 @@ Plugins that shape how you plan, build, test, and ship code.
 | [pr-tools](plugins/pr-tools) | 0.7.1 | Parallel PR review agents for code quality, SDD task verification, and TODO tracking<br><sub>🛠 2 skills · 🤖 5 agents</sub> |
 | [sandbox](plugins/sandbox) | 0.7.1 | Isolated Docker-based development environments for Claude Code<br><sub>🛠 3 skills · 📋 1 command</sub> |
 | [share-transcript](plugins/share-transcript) | 0.1.0 | Convert session transcripts to shareable HTML/Markdown with redaction, themes, and progressive disclosure<br><sub>🛠 1 skill · 📋 1 command</sub> |
+| [decision-making](plugins/decision-making) | 0.1.0 | Seven structured decision-making techniques that exploit the subagent architecture to produce verdicts plan steps can branch on<br><sub>🛠 1 skill · 📋 7 commands · 🤖 2 agents</sub> |
 
 ### Coding & Languages
 
