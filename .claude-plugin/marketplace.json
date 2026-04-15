@@ -1,7 +1,7 @@
 {
   "name": "agent-foundry",
   "metadata": {
-    "version": "0.13.0",
+    "version": "0.14.0",
     "description": "Personal marketplace for Claude Code plugins, agents, and skills",
     "homepage": "https://github.com/aaronbassett/agent-foundry",
     "repository": "https://github.com/aaronbassett/agent-foundry.git",
@@ -88,19 +88,7 @@
     },
     {
       "source": "./plugins/design-systems",
-      "name": "design-systems",
-      "description": "Create, implement, review, and visualize opinionated design systems that resist AI slop convergence",
-      "version": "0.1.0",
-      "keywords": [
-        "design-system",
-        "design-tokens",
-        "css",
-        "ui",
-        "frontend",
-        "anti-slop",
-        "review",
-        "specimen"
-      ]
+      "name": "design-systems"
     },
     {
       "name": "supply-chain-defence",
@@ -108,18 +96,11 @@
     },
     {
       "source": "./plugins/share-transcript",
-      "name": "share-transcript",
-      "description": "Convert Claude Code session transcripts (JSONL) into shareable Markdown or HTML files with interactive session selection, section filtering, tiered redaction, and themed rendering.",
-      "version": "0.1.0",
-      "keywords": [
-        "transcript",
-        "sharing",
-        "markdown",
-        "html",
-        "redaction",
-        "session",
-        "export"
-      ]
+      "name": "share-transcript"
+    },
+    {
+      "source": "./plugins/decision-making",
+      "name": "decision-making"
     }
   ]
 }
