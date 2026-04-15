@@ -8,7 +8,7 @@ Build. Ship. Repeat. A collection of Claude Code plugins for devs.
 
 Plugins that turn ideas into specs, plans, tasks, and decisions — from vision documents and constitutions through guided spec writing to structured decision-making techniques.
 
-**Totals:** 10 skills · 35 references · 2 examples · 17 commands · 4 agents · 0 MCP servers · 2 hooks
+**Totals:** 10 skills · 35 references · 2 examples · 17 commands · 4 agents · 2 hooks
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
@@ -22,7 +22,7 @@ Plugins that turn ideas into specs, plans, tasks, and decisions — from vision 
 
 Language specialists, git workflows, environments, and PR tooling for writing, building, and shipping code.
 
-**Totals:** 38 skills · 190 references · 39 examples · 7 commands · 17 agents · 0 MCP servers · 0 hooks
+**Totals:** 38 skills · 190 references · 39 examples · 7 commands · 17 agents
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
@@ -38,7 +38,7 @@ Language specialists, git workflows, environments, and PR tooling for writing, b
 
 Supply chain protection and dependency attack guards with deterministic, hook-enforced checks.
 
-**Totals:** 3 skills · 0 references · 7 examples · 2 commands · 0 agents · 0 MCP servers · 19 hooks
+**Totals:** 3 skills · 7 examples · 2 commands · 19 hooks
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
@@ -48,7 +48,7 @@ Supply chain protection and dependency attack guards with deterministic, hook-en
 
 Interface and interaction design — opinionated design systems that resist AI slop convergence.
 
-**Totals:** 4 skills · 3 references · 0 examples · 0 commands · 0 agents · 0 MCP servers · 0 hooks
+**Totals:** 4 skills · 3 references
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
@@ -58,7 +58,7 @@ Interface and interaction design — opinionated design systems that resist AI s
 
 Written and visual content creation — READMEs and repo documentation, AI image generation, and writing voice design.
 
-**Totals:** 6 skills · 15 references · 9 examples · 2 commands · 2 agents · 1 MCP server · 0 hooks
+**Totals:** 6 skills · 15 references · 9 examples · 2 commands · 2 agents · 1 MCP server
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
@@ -70,7 +70,7 @@ Written and visual content creation — READMEs and repo documentation, AI image
 
 Plugin management, diagnostics, settings presets, and session transcript sharing.
 
-**Totals:** 8 skills · 9 references · 11 examples · 1 command · 0 agents · 0 MCP servers · 1 hook
+**Totals:** 8 skills · 9 references · 11 examples · 1 command · 1 hook
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
