@@ -74,6 +74,8 @@ Optional: `--depth=N` to override the fan-out count.
 
    Each subagent returns one concrete failure narrative.
 
+   **Note on rule 1 for pre-mortem:** The good-faith rule "no fabricated facts" is legitimately softened for this technique to "no fabricated *technical* facts" — the subagent is writing a counterfactual failure narrative, so it must be allowed to invent plausible specific events ("the migration ran on a Friday and the 3am alert paged Priya," "the cache invalidation missed a shard") to make the story concrete. The rule still prohibits fabricating technical facts about how systems actually work. Future readers: this variant is intentional, not a drift from `references/verdict-format.md`.
+
 3. **Cluster failure modes** — the main thread groups the returned
    narratives by root cause. Similar failure modes from different
    subagents converge into a cluster; unique failure modes stand alone.
