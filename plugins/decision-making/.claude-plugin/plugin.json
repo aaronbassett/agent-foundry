@@ -1,0 +1,26 @@
+{
+  "name": "decision-making",
+  "version": "0.1.0",
+  "description": "Seven structured decision-making techniques (tribunal, adversarial, red-team, pre-mortem, council, ladder-of-abstraction, calibration) that exploit the subagent architecture to produce verdicts plan steps can branch on. Includes a routing skill and two custom subagent types (Advocate, Lens).",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/decision-making",
+  "license": "MIT",
+  "keywords": [
+    "decision-making",
+    "deliberation",
+    "adversarial",
+    "tribunal",
+    "red-team",
+    "pre-mortem",
+    "council",
+    "ladder-of-abstraction",
+    "calibration",
+    "reasoning",
+    "subagents"
+  ]
+}
