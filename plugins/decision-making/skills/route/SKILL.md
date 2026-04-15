@@ -1,6 +1,6 @@
 ---
 name: route
-description: Use when you need to pick a decision-making technique for the current question. Matches the decision shape against seven techniques (tribunal, adversarial, red-team, pre-mortem, council, ladder-of-abstraction, calibration) and recommends one. Plan steps that already know which command to invoke should call the command directly and skip this skill.
+description: Plan steps that already know which command to invoke should call the command directly and skip this skill. Use this skill only when you need to pick a decision-making technique for the current question — it matches the decision shape against seven techniques (tribunal, adversarial, red-team, pre-mortem, council, ladder-of-abstraction, calibration) and recommends one.
 ---
 
 # Decision-making route
@@ -17,10 +17,10 @@ You have a decision to make and don't already know which technique fits. If you 
 
 **Signals:**
 - Irreversible or expensive-to-undo
-- Stakeholders disagree or context is contested
+- You need a written record of the reasoning (rebuttals, trade-offs) that will survive the decision, not just a pick
 - You want an honest "unable to decide" escape hatch
 
-**Not this if:** You need a quick tiebreak and the decision is reversible → use `adversarial`.
+**Not this if:** You need a quick tiebreak and the decision is reversible → use `adversarial`. Not this if: the contest is over *values* rather than *evidence* (different stakeholders want genuinely different things) → use `council`.
 
 **Invoke:** `/decision-making:tribunal "<decision + options>"`
 
@@ -30,8 +30,8 @@ You have a decision to make and don't already know which technique fits. If you 
 
 **Signals:**
 - Decision is reversible or moderate-stakes
-- Options are clear and enumerable
-- You want a committed pick, not open-ended analysis
+- You've been going back and forth and want to force a pick
+- The cost of delay exceeds the cost of picking wrong
 
 **Not this if:** Stakes are high, you want rebuttals, or you want an honest "unable to decide" escape hatch → use `tribunal`.
 
@@ -46,7 +46,9 @@ You have a decision to make and don't already know which technique fits. If you 
 - You want someone committed to finding reasons it will fail
 - You're about to make it official
 
-**Not this if:** You're choosing between named options → use `adversarial` or `tribunal`. Not this if: the decision has already been tentatively made and you want to surface failure modes → use `pre-mortem`.
+**Not this if:** You're choosing between named options → use `adversarial` or `tribunal`.
+
+**Also not this if:** The decision has already been tentatively made and you want to surface failure modes → use `pre-mortem`. The discriminator is "still open to critique" vs "already committed."
 
 **Invoke:** `/decision-making:red-team "<the plan/artifact>"`
 
@@ -72,7 +74,9 @@ You have a decision to make and don't already know which technique fits. If you 
 - Framing matters as much as conclusions
 - You suspect different stakeholders would answer differently
 
-**Not this if:** The question has named enumerable options → use `adversarial`/`tribunal`. Not this if: the question itself feels wrong → use `ladder-of-abstraction`.
+**Not this if:** The question has named enumerable options AND the contest is over evidence/rigor rather than values → use `adversarial`/`tribunal`. The discriminator: `tribunal` is for contested *evidence*, `council` is for contested *values*.
+
+**Also not this if:** The question itself feels wrong or forced → use `ladder-of-abstraction`.
 
 **Invoke:** `/decision-making:council "<the question>"`
 
@@ -98,7 +102,7 @@ You have a decision to make and don't already know which technique fits. If you 
 - You need to know how sure you are, not just what the answer is
 - Spread matters as much as the median
 
-**Not this if:** The question is qualitative — use one of the other six.
+**Not this if:** A number is an *input* to a qualitative decision rather than the output of it — use `adversarial`/`tribunal` for the decision and only pull in `calibration` if the estimate itself is load-bearing and you're uncertain about it. Not this if: you have a number but aren't uncertain about it — you don't need this technique at all.
 
 **Invoke:** `/decision-making:calibration "<quantitative question>"`
 
@@ -106,8 +110,8 @@ You have a decision to make and don't already know which technique fits. If you 
 
 | Decision shape | Technique |
 |---|---|
-| N options, quick pick | `adversarial` |
-| N options, high stakes | `tribunal` |
+| N options, reversible | `adversarial` |
+| N options, irreversible or contested | `tribunal` |
 | One proposed plan to stress-test | `red-team` |
 | Tentative decision, check before committing | `pre-mortem` |
 | Ambiguous / value-laden / multi-stakeholder | `council` |
