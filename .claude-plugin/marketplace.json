@@ -101,6 +101,10 @@
     {
       "source": "./plugins/decision-making",
       "name": "decision-making"
+    },
+    {
+      "source": "./plugins/prompt-rewriter",
+      "name": "prompt-rewriter"
     }
   ]
 }
