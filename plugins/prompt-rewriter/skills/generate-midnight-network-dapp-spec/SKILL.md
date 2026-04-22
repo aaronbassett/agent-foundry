@@ -36,7 +36,7 @@ markdown brief. Implementation decisions happen downstream in
 
 ## Checklist
 
-Create a task for each item via `TaskCreate` and complete in order:
+Create a todo for each item via `TodoWrite` and complete in order:
 
 1. Intake — discover any existing DESIGN.md
 2. Use-case — Educational / PoC / MVP
@@ -149,7 +149,7 @@ AskUserQuestion(
   header: "Value movement",
   options:
     - label: "No value movement"
-      description: "Informational / gated logic / ZK proofs only. DUST auto-generated from NIGHT holdings covers protocol fees."
+      description: "Informational / gated logic / ZK proofs only."
     - label: "NIGHT transfers"
       description: "Moves the public, fixed-supply NIGHT token. Balances and transfers observable on-chain."
     - label: "Custom shielded token"
@@ -443,7 +443,7 @@ strictly.
    - No hand-off section.
    - Omit unselected-branch sections entirely.
 
-4. **Return the brief inline** in a single fenced markdown block.
+4. **Return the brief inline as markdown.** Do not wrap the whole brief in a fenced code block — it should render as formatted markdown in the user's view so they can read and copy it directly.
 
 5. **After returning**, tell the user:
 
@@ -452,7 +452,7 @@ strictly.
    > like me to save it to disk somewhere."
 
    If the user asks to save, write to the requested path. Default is
-   `./prompt.md` if they don't specify and want to save. Do not
+   `./dapp-brief.md` if they don't specify and want to save. Do not
    auto-save without being asked.
 
 ### Final verification checklist (mental, run before returning)
