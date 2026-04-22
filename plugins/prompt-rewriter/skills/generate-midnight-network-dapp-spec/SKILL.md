@@ -407,3 +407,62 @@ AskUserQuestion(
 
 Accept free-form text via Other. Store the answer. Empty / "None" /
 skip → the rendered brief says `No explicit exclusions captured.`
+
+## Phase 9 — Render
+
+Read `references/output-template.md` and follow its framing rules
+strictly.
+
+### Steps
+
+1. **Choose a name.** Derive a 2–4 word Title Case name from Phase 2's
+   one-line description (e.g., "Anonymous Donations Portal"). If the
+   inferred name is longer than 4 words, confirm via
+   `AskUserQuestion` with 2–3 shorter alternatives + Other.
+
+2. **Assemble the brief in memory** following the exact section order
+   in `output-template.md`:
+
+   | Section | Source |
+   |---|---|
+   | Summary | Phase 2a verbatim |
+   | Use-case | Phase 1 label + short rationale combining Phase 2b audience |
+   | What it does | Narrative 3–6 sentences expanded from Phase 2a + 2b |
+   | Privacy direction | Phase 3 buckets, with the preamble from `output-template.md` |
+   | Value movement | Phase 3a (omit section entirely if "No value movement") |
+   | Interfaces | Phase 4 selections, plain-language bullets |
+   | Design direction | Phase 5 record (omit section if Phase 5 was skipped) |
+   | Networks | Phase 7 selections |
+   | Developer-experience priorities | Phase 6 selections (omit section if MVP) |
+   | Out of scope | Phase 8 answer |
+
+3. **Apply the framing rules** from `output-template.md`:
+   - No stack names.
+   - No implementation filenames.
+   - No fee / DUST commentary.
+   - No hand-off section.
+   - Omit unselected-branch sections entirely.
+
+4. **Return the brief inline** in a single fenced markdown block.
+
+5. **After returning**, tell the user:
+
+   > "The brief is above. You can paste it into `/superpowers:brainstorming`,
+   > `/sdd:specify`, or any spec/planning skill. Let me know if you'd
+   > like me to save it to disk somewhere."
+
+   If the user asks to save, write to the requested path. Default is
+   `./prompt.md` if they don't specify and want to save. Do not
+   auto-save without being asked.
+
+### Final verification checklist (mental, run before returning)
+
+- [ ] No "React", "Vite", "commander", "ink", "yargs", "clack" or other
+  framework/library names anywhere in the brief.
+- [ ] No `./scripts/`, no `package.json`, no `src/` paths.
+- [ ] No "DUST" mentioned outside `references/*` (which are not in the
+  brief).
+- [ ] Privacy section has the "initial thoughts" preamble.
+- [ ] Value-movement ends with a deferral phrase ("for the spec to
+  determine" or equivalent) unless omitted.
+- [ ] No "N/A" sections. Unused sections omitted entirely.
