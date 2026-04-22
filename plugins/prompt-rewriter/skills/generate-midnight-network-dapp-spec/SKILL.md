@@ -54,9 +54,9 @@ Create a task for each item via `TaskCreate` and complete in order:
 
 Read each reference only when its phase is entered:
 
-- `references/use-case-defaults.md` — Phase 1 / 6 / 7 branching rules.
+- `references/use-case-defaults.md` — Phase 1 / 6 / 7 branching rules; also seeds Phase 3 privacy inference.
 - `references/privacy-goals.md` — Phase 3 inference and fallback list.
-- `references/interface-defaults.md` — Phase 3 / 4 supplemental hints.
+- `references/interface-defaults.md` — Phase 3 privacy-item hints per interface.
 - `references/design-integration.md` — Phase 5 design sub-flows.
 - `references/output-template.md` — Phase 9 render template.
 
@@ -176,7 +176,7 @@ is not a user-transferable asset.
 
 ## Phase 3 — Privacy direction
 
-Read `references/privacy-goals.md` and `references/interface-defaults.md`.
+Read `references/privacy-goals.md`, `references/interface-defaults.md`, and the "Inference hints for Phase 3" section of `references/use-case-defaults.md`.
 
 1. **Infer candidate items.** Using Phase 2 (concept + audience),
    Phase 3a (value movement), and interface hints, produce a list of
@@ -310,7 +310,7 @@ TUI too with the terminal prefix applied in the render phase.
 If distinct, repeat the appropriate 5b sub-flow for the TUI with the
 TUI-aware prefix from `design-integration.md`.
 
-### Phase-5-only edge: TUI without Web UI
+### 5d — TUI without Web UI (edge case)
 
 If TUI was selected but Web UI was not:
 
