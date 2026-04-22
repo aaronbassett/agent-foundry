@@ -210,3 +210,114 @@ Read `references/privacy-goals.md` and `references/interface-defaults.md`.
 
 **Never use** Compact vocabulary in the questions. Say "individual
 donation amounts", not "committed donation leaves".
+
+## Phase 4 — Interfaces
+
+Read `references/interface-defaults.md`.
+
+```text
+AskUserQuestion(
+  question: "Which interfaces should this DApp expose? (Select all that apply.)",
+  header: "Interfaces",
+  multiSelect: true,
+  options:
+    - label: "Web UI"
+      description: "Browser-based interface for end users."
+    - label: "CLI"
+      description: "Terminal command-line tool."
+    - label: "TUI"
+      description: "Full-screen terminal interface."
+    - label: "Headless / library"
+      description: "No interface; contract + SDK wrapper consumed by other code."
+)
+```
+
+**Do not ask per-interface framework or library questions.** Those
+choices belong to the downstream spec. `interface-defaults.md` is used
+only to enrich Phase 3's privacy inference — not to probe stack
+preferences.
+
+Record the selection.
+
+## Phase 5 — Design system
+
+**Skip this phase entirely** if neither Web UI nor TUI was selected in
+Phase 4.
+
+Read `references/design-integration.md`.
+
+### 5a — Reuse check
+
+If Phase 0 found an existing DESIGN.md:
+
+```text
+AskUserQuestion(
+  question: "I found an existing design system at <path>. How should I use it?",
+  header: "Design reuse",
+  options:
+    - label: "Reuse it for this DApp"
+      description: "Record the path in the brief; skip the design sub-flow."
+    - label: "Start fresh"
+      description: "Ignore the existing file and run a design sub-flow."
+)
+```
+
+If the user picks reuse, record `reuse:<path>` and jump to the Web+TUI
+reconciliation step (5c) if applicable, otherwise end Phase 5.
+
+### 5b — Sub-flow choice (Web UI)
+
+If no reuse:
+
+```text
+AskUserQuestion(
+  question: "How should we establish the design direction for the Web UI?",
+  header: "Design path",
+  options:
+    - label: "Full /design-systems flow"
+      description: "Run /design-systems:create and /design-systems:specimen now, with sign-off on the specimen before we continue."
+    - label: "Just capture an aesthetic brief"
+      description: "Record a one-paragraph direction. No DESIGN.md is produced; the downstream spec can run /design-systems:create if it wants."
+)
+```
+
+Run the chosen sub-flow per `references/design-integration.md`. Record
+`generated` (full flow produced DESIGN.md) or `brief:"<text>"`.
+
+### 5c — TUI reconciliation
+
+Entered only if **both** Web UI and TUI were selected.
+
+```text
+AskUserQuestion(
+  question: "Should the TUI share the Web UI's primary design elements (colour palette, type hierarchy), or have a distinct identity?",
+  header: "TUI design",
+  options:
+    - label: "Share Web UI primaries"
+      description: "Write a thin TUI_DESIGN.md that references DESIGN.md and notes terminal adaptations."
+    - label: "Distinct identity"
+      description: "Run a separate design sub-flow for the TUI with the TUI-aware prefix prepended to the brief."
+)
+```
+
+If shared and the Web UI's design was `reuse` or `generated` (i.e.,
+there is a DESIGN.md on disk), write `TUI_DESIGN.md` using the template
+in `design-integration.md`.
+
+If shared but the Web UI was `brief:` only, record `brief:<text>` for
+TUI too with the terminal prefix applied in the render phase.
+
+If distinct, repeat the appropriate 5b sub-flow for the TUI with the
+TUI-aware prefix from `design-integration.md`.
+
+### Phase-5-only edge: TUI without Web UI
+
+If TUI was selected but Web UI was not:
+
+- Skip 5c.
+- In 5b, when choosing "Full flow," prepend the TUI-aware prefix to the
+  aesthetic brief passed to `design-systems:create`. Write
+  `TUI_DESIGN.md` to cwd (not `DESIGN.md`).
+- When choosing "Brief only," capture the TUI-framed text verbatim.
+
+Record `generated` (TUI_DESIGN.md written) or `brief:"<text>"`.
