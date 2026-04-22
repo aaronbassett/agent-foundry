@@ -1,0 +1,20 @@
+{
+  "name": "prompt-rewriter",
+  "version": "0.1.0",
+  "description": "Skills for rewriting, generating, and structuring prompts. The first skill walks through an adaptive Q&A and produces a Midnight Network DApp spec brief suitable for handing to /superpowers:brainstorming, /sdd:specify, or similar spec/planning skills.",
+  "author": {
+    "name": "Aaron Bassett",
+    "email": "aaronbassett@gmail.com",
+    "url": "https://aaronbassett.com"
+  },
+  "homepage": "https://github.com/aaronbassett/agent-foundry",
+  "repository": "https://github.com/aaronbassett/agent-foundry/tree/main/plugins/prompt-rewriter",
+  "license": "MIT",
+  "keywords": [
+    "prompt-engineering",
+    "midnight",
+    "dapp",
+    "spec-brief",
+    "adaptive-qa"
+  ]
+}
