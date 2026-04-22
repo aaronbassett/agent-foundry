@@ -77,3 +77,66 @@ Announce the start of the flow:
 > spec out. We'll work through use-case, concept, privacy, interfaces,
 > networks, and (if UI is involved) design direction. The end result is
 > a concise brief you can hand to a spec/planning skill."
+
+## Phase 1 — Use-case
+
+Read `references/use-case-defaults.md` before asking.
+
+```text
+AskUserQuestion(
+  question: "Which best describes the kind of Midnight DApp you're building?",
+  header: "Use-case",
+  options:
+    - label: "Educational example"
+      description: "Learning resource — zero-config, demo-oriented, local-devnet first. Not aimed at production users."
+    - label: "Proof of Concept (PoC)"
+      description: "Internal or technical validation of an idea. Real users not yet in scope."
+    - label: "MVP"
+      description: "First shippable slice. Real users in scope; deployment story matters."
+)
+```
+
+Record the answer. It gates Phase 6 (skipped for MVP) and Phase 7
+(Educational treats local as implicit).
+
+## Phase 2 — Core concept
+
+Ask two questions in sequence.
+
+### Q2a — One-line description
+
+```text
+AskUserQuestion(
+  question: "In one sentence, what does this DApp do?",
+  header: "Concept",
+  options:
+    - label: "It's <X> for <audience> that does <Y>"
+      description: "Product framing: who uses it, what it does for them."
+    - label: "It solves <problem> by <approach>"
+      description: "Problem/solution framing: what problem, what is the private mechanism."
+    - label: "I'll describe it freely"
+      description: "Free-form via Other."
+)
+```
+
+Accept free-form text via Other when the seeded framings don't fit.
+Store the one-line description verbatim — it seeds the `Summary`
+section of the brief.
+
+### Q2b — Audience
+
+```text
+AskUserQuestion(
+  question: "Who is this DApp for?",
+  header: "Audience",
+  options:
+    - label: "Developers learning Midnight"
+      description: "The DApp exists to teach. (Most common in Educational use-cases.)"
+    - label: "A specific user group"
+      description: "End users outside the dev audience — e.g., DAO members, event attendees, researchers."
+    - label: "An internal team"
+      description: "Validating an idea for internal stakeholders — PoC / MVP flavour."
+)
+```
+
+Record the answer. Feeds Phase 3's privacy-item inference.
