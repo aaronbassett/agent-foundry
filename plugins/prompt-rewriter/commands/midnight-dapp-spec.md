@@ -1,4 +1,5 @@
 ---
+name: midnight-dapp-spec
 description: Walk through an adaptive Q&A to generate a Midnight Network DApp spec brief. The brief is designed as input to a downstream spec / planning skill such as /superpowers:brainstorming or /sdd:specify.
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: prompt-rewriter:generate-midnight-network-dapp-spec
-description: Use this skill to generate a Midnight Network DApp spec brief through an adaptive Q&A. The output is a concise brief (not a full spec) intended as input to a downstream spec / planning skill such as /superpowers:brainstorming or /sdd:specify. Triggers on "generate midnight dapp spec", "new midnight dapp", "midnight dapp brief", "midnight dapp prompt", or /prompt-rewriter:midnight-dapp-spec.
+description: Use this skill to generate a Midnight Network DApp spec brief through an adaptive Q&A. The output is a concise brief (not a full spec) intended as input to a downstream spec / planning skill such as /superpowers:brainstorming or /sdd:specify. Triggers on "generate midnight dapp spec", "improve midnight dapp prompt", "midnight dapp brief", "midnight dapp prompt", or /prompt-rewriter:midnight-dapp-spec.
 ---
 
 # Generate Midnight Network DApp Spec Brief
@@ -141,7 +141,7 @@ AskUserQuestion(
 
 Record the answer. Feeds Phase 3's privacy-item inference.
 
-## Phase 3a — Value movement
+## Phase 3 — Value movement
 
 ```text
 AskUserQuestion(
@@ -164,7 +164,7 @@ AskUserQuestion(
 ```
 
 If the user picked "Multiple kinds," follow up with a **multi-select**
-across the same five concrete options (excluding "No value movement"
+across the same four concrete options (excluding "No value movement"
 and "Multiple kinds").
 
 **Do not** ask a balance-privacy follow-up — privacy is implicit in the
@@ -174,7 +174,7 @@ chosen option (shielded vs unshielded).
 DUST is a non-transferable fee resource auto-generated from NIGHT; it
 is not a user-transferable asset.
 
-## Phase 3 — Privacy direction
+## Phase 3a — Privacy direction
 
 Read `references/privacy-goals.md`, `references/interface-defaults.md`, and the "Inference hints for Phase 3" section of `references/use-case-defaults.md`.
 
@@ -451,9 +451,7 @@ strictly.
    > `/sdd:specify`, or any spec/planning skill. Let me know if you'd
    > like me to save it to disk somewhere."
 
-   If the user asks to save, write to the requested path. Default is
-   `./dapp-brief.md` if they don't specify and want to save. Do not
-   auto-save without being asked.
+   If the user asks to save, write to the requested path. Default is `./dapp-brief.md` if they don't specify and want to save. Do not auto-save without being asked. If the user provides a save path outside the current working directory, confirm before writing.
 
 ### Final verification checklist (mental, run before returning)
 

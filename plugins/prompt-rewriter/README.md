@@ -58,8 +58,3 @@ $ (paste brief into) /sdd:specify
 - Framing phrases like "initial thoughts", "likely private", "for the
   spec to determine" are baked into the template so the downstream skill
   has room to make its own decisions.
-
-## References
-
-- Design spec: `docs/superpowers/specs/2026-04-22-prompt-rewriter-plugin-design.md`
-- Implementation plan: `docs/superpowers/plans/2026-04-22-prompt-rewriter-plugin.md`
