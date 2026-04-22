@@ -140,3 +140,73 @@ AskUserQuestion(
 ```
 
 Record the answer. Feeds Phase 3's privacy-item inference.
+
+## Phase 3a — Value movement
+
+```text
+AskUserQuestion(
+  question: "Does this DApp move value between parties?",
+  header: "Value movement",
+  options:
+    - label: "No value movement"
+      description: "Informational / gated logic / ZK proofs only. DUST auto-generated from NIGHT holdings covers protocol fees."
+    - label: "NIGHT transfers"
+      description: "Moves the public, fixed-supply NIGHT token. Balances and transfers observable on-chain."
+    - label: "Custom shielded token"
+      description: "DApp mints / manages its own Zswap-shielded token. Balances and transfers private."
+    - label: "Custom unshielded token"
+      description: "DApp mints / manages its own public token. Balances observable."
+    - label: "Shielded unique assets"
+      description: "NFT-style unique items via Zswap."
+    - label: "Multiple kinds"
+      description: "A mix of the above."
+)
+```
+
+If the user picked "Multiple kinds," follow up with a **multi-select**
+across the same five concrete options (excluding "No value movement"
+and "Multiple kinds").
+
+**Do not** ask a balance-privacy follow-up — privacy is implicit in the
+chosen option (shielded vs unshielded).
+
+**Do not** mention DUST as a DApp-level privacy item in later phases.
+DUST is a non-transferable fee resource auto-generated from NIGHT; it
+is not a user-transferable asset.
+
+## Phase 3 — Privacy direction
+
+Read `references/privacy-goals.md` and `references/interface-defaults.md`.
+
+1. **Infer candidate items.** Using Phase 2 (concept + audience),
+   Phase 3a (value movement), and interface hints, produce a list of
+   4–10 concrete data items likely present in this DApp. Follow the
+   inference heuristics in `privacy-goals.md`.
+
+2. **Fallback if inference under-produces.** If the list has fewer
+   than 4 items, merge in items from the generic fallback list in
+   `privacy-goals.md`.
+
+3. **Ask per item.** For each candidate item, ask one
+   `AskUserQuestion` with options:
+
+   ```text
+   - label: "Likely private"
+     description: "The DApp should keep this hidden from observers."
+   - label: "Likely public"
+     description: "Observable or deliberately disclosed."
+   - label: "Undecided / depends on design"
+     description: "The spec skill should explore this further."
+   - label: "Doesn't apply"
+     description: "Not relevant to this DApp."
+   ```
+
+   For speed, group related items (e.g., identity / actions /
+   aggregates) and issue one multi-select `AskUserQuestion` per group
+   where the items clearly share a category.
+
+4. **Store buckets.** Record items as three lists: `likely_private`,
+   `likely_public`, `undecided`. Drop items marked "Doesn't apply".
+
+**Never use** Compact vocabulary in the questions. Say "individual
+donation amounts", not "committed donation leaves".
