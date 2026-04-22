@@ -321,3 +321,89 @@ If TUI was selected but Web UI was not:
 - When choosing "Brief only," capture the TUI-framed text verbatim.
 
 Record `generated` (TUI_DESIGN.md written) or `brief:"<text>"`.
+
+## Phase 6 — Developer-experience priorities
+
+**Skip this phase entirely** if Use-case is MVP.
+
+Ask a single multi-select `AskUserQuestion` with defaults all pre-checked:
+
+```text
+AskUserQuestion(
+  question: "Which developer-experience priorities should the brief carry? (All default to yes.)",
+  header: "Dev-XP",
+  multiSelect: true,
+  options:
+    - label: "Zero-config onboarding"
+      description: "A newcomer should be able to run the project end-to-end with minimal setup."
+    - label: "Automated test-wallet setup"
+      description: "Demos and tests don't require manual wallet creation or funding."
+    - label: "Local-network auto-provision or detect"
+      description: "Automatic provisioning or detection of a local Midnight network for local development."
+)
+```
+
+Record selected items. The rendered brief only shows bullets the user
+selected. Bullets are phrased as *priorities*, not implementation
+filenames.
+
+## Phase 7 — Networks
+
+Always asked, regardless of use-case.
+
+### Educational branch
+
+```text
+AskUserQuestion(
+  question: "Local devnet is pre-included for Educational examples. Should the brief *additionally* target any other networks?",
+  header: "Networks",
+  multiSelect: true,
+  options:
+    - label: "Preview network"
+      description: "The public preview testnet."
+    - label: "Preprod network"
+      description: "The pre-production testnet."
+)
+```
+
+Record `[local]` plus any additions. Even "local only" is explicitly
+recorded.
+
+### PoC / MVP branch
+
+```text
+AskUserQuestion(
+  question: "Which networks should the DApp be able to run against? (Select all that apply.)",
+  header: "Networks",
+  multiSelect: true,
+  options:
+    - label: "Local devnet"
+      description: "Docker-compose local network for development."
+    - label: "Preview network"
+      description: "Public preview testnet."
+    - label: "Preprod network"
+      description: "Pre-production testnet."
+    - label: "Mainnet"
+      description: "Production Midnight mainnet."
+)
+```
+
+If the user deselects local devnet, re-prompt once to confirm (local
+is nearly always wanted for development). Record the final selection.
+
+## Phase 8 — Out of scope
+
+```text
+AskUserQuestion(
+  question: "Anything you want to explicitly exclude from scope? (Plain English. 'None' is fine.)",
+  header: "Out of scope",
+  options:
+    - label: "None"
+      description: "No explicit exclusions — the downstream spec decides what's in scope."
+    - label: "I'll list a few items"
+      description: "Free text via Other."
+)
+```
+
+Accept free-form text via Other. Store the answer. Empty / "None" /
+skip → the rendered brief says `No explicit exclusions captured.`
