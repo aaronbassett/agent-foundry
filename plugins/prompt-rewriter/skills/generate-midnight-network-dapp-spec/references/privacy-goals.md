@@ -1,6 +1,6 @@
 # Privacy Goals — Inference and Fallback
 
-Used in Phase 3 to produce a *tailored* privacy multi-select rather
+Used in Phase 3a to produce a *tailored* privacy multi-select rather
 than a generic list.
 
 ## Inference procedure
@@ -9,7 +9,7 @@ Given:
 
 - Phase 2 core concept (one-line description)
 - Phase 2 audience
-- Phase 3a value-movement selection
+- Phase 3 value-movement selection
 - Phase 4 interface selections
 
 Produce a candidate list of 4–10 concrete data items likely present

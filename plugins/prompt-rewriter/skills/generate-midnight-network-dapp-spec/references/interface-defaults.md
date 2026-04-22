@@ -2,7 +2,7 @@
 
 This file has **no stack recommendations.** Framework and library
 choices belong to the downstream spec. The skill uses the hints here
-only to enrich Phase 3's privacy inference.
+only to enrich Phase 3a's privacy inference.
 
 ## Web UI
 
@@ -41,9 +41,9 @@ Typical privacy-relevant items a headless build introduces:
 - Consumer-application logs that may capture DApp inputs/outputs
 - Service accounts / signing keys held by the caller
 
-## Usage in Phase 3
+## Usage in Phase 3a
 
 For each selected interface, the skill pulls the relevant bullets above
-and merges them into the Phase 3 candidate list **only if** the core
+and merges them into the Phase 3a candidate list **only if** the core
 concept doesn't already cover them. Do not pad the list — the goal is
 relevance, not exhaustiveness.

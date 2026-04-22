@@ -34,7 +34,7 @@ This file tells `SKILL.md` how each use-case affects later branches.
 - **Rendered brief note:** Use-case line should emphasise the user
   outcome the MVP validates, not the internals.
 
-## Inference hints for Phase 3 (privacy)
+## Inference hints for Phase 3a (privacy)
 
 These are suggestions the skill uses when inferring candidate
 privacy items:

@@ -41,8 +41,8 @@ Create a todo for each item via `TodoWrite` and complete in order:
 1. Intake — discover any existing DESIGN.md
 2. Use-case — Educational / PoC / MVP
 3. Core concept — one-line description + audience
-4. Value movement (Phase 3a) — how / whether the DApp moves value
-5. Privacy direction (Phase 3) — inferred private/public items
+4. Value movement (Phase 3) — how / whether the DApp moves value
+5. Privacy direction (Phase 3a) — inferred private/public items
 6. Interfaces — Web UI / CLI / TUI / Headless
 7. Design system (only if Web UI or TUI) — reuse, full flow, or brief
 8. Developer-experience priorities (Educational / PoC only)
@@ -54,9 +54,9 @@ Create a todo for each item via `TodoWrite` and complete in order:
 
 Read each reference only when its phase is entered:
 
-- `references/use-case-defaults.md` — Phase 1 / 6 / 7 branching rules; also seeds Phase 3 privacy inference.
-- `references/privacy-goals.md` — Phase 3 inference and fallback list.
-- `references/interface-defaults.md` — Phase 3 privacy-item hints per interface.
+- `references/use-case-defaults.md` — Phase 1 / 6 / 7 branching rules; also seeds Phase 3a privacy inference.
+- `references/privacy-goals.md` — Phase 3a inference and fallback list.
+- `references/interface-defaults.md` — Phase 3a privacy-item hints per interface.
 - `references/design-integration.md` — Phase 5 design sub-flows.
 - `references/output-template.md` — Phase 9 render template.
 
@@ -139,7 +139,7 @@ AskUserQuestion(
 )
 ```
 
-Record the answer. Feeds Phase 3's privacy-item inference.
+Record the answer. Feeds Phase 3a's privacy-item inference.
 
 ## Phase 3 — Value movement
 
@@ -176,10 +176,10 @@ is not a user-transferable asset.
 
 ## Phase 3a — Privacy direction
 
-Read `references/privacy-goals.md`, `references/interface-defaults.md`, and the "Inference hints for Phase 3" section of `references/use-case-defaults.md`.
+Read `references/privacy-goals.md`, `references/interface-defaults.md`, and the "Inference hints for Phase 3a" section of `references/use-case-defaults.md`.
 
 1. **Infer candidate items.** Using Phase 2 (concept + audience),
-   Phase 3a (value movement), and interface hints, produce a list of
+   Phase 3 (value movement), and interface hints, produce a list of
    4–10 concrete data items likely present in this DApp. Follow the
    inference heuristics in `privacy-goals.md`.
 
@@ -234,7 +234,7 @@ AskUserQuestion(
 
 **Do not ask per-interface framework or library questions.** Those
 choices belong to the downstream spec. `interface-defaults.md` is used
-only to enrich Phase 3's privacy inference — not to probe stack
+only to enrich Phase 3a's privacy inference — not to probe stack
 preferences.
 
 Record the selection.
@@ -428,8 +428,8 @@ strictly.
    | Summary | Phase 2a verbatim |
    | Use-case | Phase 1 label + short rationale combining Phase 2b audience |
    | What it does | Narrative 3–6 sentences expanded from Phase 2a + 2b |
-   | Privacy direction | Phase 3 buckets, with the preamble from `output-template.md` |
-   | Value movement | Phase 3a (omit section entirely if "No value movement") |
+   | Privacy direction | Phase 3a buckets, with the preamble from `output-template.md` |
+   | Value movement | Phase 3 (omit section entirely if "No value movement") |
    | Interfaces | Phase 4 selections, plain-language bullets |
    | Design direction | Phase 5 record (omit section if Phase 5 was skipped) |
    | Networks | Phase 7 selections |

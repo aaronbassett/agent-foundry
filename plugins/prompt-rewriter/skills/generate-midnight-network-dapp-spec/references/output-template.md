@@ -51,9 +51,9 @@ list. The spec skill should pressure-test and refine them.
 **Undecided / depends on design:**  <!-- only if user marked "either" -->
 - <item with short note>
 
-## Value movement   <!-- omitted if Phase 3a == "no value movement" -->
+## Value movement   <!-- omitted if Phase 3 == "no value movement" -->
 
-<Prose expansion of the Phase 3a selection. Ends with phrasing that
+<Prose expansion of the Phase 3 selection. Ends with phrasing that
 defers final mechanics, e.g. "Final token mechanics and transfer
 semantics are for the spec to determine.">
 
