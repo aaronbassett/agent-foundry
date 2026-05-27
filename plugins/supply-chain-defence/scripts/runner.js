@@ -319,7 +319,11 @@ async function main() {
 
   switch (hookEvent) {
     case "PreToolUse":
-      if (args.profile === "edit-guard" || args.profile === "write-guard") {
+      if (
+        args.profile === "edit-guard" ||
+        args.profile === "write-guard" ||
+        args.profile === "installer-hard-block"
+      ) {
         output = formatAlwaysBlockOutput(results);
       } else {
         output = formatPreToolUseOutput(results, state, config);

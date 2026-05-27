@@ -24,6 +24,9 @@
       "socket-present",
       "install-scripts"
     ],
+    "installer-hard-block": [
+      "installer-block"
+    ],
     "edit-guard": [
       "dep-direct-edit"
     ],
@@ -74,6 +77,7 @@
   },
   "severity": {
     "dep-direct-edit": "always-block",
+    "installer-block": "always-block",
     "ci-over-install": "block-then-warn",
     "before-flag": "block-then-warn",
     "typosquat-local": "block-then-warn",

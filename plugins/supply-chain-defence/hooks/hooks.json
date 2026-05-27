@@ -43,6 +43,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile installer-hard-block",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "if": "Bash(npm *)",
             "command": "node ${CLAUDE_PLUGIN_DATA}/scripts/runner.js --profile bash-guard",
             "timeout": 30
