@@ -7,6 +7,7 @@ Protect npm/pnpm/yarn projects from supply chain attacks through deterministic h
 ### Hooks (automatic, every session)
 
 - **Session start:** Quick health check + deep async audit of dependencies
+- **Hard-block of network installers:** Refuses `npx`, `npm install` / `npm add`, `pnpm install` / `pnpm dlx`, `yarn add` / `yarn dlx`, `bun add` / `bun x`, `pip install`, `pipx`, `uv pip install` / `uvx`, `brew install`, `gem install`, `go install`, and pipe-to-shell installers (`curl … | sh`, `wget … | bash`). These bypass lockfile and release-age gates by pulling arbitrary code straight from a network registry. There is no TTL override — every invocation is refused.
 - **Install interception:** Enforces `ci` over `install`, `--before` flag for new packages, typosquatting detection, Socket.dev presence, lifecycle script warnings
 - **Dependency edit block:** Prevents Claude from directly editing dependency fields in `package.json` — forces use of the package manager
 - **Lockfile monitoring:** Watches for unexpected changes to lockfiles and `.npmrc`
@@ -50,9 +51,10 @@ Prefers **pnpm** for new projects. Detects and adapts to existing projects using
 
 ## How It Works
 
-### Block-Then-Warn
+### Two enforcement tiers
 
-Most checks (typosquatting, Socket presence, `ci`-over-`install`, `--before` flag, lifecycle scripts) **block the first time** to force awareness, then **warn on subsequent attempts** within an 8-hour window. This prevents alert fatigue while ensuring you see every issue at least once. The dependency direct-edit check always blocks — there is no override.
+- **Always-block (no TTL):** the `installer-block` check refuses every `npx`, `npm install`, `pnpm dlx`, `pip install`, `brew install`, pipe-to-shell, etc. invocation. The `dep-direct-edit` check similarly always-blocks direct edits to dependency fields in `package.json`. Neither has an override — you must take a different route (vetted lockfile update, cargo equivalent, container image, etc.).
+- **Block-then-warn (8-hour TTL):** typosquatting, Socket presence, `ci`-over-`install`, `--before` flag, lifecycle scripts. These **block the first time** to force awareness, then **warn on subsequent attempts** within an 8-hour window — preventing alert fatigue while ensuring every issue is seen at least once.
 
 State is tracked per-project in `.claude/agent-foundry/supply-chain-defence.local.json`.
 
@@ -68,7 +70,7 @@ Run the test suite with Node's built-in test runner:
 node --test plugins/supply-chain-defence/tests/*.test.js
 ```
 
-68 tests covering all check scripts and runner internals (severity logic, output formatting, state management).
+238 tests covering all check scripts and runner internals (severity logic, output formatting, state management).
 
 ## Plugin Dependencies
 
