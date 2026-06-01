@@ -12,6 +12,27 @@ function emptyState() {
   return { detectedPackageManager: null, lastDeepAudit: null, blocked: {} };
 }
 
+// Hermetic npm-metadata fetchers injected into typosquat-local's two-layer
+// maturity check (the optional 5th argument) so tests never hit the network.
+// Shapes mirror utils.fetchPackageMetadata().
+const metaImmature = async () => ({
+  ok: true,
+  downloadsAvailable: true,
+  downloads: 8,
+  ageDays: 2,
+  releases: 1,
+  firstPublish: "2026-05-29T00:00:00.000Z",
+});
+const metaMature = async () => ({
+  ok: true,
+  downloadsAvailable: true,
+  downloads: 5000000,
+  ageDays: 1500,
+  releases: 40,
+  firstPublish: "2022-01-01T00:00:00.000Z",
+});
+const metaUnverifiable = async () => ({ ok: false, error: "not-found" });
+
 // ---------------------------------------------------------------------------
 // 1. ci-over-install
 // ---------------------------------------------------------------------------
@@ -685,7 +706,8 @@ describe("typosquat-local", () => {
       { tool_input: { command: "npm install axois" } },
       emptyState(),
       config,
-      "/tmp"
+      "/tmp",
+      { fetchMetadata: metaImmature }
     );
     assert.strictEqual(result.status, "block");
     assert.ok(result.message.includes("axios"));
@@ -726,7 +748,8 @@ describe("typosquat-local", () => {
       { tool_input: { command: "npm install chalkk" } },
       emptyState(),
       config,
-      "/tmp"
+      "/tmp",
+      { fetchMetadata: metaImmature }
     );
     assert.strictEqual(result.status, "block");
     assert.ok(result.message.includes("chalk"));
@@ -1216,7 +1239,8 @@ describe("typosquat-local (scope substitution)", () => {
       { tool_input: { command: "npm install @attacker/code-frame" } },
       emptyState(),
       config,
-      "/tmp"
+      "/tmp",
+      { fetchMetadata: metaImmature }
     );
     assert.strictEqual(result.status, "block");
     assert.ok(result.message.includes("scope substitution"));
@@ -1240,12 +1264,12 @@ describe("typosquat-bulk (scope substitution)", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
     fs.writeFileSync(
       path.join(tmpDir, "package.json"),
-      JSON.stringify({ dependencies: { "@attacker/core": "^1.0.0" } })
+      JSON.stringify({ dependencies: { "@attacker/code-frame": "^1.0.0" } })
     );
     try {
       const result = await check({}, emptyState(), config, tmpDir);
       assert.strictEqual(result.status, "warn");
-      assert.ok(result.message.includes("scope substitution") || result.message.includes("@attacker/core"));
+      assert.ok(result.message.includes("scope substitution") || result.message.includes("@attacker/code-frame"));
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -1338,11 +1362,83 @@ describe("typosquat-local (combined attacks)", () => {
       { tool_input: { command: "npm install axois @attacker/code-frame" } },
       emptyState(),
       config,
-      "/tmp"
+      "/tmp",
+      { fetchMetadata: metaImmature }
     );
     assert.strictEqual(result.status, "block");
     // Should flag both, not just the first
     assert.ok(result.details.suspects.length >= 2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// typosquat-local: two-layer maturity check + false-positive regressions
+// ---------------------------------------------------------------------------
+describe("typosquat-local (two-layer maturity check)", () => {
+  const check = require("../scripts/checks/typosquat-local");
+
+  it("explains both layers and how to verify in the block message", async () => {
+    const result = await check(
+      { tool_input: { command: "npm install axois" } },
+      emptyState(),
+      config,
+      "/tmp",
+      { fetchMetadata: metaImmature }
+    );
+    assert.strictEqual(result.status, "block");
+    assert.ok(result.message.includes("axios")); // layer 1
+    assert.ok(result.message.includes("downloads")); // layer 2 metrics
+    assert.ok(result.message.includes("published releases"));
+    assert.ok(result.message.includes("How to verify")); // guidance
+  });
+
+  it("warns (does not block) when the suspect is an established package", async () => {
+    const result = await check(
+      { tool_input: { command: "npm install axois" } },
+      emptyState(),
+      config,
+      "/tmp",
+      { fetchMetadata: metaMature }
+    );
+    assert.strictEqual(result.status, "warn");
+    assert.ok(result.message.includes("established"));
+  });
+
+  it("blocks fail-closed when metadata cannot be fetched", async () => {
+    const result = await check(
+      { tool_input: { command: "npm install axois" } },
+      emptyState(),
+      config,
+      "/tmp",
+      { fetchMetadata: metaUnverifiable }
+    );
+    assert.strictEqual(result.status, "block");
+    assert.ok(result.message.includes("could not") || result.message.includes("fail-closed"));
+  });
+
+  it("does not false-flag legitimate scoped packages (regression)", async () => {
+    // @docusaurus/core etc. must NOT be compared by their bare segment
+    // ("core"/"types") against unrelated popular packages, and "core"/"types"
+    // are too generic for scope-substitution.
+    const result = await check(
+      { tool_input: { command: "pnpm add @docusaurus/core @docusaurus/types @docusaurus/faster" } },
+      emptyState(),
+      config,
+      "/tmp",
+      { fetchMetadata: metaImmature }
+    );
+    assert.strictEqual(result.status, "pass");
+  });
+
+  it("does not false-flag shell tokens from piped/redirected commands (regression)", async () => {
+    const result = await check(
+      { tool_input: { command: "pnpm add -D @lavamoat/allow-scripts 2>&1 | tail -30" } },
+      emptyState(),
+      config,
+      "/tmp",
+      { fetchMetadata: metaMature }
+    );
+    assert.strictEqual(result.status, "pass");
   });
 });
 

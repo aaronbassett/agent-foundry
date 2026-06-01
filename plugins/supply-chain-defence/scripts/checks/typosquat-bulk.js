@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { levenshtein } = require("../utils");
+const { findTyposquatSuspects } = require("../utils");
 
 module.exports = async function typosquatBulk(input, state, config, cwd) {
   const pkgPath = path.join(cwd, "package.json");
@@ -44,51 +44,11 @@ module.exports = async function typosquatBulk(input, state, config, cwd) {
     };
   }
 
-  const popularSet = new Set(popularPackages);
   const maxDist = config.thresholds.typosquatMaxDistance || 2;
-  const suspects = [];
-
-  for (const dep of allDeps) {
-    if (popularSet.has(dep)) continue;
-
-    const bare = dep.startsWith("@") ? dep.split("/")[1] || dep : dep;
-
-    for (const popular of popularPackages) {
-      const popularBare = popular.startsWith("@")
-        ? popular.split("/")[1] || popular
-        : popular;
-      const dist = levenshtein(bare, popularBare);
-      if (dist > 0 && dist <= maxDist) {
-        suspects.push({ dep, similarTo: popular, distance: dist });
-        break;
-      }
-    }
-  }
-
-  // Scope-substitution check — always runs, not conditional on suspects being empty
-  const alreadyFlagged = new Set(suspects.map((s) => s.dep));
-  for (const dep of allDeps) {
-    if (!dep.startsWith("@")) continue;
-    if (popularSet.has(dep)) continue;
-    if (alreadyFlagged.has(dep)) continue;
-
-    const [depScope, depBare] = dep.slice(1).split("/");
-    if (!depBare) continue;
-
-    for (const popular of popularPackages) {
-      if (!popular.startsWith("@")) continue;
-      const [popScope, popBare] = popular.slice(1).split("/");
-      if (depBare === popBare && depScope !== popScope) {
-        suspects.push({
-          dep,
-          similarTo: popular,
-          distance: 0,
-          reason: "scope substitution — same package name under a different scope",
-        });
-        break;
-      }
-    }
-  }
+  // Full-name, same-namespace-class comparison (see utils.findTyposquatSuspects):
+  // a legitimate scoped package like @docusaurus/core is no longer compared by
+  // its bare segment ("core") against unrelated unscoped packages.
+  const suspects = findTyposquatSuspects(allDeps, popularPackages, maxDist);
 
   if (suspects.length === 0) {
     return {
@@ -98,11 +58,10 @@ module.exports = async function typosquatBulk(input, state, config, cwd) {
     };
   }
 
-  const lines = suspects.map(
-    (s) =>
-      s.reason
-        ? `"${s.dep}" looks like "${s.similarTo}" (${s.reason})`
-        : `"${s.dep}" looks like "${s.similarTo}" (edit distance: ${s.distance})`
+  const lines = suspects.map((s) =>
+    s.reason
+      ? `"${s.name}" looks like "${s.similarTo}" (${s.reason})`
+      : `"${s.name}" looks like "${s.similarTo}" (edit distance: ${s.distance})`
   );
 
   return {
@@ -110,7 +69,8 @@ module.exports = async function typosquatBulk(input, state, config, cwd) {
     message:
       "Possible typosquatting in existing dependencies:\n" +
       lines.join("\n") +
-      "\n\nReview these packages carefully.",
+      "\n\nReview these packages carefully. Inspect each with `npm view <pkg> " +
+      "homepage repository maintainers`, or check it at https://socket.dev/npm/package/<pkg>.",
     details: { suspects, checked: allDeps.length },
   };
 };

@@ -1,7 +1,17 @@
 # Supply chain defence — GitHub Actions workflow
 #
 # Add to .github/workflows/supply-chain-check.yml
-# Adapt the package manager commands for your project (this example uses pnpm).
+# Adapt the package manager commands for your project. This example uses pnpm.
+#
+# IMPORTANT: lockfile-lint supports npm and yarn ONLY. Do NOT add a lockfile-lint
+# step for pnpm/bun — it cannot parse their lockfiles and fails CI. pnpm/bun
+# verify lockfile integrity natively on a frozen-lockfile install.
+#
+# For npm/yarn, add these extra steps:
+#   - name: Lint lockfile
+#     run: npx lockfile-lint --path package-lock.json --type npm --allowed-hosts npm --validate-https
+#   - name: Verify provenance signatures   # needs an npm lockfile; omit for pnpm/bun
+#     run: npm audit signatures
 
 name: Supply Chain Check
 on: [push, pull_request]
@@ -12,20 +22,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
+      - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
         run: pnpm audit
-
-      - name: Lint lockfile
-        run: npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https
-
-      - name: Verify provenance signatures
-        run: npm audit signatures

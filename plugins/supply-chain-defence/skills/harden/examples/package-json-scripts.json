@@ -1,7 +1,13 @@
 {
-  "_comment": "Add these scripts to your package.json. Adapt the lockfile path and type for your package manager.",
-  "scripts": {
-    "preinstall": "npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https",
-    "audit:security": "pnpm audit && npx lockfile-lint --path pnpm-lock.yaml --type pnpm --allowed-hosts npm --validate-https"
+  "_comment": "Add the scripts for your package manager to package.json. lockfile-lint supports npm and yarn ONLY — never add a lockfile-lint preinstall to a pnpm/bun project, it cannot parse their lockfiles and a failing preinstall breaks every install. pnpm/bun verify lockfile integrity natively on a --frozen-lockfile install, so they only need an audit script.",
+  "npm-or-yarn": {
+    "preinstall": "npx lockfile-lint --path package-lock.json --type npm --allowed-hosts npm --validate-https",
+    "audit:security": "npm audit && npx lockfile-lint --path package-lock.json --type npm --allowed-hosts npm --validate-https"
+  },
+  "pnpm": {
+    "audit:security": "pnpm audit"
+  },
+  "bun": {
+    "audit:security": "bun audit"
   }
 }

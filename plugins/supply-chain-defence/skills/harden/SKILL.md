@@ -35,21 +35,39 @@ Based on the detected package manager, read the corresponding example template a
 - **pnpm:** Read `${CLAUDE_SKILL_DIR}/examples/pnpm-workspace.yaml` as template. Add `minimumReleaseAge` to the project's existing `pnpm-workspace.yaml`. Preserve existing `packages` and other settings.
 - **yarn:** Read `${CLAUDE_SKILL_DIR}/examples/.yarnrc.yml` as template. Add `npmMinimumReleaseAge` to the project's existing `.yarnrc.yml`. Preserve existing settings.
 
-## Step 3: Lockfile-Lint Config
+> **lockfile-lint compatibility — read before Steps 3–5.** `lockfile-lint` only
+> ships **npm** and **yarn** lockfile parsers. Pointing it at a `pnpm-lock.yaml`
+> or a bun lockfile fails with `Unable to find relevant lockfile parser`. For
+> **pnpm and bun, skip every lockfile-lint step** below — those package managers
+> verify lockfile integrity natively on a frozen-lockfile install. Wiring
+> lockfile-lint into a pnpm/bun project breaks `install` (via a failing
+> `preinstall`) and fails CI, so only add it for npm/yarn.
 
-Read `${CLAUDE_SKILL_DIR}/examples/.lockfile-lintrc` as template. Create `.lockfile-lintrc` in the project root, substituting `path` and `type` for the detected lockfile and package manager.
+## Step 3: Lockfile-Lint Config (npm and yarn only)
+
+**Skip this step for pnpm and bun.** For **npm or yarn**, read
+`${CLAUDE_SKILL_DIR}/examples/.lockfile-lintrc` as a template and create
+`.lockfile-lintrc` in the project root, substituting `path` and `type` for the
+detected lockfile (`package-lock.json`/`npm` or `yarn.lock`/`yarn`).
 
 ## Step 4: package.json Security Scripts
 
-Read `${CLAUDE_SKILL_DIR}/examples/package-json-scripts.json` as template. Add the `preinstall` and `audit:security` scripts to the project's `package.json`, adapting lockfile path and package manager commands.
+Read `${CLAUDE_SKILL_DIR}/examples/package-json-scripts.json` as template. Add the appropriate scripts for the detected package manager:
 
-Use the package manager to add the scripts where possible (e.g., `npm pkg set`). If that's not feasible, edit `package.json` directly — but only the `scripts` field, never dependency fields.
+- **npm / yarn:** add both a lockfile-lint `preinstall` (verifies the lockfile before every install) and an `audit:security` script.
+- **pnpm / bun:** do **not** add a lockfile-lint `preinstall` — lockfile-lint cannot parse these lockfiles, so a `preinstall` would fail and break every install. Add only an `audit:security` script using the package manager's native audit (`pnpm audit` / `bun audit`); integrity is verified natively on a `--frozen-lockfile` install.
+
+Use the package manager to add the scripts where possible (e.g., `npm pkg set` / `pnpm pkg set`). If that's not feasible, edit `package.json` directly — but only the `scripts` field, never dependency fields.
 
 ## Step 5: CI Workflow (GitHub Actions)
 
 Ask the user if they want a CI security workflow. If yes:
 
-Read `${CLAUDE_SKILL_DIR}/examples/github-actions/supply-chain-check.yml` as template. Create `.github/workflows/supply-chain-check.yml`, adapting for the detected package manager.
+Read `${CLAUDE_SKILL_DIR}/examples/github-actions/supply-chain-check.yml` as template. Create `.github/workflows/supply-chain-check.yml`, adapting for the detected package manager:
+
+- Install with the frozen-lockfile flag (`npm ci` / `pnpm install --frozen-lockfile` / `yarn install --immutable`) and run the package manager's audit.
+- Include the **lockfile-lint** step only for **npm/yarn**; omit it for pnpm/bun (it fails CI there).
+- `npm audit signatures` requires an npm lockfile — include it only for npm/yarn; it errors in pnpm/bun-only projects.
 
 ## Verification
 

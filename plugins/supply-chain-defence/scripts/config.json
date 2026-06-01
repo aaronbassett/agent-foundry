@@ -93,6 +93,9 @@
   },
   "thresholds": {
     "typosquatMaxDistance": 2,
+    "typosquatMinDownloads": 1000,
+    "typosquatMinAgeDays": 180,
+    "typosquatMinReleases": 5,
     "beforeFlagDays": 5,
     "blockThenWarnTTLHours": 8
   }
