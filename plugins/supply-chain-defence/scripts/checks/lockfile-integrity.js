@@ -29,6 +29,20 @@ module.exports = async function lockfileIntegrity(input, state, config, cwd) {
     };
   }
 
+  // lockfile-lint only ships npm and yarn parsers. For pnpm and bun lockfiles it
+  // aborts with "Unable to find relevant lockfile parser", which would otherwise
+  // surface as a perpetual false "integrity issues" warning. pnpm and bun embed
+  // their own integrity hashes and verify them natively on install, so skip cleanly
+  // here rather than running a linter that cannot parse the lockfile. (See also the
+  // bun-gaps check, which documents lockfile-lint's lack of bun support.)
+  if (lockfile.type !== "npm" && lockfile.type !== "yarn") {
+    return {
+      status: "info",
+      message: `Skipping lockfile-lint for ${lockfile.file} — lockfile-lint has no ${lockfile.type} parser; ${lockfile.type} verifies lockfile integrity natively on install`,
+      details: { skipped: lockfile.type },
+    };
+  }
+
   const versionCheck = spawnSync("npx", ["lockfile-lint", "--version"], {
     cwd,
     stdio: "pipe",
