@@ -1645,3 +1645,54 @@ describe("installer-block: empty / whitespace input", () => {
     assert.strictEqual(result.status, "pass");
   });
 });
+
+// ---------------------------------------------------------------------------
+// lockfile-integrity — skip lockfile types lockfile-lint cannot parse
+//
+// lockfile-lint only ships npm and yarn parsers. The pnpm/bun skip paths return
+// before any npx invocation, so these tests are hermetic. The npm/yarn paths
+// spawn `npx lockfile-lint` (network-dependent) and are intentionally not tested
+// here, consistent with the rest of this suite.
+// ---------------------------------------------------------------------------
+describe("lockfile-integrity", () => {
+  const check = require("../scripts/checks/lockfile-integrity");
+
+  it("returns info when no lockfile is present", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "info");
+      assert.ok(result.message.includes("No lockfile found"));
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("skips pnpm lockfiles (lockfile-lint has no pnpm parser)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "info");
+      assert.ok(result.message.includes("Skipping lockfile-lint"));
+      assert.ok(result.message.includes("pnpm"));
+      assert.strictEqual(result.details.skipped, "pnpm");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("skips bun lockfiles (lockfile-lint has no bun parser)", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scd-test-"));
+    fs.writeFileSync(path.join(tmpDir, "bun.lock"), "{}\n");
+    try {
+      const result = await check({}, emptyState(), config, tmpDir);
+      assert.strictEqual(result.status, "info");
+      assert.ok(result.message.includes("Skipping lockfile-lint"));
+      assert.ok(result.message.includes("bun"));
+      assert.strictEqual(result.details.skipped, "bun");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
