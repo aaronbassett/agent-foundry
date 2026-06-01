@@ -67,11 +67,44 @@ describe("extractPackageNames", () => {
     assert.strictEqual(result[0].full, "lodash@^4.0.0");
   });
 
-  it("does not treat shell metacharacters as special", () => {
-    // This tests the extraction — injection prevention is in npmView
+  it("stops at shell command separators", () => {
+    // `;` ends the install command; `rm -rf /` is a separate command and must
+    // not be parsed as package names.
     const result = extractPackageNames("npm install evil;rm -rf /");
-    // Should extract "evil;rm" as package name (it's just a string)
-    assert.ok(result.length >= 1);
+    assert.deepStrictEqual(
+      result.map((p) => p.name),
+      ["evil"]
+    );
+  });
+
+  it("does not extract piped commands or file descriptors as packages", () => {
+    // Regression: `tail`, `2`, etc. were previously extracted and false-flagged.
+    const result = extractPackageNames("pnpm add foo 2>&1 | tail -30");
+    assert.deepStrictEqual(
+      result.map((p) => p.name),
+      ["foo"]
+    );
+  });
+
+  it("does not extract redirect targets", () => {
+    const result = extractPackageNames("npm install lodash > out.log 2>&1");
+    assert.deepStrictEqual(
+      result.map((p) => p.name),
+      ["lodash"]
+    );
+  });
+
+  it("does not extract chained commands after && or ;", () => {
+    const result = extractPackageNames("npm install lodash && echo done; cat file");
+    assert.deepStrictEqual(
+      result.map((p) => p.name),
+      ["lodash"]
+    );
+  });
+
+  it("extracts nothing from a non-install pipeline", () => {
+    const result = extractPackageNames("cat /tmp/x | head -30");
+    assert.deepStrictEqual(result, []);
   });
 });
 
