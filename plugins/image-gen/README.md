@@ -31,3 +31,9 @@ Provides the following tools:
 ### Skill: nanobanana
 
 Workflow guidance for common image generation tasks including prompt crafting, model selection, aspect ratio control, and multi-image conditioning.
+
+### Skill: image-compression
+
+Compress, resize, and convert images using `caesiumclt`, `rimage`, and `gifsicle`. Covers web optimization (WebP/AVIF, responsive `srcset`/`<picture>`), batch jobs, GIF optimization, GIF modernization to video/animated WebP via `ffmpeg` (optional), and an interactive browser-based before/after preview with four comparison views (side-by-side, press-and-hold, alpha slider, before/after slider). Pairs with the nanobanana skill to optimize generated images for delivery.
+
+These tools are checked for at runtime and are not bundled — the skill prompts for installation (Homebrew, cargo, winget, apt, etc.) when one is missing. `ffmpeg` is optional and only needed for GIF modernization.
