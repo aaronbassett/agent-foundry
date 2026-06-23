@@ -159,6 +159,23 @@ generate_image(
 
 If not specified, images save to the `IMAGE_OUTPUT_DIR` env var or `~/nanobanana-images`.
 
+**Correct the extension after every generation.** The model frequently returns
+**JPEG bytes even when `output_path` ends in `.png`**, and the response
+`mime_type` is not reliable — so the saved file's extension can mismatch its
+actual content. Never trust the requested extension or the metadata; detect the
+real type from the file's bytes and rename. Run the bundled script on each saved
+path (the result's `file_paths` entries):
+
+```bash
+scripts/fix-image-extension.sh /path/to/project/assets/logo.png
+# detects the true type via `file --mime-type` and renames if needed,
+# e.g. logo.png (actually JPEG) -> logo.jpg; prints the corrected path
+```
+
+It maps jpeg→`.jpg`, png→`.png`, webp→`.webp`, gif→`.gif`, avif→`.avif`, leaves
+already-correct files untouched, and prints the corrected path on stdout. Use
+that corrected path in any follow-up (e.g. compression via `image-compression`).
+
 ### 9. Use Negative Prompts
 
 Specify what to avoid in the output:
@@ -193,9 +210,39 @@ generate_image(
 - **Text in images**: Use `system_instruction` for tone and include exact text to render in the prompt
 - **Avoid ambiguity**: The more precise the prompt, the better the result
 
+## Optimizing Generated Images
+
+Generated images are large (up to 4K) — often far larger than needed for web,
+email, or app assets. After generating (and after correcting the file extension,
+see step 8), offer to optimize them with the
+**image-compression** skill (also in this plugin), which compresses, resizes,
+and converts images using `caesiumclt`, `rimage`, and `gifsicle`, and can show
+the user an interactive before/after preview.
+
+Hand off to it when the user wants to:
+- Reduce the file size of a generated image, or hit a size budget.
+- Convert a generation to **WebP** or **AVIF** for the web.
+- Produce responsive resolutions (`srcset` / `<picture>`).
+- Compare compression levels visually before choosing one.
+
+Typical follow-up: generate at high quality with nanobanana, then compress for
+delivery. For example, after saving a 4K hero image, suggest resizing to the
+layout width and emitting WebP + AVIF. Invoke the `image-compression` skill to
+do this rather than reimplementing compression here.
+
 ## Additional Resources
 
 ### Reference Files
 
 For complete parameter documentation, consult:
 - **`references/parameters.md`** - Full parameter reference for all tools with types and defaults
+
+### Scripts
+
+- **`scripts/fix-image-extension.sh`** - Rename a generated file so its extension matches its actual content (the model may save JPEG bytes under a `.png` path). Run on each saved path after generation.
+
+### Related Skills
+
+- **`image-compression`** - Compress, resize, and convert generated images
+  (WebP/AVIF, responsive sets, GIF optimization) with a visual before/after
+  preview. Use it to optimize nanobanana output for the web.

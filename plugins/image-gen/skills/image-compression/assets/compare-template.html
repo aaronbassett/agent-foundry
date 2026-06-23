@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Compression Preview</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1f2630;
+    --border: #2b333d;
+    --text: #e6edf3;
+    --muted: #9aa7b4;
+    --accent: #818cf8;
+    --accent-strong: #6366f1;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --radius: 14px;
+    --shadow: 0 6px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  .muted { color: var(--muted); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  /* Header */
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  .title-wrap { display: flex; flex-direction: column; gap: 2px; }
+
+  /* Variant tabs */
+  .variants { display: flex; flex-wrap: wrap; gap: 8px; }
+  .variant-tab {
+    cursor: pointer;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    transition: border-color .15s, background .15s;
+  }
+  .variant-tab:hover { border-color: var(--accent); }
+  .variant-tab[aria-selected="true"] {
+    border-color: var(--accent-strong);
+    background: rgba(99,102,241,.18);
+  }
+  .variant-tab .vt-save { color: var(--good); font-variant-numeric: tabular-nums; }
+  .variant-tab .vt-save.neg { color: var(--warn); }
+
+  /* Stats bar */
+  .statsbar { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; }
+  .stat { display: flex; flex-direction: column; }
+  .stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .stat .v { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .v.good { color: var(--good); }
+  .stat .v.warn { color: var(--warn); }
+
+  /* View mode buttons */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .segmented { display: inline-flex; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; }
+  .segmented button {
+    cursor: pointer;
+    border: 0; background: transparent; color: var(--muted);
+    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 550;
+    transition: background .15s, color .15s;
+  }
+  .segmented button:hover { color: var(--text); }
+  .segmented button[aria-pressed="true"] { background: var(--accent-strong); color: #fff; }
+
+  /* Stage */
+  .stage { position: relative; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Overlay box (shared by toggle/alpha/slider) sizes to image aspect ratio */
+  .box {
+    position: relative;
+    width: 100%;
+    max-height: calc(100vh - 320px);
+    aspect-ratio: var(--ar, 16 / 9);
+    background: #0a0d12 repeating-conic-gradient(#11151b 0% 25%, #0a0d12 0% 50%) 50% / 28px 28px;
+    border-radius: 12px;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+  .box img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  .corner-label {
+    position: absolute; z-index: 5;
+    background: rgba(12,14,18,.82);
+    color: #fff; font-size: 12px; font-weight: 600;
+    padding: 6px 12px; border-radius: 999px;
+    pointer-events: none;
+  }
+  .corner-label.bl { left: 12px; bottom: 12px; }
+  .corner-label.br { right: 12px; bottom: 12px; }
+  .corner-label.tc { left: 50%; top: 12px; transform: translateX(-50%); }
+
+  /* Side by side */
+  .sbs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sbs figure { margin: 0; }
+  .sbs .frame {
+    background: #0a0d12 repeating-conic-gradient(#11151b 0% 25%, #0a0d12 0% 50%) 50% / 28px 28px;
+    border-radius: 12px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    max-height: calc(100vh - 340px);
+  }
+  .sbs img { max-width: 100%; max-height: calc(100vh - 340px); display: block; }
+  .sbs figcaption { color: var(--muted); font-size: 13px; padding: 8px 2px 0; display: flex; justify-content: space-between; }
+  @media (max-width: 720px){ .sbs { grid-template-columns: 1fr; } }
+
+  /* Toggle (press & hold) */
+  #toggleBox .img-original { opacity: 0; transition: opacity .05s; }
+  #toggleBox.pressing .img-original { opacity: 1; }
+  #toggleBox.pressing .lbl-compressed { display: none; }
+  #toggleBox .lbl-original { display: none; }
+  #toggleBox.pressing .lbl-original { display: block; }
+
+  /* Alpha */
+  .alpha-controls { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .alpha-controls input[type=range] { flex: 1; accent-color: var(--accent-strong); }
+  .alpha-controls .pct { width: 56px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  /* Before/After slider */
+  .ba-handle {
+    position: absolute; z-index: 6;
+    background: var(--accent);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4);
+  }
+  .ba-handle .knob {
+    position: absolute;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--accent); border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px;
+    box-shadow: var(--shadow);
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+  }
+  /* vertical divider (drag left-right) */
+  .box.vertical .ba-handle { top: 0; bottom: 0; width: 3px; left: var(--split, 50%); transform: translateX(-50%); cursor: ew-resize; }
+  .box.vertical .img-original { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); }
+  /* horizontal divider (drag up-down) */
+  .box.horizontal .ba-handle { left: 0; right: 0; height: 3px; top: var(--split, 50%); transform: translateY(-50%); cursor: ns-resize; }
+  .box.horizontal .img-original { clip-path: inset(0 0 calc(100% - var(--split, 50%)) 0); }
+
+  .slider-toolbar { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+
+  /* Variants comparison table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 550; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.sel td { background: rgba(99,102,241,.10); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); }
+  .save-pos { color: var(--good); }
+  .save-neg { color: var(--warn); }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title-wrap">
+      <h1 id="title">Image Compression Preview</h1>
+      <span class="muted" id="subtitle"></span>
+    </div>
+    <div class="variants" id="variants" role="tablist"></div>
+  </header>
+
+  <div class="panel statsbar" id="statsbar"></div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <div class="segmented" id="viewmodes" role="group" aria-label="View mode">
+        <button data-mode="sbs" aria-pressed="true">Side-by-side</button>
+        <button data-mode="toggle" aria-pressed="false">Press &amp; hold</button>
+        <button data-mode="alpha" aria-pressed="false">Alpha slider</button>
+        <button data-mode="ba" aria-pressed="false">Before / After</button>
+      </div>
+      <span class="muted" id="modehint"></span>
+    </div>
+
+    <div class="stage" id="stage" style="margin-top:14px;">
+      <!-- Side-by-side -->
+      <div class="view active" data-mode="sbs">
+        <div class="sbs">
+          <figure><div class="frame"><img id="sbsOriginal" alt="Original"></div><figcaption><span>Original</span><span id="sbsOriginalMeta" class="muted"></span></figcaption></figure>
+          <figure><div class="frame"><img id="sbsCompressed" alt="Compressed"></div><figcaption><span id="sbsCompressedName">Compressed</span><span id="sbsCompressedMeta" class="muted"></span></figcaption></figure>
+        </div>
+      </div>
+
+      <!-- Press & hold -->
+      <div class="view" data-mode="toggle">
+        <div class="box" id="toggleBox">
+          <img class="img-compressed" id="toggleCompressed" alt="Compressed">
+          <img class="img-original" id="toggleOriginal" alt="Original">
+          <span class="corner-label tc lbl-compressed">Compressed — hold to reveal original</span>
+          <span class="corner-label tc lbl-original">Original</span>
+        </div>
+      </div>
+
+      <!-- Alpha -->
+      <div class="view" data-mode="alpha">
+        <div class="box" id="alphaBox">
+          <img id="alphaOriginal" alt="Original">
+          <img id="alphaCompressed" alt="Compressed">
+          <span class="corner-label bl">Original (base)</span>
+          <span class="corner-label br" id="alphaTopLabel">Compressed</span>
+        </div>
+        <div class="alpha-controls">
+          <span class="muted">Compressed opacity</span>
+          <input type="range" id="alphaRange" min="0" max="100" value="100">
+          <span class="pct" id="alphaPct">100%</span>
+        </div>
+      </div>
+
+      <!-- Before / After slider -->
+      <div class="view" data-mode="ba">
+        <div class="box vertical" id="baBox" style="--split:50%;">
+          <img class="img-compressed" id="baCompressed" alt="After (compressed)">
+          <img class="img-original" id="baOriginal" alt="Before (original)">
+          <div class="ba-handle"><span class="knob">&#8596;</span></div>
+          <span class="corner-label bl">Before · Original</span>
+          <span class="corner-label br" id="baAfterLabel">After · Compressed</span>
+        </div>
+        <div class="slider-toolbar">
+          <span class="muted">Divider</span>
+          <div class="segmented" id="baOrient" role="group" aria-label="Slider orientation">
+            <button data-orient="vertical" aria-pressed="true">Vertical</button>
+            <button data-orient="horizontal" aria-pressed="false">Horizontal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="tablePanel">
+    <h1 style="font-size:14px;margin-bottom:8px;">All variants</h1>
+    <div style="overflow-x:auto;"><table id="variantsTable"></table></div>
+  </div>
+
+<script id="preview-data" type="application/json">__PREVIEW_DATA__</script>
+<script>
+(function () {
+  "use strict";
+
+  // ---- Load injected data (falls back gracefully if template is opened raw) ----
+  var DATA;
+  try { DATA = JSON.parse(document.getElementById("preview-data").textContent); }
+  catch (e) { DATA = { title: "No preview data", original: null, variants: [] }; }
+
+  var original = DATA.original;
+  var variants = DATA.variants || [];
+
+  if (!original || variants.length === 0) {
+    document.body.innerHTML = '<div class="empty">No images to preview. Re-run build_preview.py with --original and at least one --variant.</div>';
+    return;
+  }
+
+  // ---- Helpers ----
+  function fmtBytes(n) {
+    if (n == null) return "—";
+    if (n < 1024) return n + " B";
+    var u = ["KB", "MB", "GB"], i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+    return n.toFixed(n < 10 ? 1 : 0) + " " + u[i];
+  }
+  function savings(v) { return original.bytes ? (1 - v.bytes / original.bytes) * 100 : 0; }
+  function fmtPct(p) { return (p >= 0 ? "−" : "+") + Math.abs(p).toFixed(1) + "%"; } // negative savings shown as "+size"
+  function el(id) { return document.getElementById(id); }
+
+  // ---- State ----
+  var active = 0;                 // active variant index
+  var mode = "sbs";              // view mode
+  var orient = "vertical";       // slider orientation
+  var dims = { o: null, c: {} };  // natural dims cache
+
+  // ---- Header ----
+  el("title").textContent = DATA.title || "Image Compression Preview";
+  el("subtitle").textContent = original.name + " · " + fmtBytes(original.bytes);
+
+  // ---- Variant tabs ----
+  var tabsWrap = el("variants");
+  variants.forEach(function (v, i) {
+    var s = savings(v);
+    var b = document.createElement("button");
+    b.className = "variant-tab";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    b.innerHTML = '<span>' + (v.label || v.name) + '</span>' +
+      '<span class="vt-save' + (s < 0 ? ' neg' : '') + '">' + fmtPct(s) + '</span>';
+    b.addEventListener("click", function () { setActive(i); });
+    tabsWrap.appendChild(b);
+  });
+  if (variants.length < 2) tabsWrap.style.display = "none";
+
+  // ---- Aspect ratio from original ----
+  var arProbe = new Image();
+  arProbe.onload = function () {
+    dims.o = { w: arProbe.naturalWidth, h: arProbe.naturalHeight };
+    var ar = arProbe.naturalWidth + " / " + arProbe.naturalHeight;
+    ["toggleBox", "alphaBox", "baBox"].forEach(function (id) { el(id).style.setProperty("--ar", ar); });
+    renderStats();
+  };
+  arProbe.src = original.src;
+
+  // ---- Wire images (sources updated by setActive) ----
+  el("sbsOriginal").src = original.src;
+  el("toggleOriginal").src = original.src;
+  el("alphaOriginal").src = original.src;
+  el("baOriginal").src = original.src;
+  el("sbsOriginalMeta").textContent = fmtBytes(original.bytes);
+
+  function probeDims(idx) {
+    var v = variants[idx];
+    if (dims.c[idx]) { renderStats(); return; }
+    var im = new Image();
+    im.onload = function () { dims.c[idx] = { w: im.naturalWidth, h: im.naturalHeight }; renderStats(); };
+    im.src = v.src;
+  }
+
+  function setActive(i) {
+    active = i;
+    var v = variants[i];
+    Array.prototype.forEach.call(tabsWrap.children, function (c, idx) {
+      c.setAttribute("aria-selected", idx === i ? "true" : "false");
+    });
+    ["sbsCompressed", "toggleCompressed", "alphaCompressed", "baCompressed"].forEach(function (id) { el(id).src = v.src; });
+    el("sbsCompressedName").textContent = v.label || v.name;
+    el("sbsCompressedMeta").textContent = fmtBytes(v.bytes);
+    el("alphaTopLabel").textContent = v.label || v.name;
+    el("baAfterLabel").textContent = "After · " + (v.label || v.name);
+    probeDims(i);
+    renderTable();
+    renderStats();
+  }
+
+  // ---- Stats bar ----
+  function renderStats() {
+    var v = variants[active];
+    var s = savings(v);
+    var od = dims.o ? dims.o.w + "×" + dims.o.h : "—";
+    var cd = dims.c[active] ? dims.c[active].w + "×" + dims.c[active].h : "—";
+    el("statsbar").innerHTML =
+      stat("Original", fmtBytes(original.bytes)) +
+      stat("Compressed", fmtBytes(v.bytes)) +
+      stat("Saved", fmtPct(s), s >= 0 ? "good" : "warn") +
+      stat("Format", '<span class="pill">' + (v.format || "—") + "</span>") +
+      stat("Original dims", od) +
+      stat("Compressed dims", cd);
+  }
+  function stat(k, v, cls) {
+    return '<div class="stat"><span class="k">' + k + '</span><span class="v ' + (cls || "") + '">' + v + "</span></div>";
+  }
+
+  // ---- Variants table ----
+  function renderTable() {
+    if (variants.length < 2) { el("tablePanel").style.display = "none"; return; }
+    var rows = '<thead><tr><th>Variant</th><th>Format</th><th class="num">Size</th><th class="num">Saved</th><th></th></tr></thead><tbody>';
+    rows += '<tr><td>Original</td><td><span class="pill">' + (original.format || "—") + '</span></td><td class="num">' + fmtBytes(original.bytes) + '</td><td class="num">—</td><td></td></tr>';
+    variants.forEach(function (v, i) {
+      var s = savings(v);
+      rows += '<tr class="' + (i === active ? "sel" : "") + '">' +
+        '<td>' + (v.label || v.name) + '</td>' +
+        '<td><span class="pill">' + (v.format || "—") + '</span></td>' +
+        '<td class="num">' + fmtBytes(v.bytes) + '</td>' +
+        '<td class="num ' + (s >= 0 ? "save-pos" : "save-neg") + '">' + fmtPct(s) + '</td>' +
+        '<td><button class="variant-tab" data-i="' + i + '" style="padding:3px 10px;">Compare</button></td>' +
+        '</tr>';
+    });
+    rows += "</tbody>";
+    var t = el("variantsTable");
+    t.innerHTML = rows;
+    Array.prototype.forEach.call(t.querySelectorAll("button[data-i]"), function (btn) {
+      btn.addEventListener("click", function () { setActive(parseInt(btn.dataset.i, 10)); });
+    });
+  }
+
+  // ---- View mode switching ----
+  el("viewmodes").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-mode]");
+    if (!btn) return;
+    mode = btn.dataset.mode;
+    Array.prototype.forEach.call(el("viewmodes").children, function (b) {
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".view"), function (vw) {
+      vw.classList.toggle("active", vw.dataset.mode === mode);
+    });
+    var hints = {
+      sbs: "Original and compressed shown side by side.",
+      toggle: "Press and hold the image to reveal the original.",
+      alpha: "Drag the slider to fade the compressed image over the original.",
+      ba: "Drag the divider; toggle its orientation below."
+    };
+    el("modehint").textContent = hints[mode] || "";
+  });
+  el("modehint").textContent = "Original and compressed shown side by side.";
+
+  // ---- Press & hold ----
+  var tb = el("toggleBox");
+  ["pointerdown", "touchstart"].forEach(function (ev) { tb.addEventListener(ev, function () { tb.classList.add("pressing"); }); });
+  ["pointerup", "pointerleave", "pointercancel", "touchend", "touchcancel"].forEach(function (ev) {
+    tb.addEventListener(ev, function () { tb.classList.remove("pressing"); });
+  });
+
+  // ---- Alpha ----
+  el("alphaRange").addEventListener("input", function () {
+    var val = this.value;
+    el("alphaCompressed").style.opacity = val / 100;
+    el("alphaPct").textContent = val + "%";
+  });
+  el("alphaCompressed").style.opacity = 1;
+
+  // ---- Before / After slider ----
+  var baBox = el("baBox");
+  function setSplit(clientX, clientY) {
+    var r = baBox.getBoundingClientRect();
+    var pct;
+    if (orient === "vertical") pct = ((clientX - r.left) / r.width) * 100;
+    else pct = ((clientY - r.top) / r.height) * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    baBox.style.setProperty("--split", pct + "%");
+  }
+  var dragging = false;
+  baBox.addEventListener("pointerdown", function (e) { dragging = true; baBox.setPointerCapture(e.pointerId); setSplit(e.clientX, e.clientY); });
+  baBox.addEventListener("pointermove", function (e) { if (dragging) setSplit(e.clientX, e.clientY); });
+  baBox.addEventListener("pointerup", function () { dragging = false; });
+  baBox.addEventListener("pointercancel", function () { dragging = false; });
+
+  el("baOrient").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-orient]");
+    if (!btn) return;
+    orient = btn.dataset.orient;
+    baBox.classList.toggle("vertical", orient === "vertical");
+    baBox.classList.toggle("horizontal", orient === "horizontal");
+    baBox.style.setProperty("--split", "50%");
+    Array.prototype.forEach.call(el("baOrient").children, function (b) {
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+    });
+    var knob = baBox.querySelector(".knob");
+    if (knob) knob.innerHTML = orient === "vertical" ? "&#8596;" : "&#8597;";
+  });
+
+  // ---- Init ----
+  setActive(0);
+})();
+</script>
+</body>
+</html>
