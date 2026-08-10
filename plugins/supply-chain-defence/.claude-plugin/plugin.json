@@ -18,6 +18,8 @@
     "typosquatting",
     "lockfile",
     "socket-dev",
-    "hooks"
+    "hooks",
+    "mcp",
+    "npmscan"
   ]
 }

@@ -24,6 +24,10 @@ Protect npm/pnpm/yarn projects from supply chain attacks through deterministic h
 - **`/supply-chain-defence:doctor`** — Check if all required tools are installed. Use `--auto-fix` to install missing tools automatically.
 - **`/supply-chain-defence:review <target>`** — Deep dive on a package name, directory, or lockfile.
 
+### MCP Integrations (optional, advisory)
+
+- **npmscan** (`https://npmscan.com/api/mcp`) — public, no-auth MCP server providing malware/OSV.dev vulnerability signal beyond what `npm view`/`npm audit` expose. Registered in `.mcp.json`; used by `/supply-chain-defence:review` and `supply-chain-defence:audit` when connected. This is a live call to a third-party service (rate-limited to 30 req/min) — it enriches the LLM-driven review/audit flows, not the deterministic `runner.js` hook checks, and both skills degrade gracefully if it isn't connected.
+
 ## Required Tools
 
 | Tool | Install |

@@ -38,11 +38,11 @@ Language specialists, git workflows, environments, and PR tooling for writing, b
 
 Supply chain protection and dependency attack guards with deterministic, hook-enforced checks.
 
-**Totals:** 3 skills · 7 examples · 2 commands · 19 hooks
+**Totals:** 3 skills · 7 examples · 2 commands · 19 hooks · 1 MCP server
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| [supply-chain-defence](plugins/supply-chain-defence) | 0.2.0 | Protect npm/pnpm/yarn/bun projects from supply chain attacks with deterministic hook-based guards<br><sub>🛠 3 skills · 📋 2 commands · 🪝 19 hooks</sub> |
+| [supply-chain-defence](plugins/supply-chain-defence) | 0.2.0 | Protect npm/pnpm/yarn/bun projects from supply chain attacks with deterministic hook-based guards<br><sub>🛠 3 skills · 📋 2 commands · 🪝 19 hooks · 🔌 1 MCP server</sub> |
 
 ### UI/UX
 
