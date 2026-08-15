@@ -1,6 +1,6 @@
 # Python Library Choices
 
-Hand-curated defaults; versions verified against PyPI August 2026. Anything with no release in 18+ months was dropped, not listed.
+Hand-curated defaults. Check maintenance before adding anything: a library with no release in 18+ months needs a strong reason.
 
 ## Core
 
@@ -40,13 +40,13 @@ Use click (8.4.2) directly only when you need its decorator/plugin ecosystem wit
 | mypy | 2.3.1 | Type checking | Run as `uv run mypy .` so it sees the project env; `strict = true` is opt-in |
 | pytest | 9.1.1 | All testing — see [testing.md](testing.md) | Config lives in `[tool.pytest.ini_options]` |
 
-## Superseded — do not recommend
+## Do not use
 
-| Old habit | Use instead |
+| Instead of | Use |
 |---|---|
 | requests by default | httpx — same ergonomics, plus async and HTTP/2 |
 | black + isort | ruff format + ruff check (`I` rules) |
 | poetry / pipenv for new projects | uv |
-| Prisma Python client (last release Aug 2024 — dead) | sqlalchemy |
-| python-jose | PyJWT (2.13.0) |
-| passlib (last release 2020) | pwdlib (0.3.1) |
+| Prisma Python client (dead) | sqlalchemy |
+| python-jose | PyJWT |
+| passlib (dead) | pwdlib |

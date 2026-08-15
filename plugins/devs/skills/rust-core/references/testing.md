@@ -56,12 +56,12 @@ db.expect_get_user()
 
 ## Benchmarking (criterion)
 
-Canonical criterion example ([performance.md](performance.md) links here). Current criterion is 0.8; `criterion::black_box` is deprecated — use `std::hint::black_box`:
+Canonical criterion example ([performance.md](performance.md) links here). Use `std::hint::black_box`:
 
 ```rust
 // benches/fib.rs
 use criterion::{Criterion, criterion_group, criterion_main};
-use std::hint::black_box; // criterion::black_box is deprecated — use std's
+use std::hint::black_box;
 
 fn fibonacci(n: u64) -> u64 {
     match n {

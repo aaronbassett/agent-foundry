@@ -1,6 +1,6 @@
 # Rust Web Frameworks
 
-Framework selection plus current axum 0.8 / actix-web 4 idioms and the breaking changes that invalidate pre-2024 examples. Versions verified against crates.io, August 2026.
+Framework selection plus current axum and actix-web idioms.
 
 ## Decision table
 
@@ -30,14 +30,6 @@ tower-http = { version = "0.7", features = ["cors"] }
 serde = { version = "1", features = ["derive"] }
 anyhow = "1"
 ```
-
-### Breaking-change landmarks
-
-- **0.7 → 0.8 route syntax**: path params are `{id}`, not `:id`. `.route("/users/:id", …)` panics at `Router` construction ("Path segments must not start with `:`"). Wildcards are `/{*rest}`; literal braces escape as `{{`.
-- **0.8 dropped `#[async_trait]`**: `FromRequestParts`/`FromRequest` use native async-fn-in-trait; an `#[async_trait]` impl no longer matches the trait.
-- **0.7 degenericized bodies**: `Next<B>` → `Next`, and `axum::extract::Request` = `http::Request<axum::body::Body>`. `axum::Server` is gone — bind a `tokio::net::TcpListener`, then `axum::serve`.
-- **0.8 `Option<T>` extractors** require `T: OptionalFromRequestParts`; rejections are no longer silently swallowed.
-- **0.8 moved `Host`** (and friends) to `axum-extra`.
 
 ### Router and handlers
 
@@ -188,6 +180,9 @@ async fn read_config() -> Result<Json<String>, AppError> {
 
 ### Gotchas
 
+- Path params are `{id}` (wildcards `/{*rest}`, literal braces `{{`); a `:`-prefixed segment panics at `Router` construction.
+- `FromRequestParts`/`FromRequest` are native async traits — an `#[async_trait]` impl does not match them. `Option<T>` extraction needs `T: OptionalFromRequestParts`. The `Host` extractor lives in `axum-extra`.
+- Serve by binding a `tokio::net::TcpListener` and calling `axum::serve` (there is no `axum::Server`).
 - Handler-trait errors are unreadable; annotate with `#[axum::debug_handler]` for a real diagnostic.
 - At most one body-consuming extractor (`Json`, `Form`, `Bytes`) per handler, and it must be the final argument.
 - Handlers must be `Send`: holding a `std::sync::MutexGuard` across `.await` fails with an opaque trait error.
@@ -231,4 +226,3 @@ async fn main() -> std::io::Result<()> {
 
 - tokio libraries (sqlx, reqwest) work unchanged; tasks spawned via `actix_web::rt::spawn` must be `'static` but need not be `Send` (single-threaded workers).
 - Build `web::Data` **outside** `HttpServer::new` and clone it in, or each worker constructs its own instance.
-- Route syntax has always been `{id}` — no 0.7/0.8-style migration.

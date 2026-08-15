@@ -44,14 +44,7 @@ pub enum DataError {
 
 `#[from]` generates both the `From` impl (enabling `?` conversion) and `source()` chaining. Mark public error enums `#[non_exhaustive]` so adding a variant isn't semver-breaking.
 
-**1 → 2 migration** (usually compiles unchanged):
-
-- Format strings use `{type}`, no longer `{r#type}`, for raw-identifier fields.
-- `{0}`-style field access can't be mixed with extra positional format args — name them instead.
-- Any crate invoking `derive(Error)` needs a direct `thiserror` dependency.
-- New: `no_std` via `default-features = false`; `#[error(fmt = path)]` for out-of-line formatting.
-
-`core::error::Error` has been stable since Rust 1.81, so custom error types (and thiserror 2) work under `#![no_std]`.
+Details worth knowing: format strings write raw-identifier fields as `{type}` (not `{r#type}`); `{0}`-style field access can't be mixed with extra positional format args — name them instead; any crate invoking `derive(Error)` needs a direct `thiserror` dependency; `no_std` works via `default-features = false` (`core::error::Error` needs Rust 1.81+); `#[error(fmt = path)]` does out-of-line formatting.
 
 ## anyhow (1.x)
 

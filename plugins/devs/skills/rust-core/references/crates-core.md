@@ -1,30 +1,30 @@
 # Essential Rust Crates
 
-Versions verified against crates.io, August 2026 (Rust 1.97, edition 2024). Before pinning, confirm with `cargo info <crate>` — never copy versions from old docs or memory.
+Before pinning, confirm the current version with `cargo info <crate>` — never copy versions from docs or memory.
 
 ## Core crates
 
 | Crate | Version | When to use | Key gotcha |
 |-------|---------|-------------|------------|
 | `anyhow` | 1.0 | Application error handling with context | Apps only — for the anyhow-vs-thiserror decision see [error-handling.md](error-handling.md) |
-| `thiserror` | 2.0 | Derived error enums for libraries | 2.x since late 2024; most online examples still show 1.x. A `#[from]` variant may hold only the source field |
+| `thiserror` | 2.0 | Derived error enums for libraries | A `#[from]` variant may hold only the source field |
 | `serde` + `serde_json` | 1.0 | Serialization | `derive` is a feature flag, not a separate dependency |
 | `tokio` | 1 | Async runtime | `features = ["full"]` is fine for binaries; libraries should enable only the features they use |
-| `reqwest` | 0.13 | HTTP client (async-first) | 0.11-era snippets are stale; sync API needs the `blocking` feature |
+| `reqwest` | 0.13 | HTTP client (async-first) | Sync API needs the `blocking` feature |
 | `chrono` | 0.4 | Calendar dates, timezones, formatting | For plain durations use `std::time`; `jiff` (0.2) is a modern alternative |
 | `uuid` | 1 | UUIDs | Generation is behind version features (`v4`, `v7`) |
 | `regex` | 1 | Regular expressions | Compile once (e.g. in a `LazyLock`), never per call |
 | `indexmap` | 2 | Map/set preserving insertion order | Order is insertion order, not sorted |
 | `itertools` | 0.15 | Iterator adaptors (`chunks`, `unique`, `cartesian_product`) | Still 0.x — minor bumps can break; check the changelog |
-| `rand` | 0.10 | Random numbers | API renamed in 0.9 — see below |
+| `rand` | 0.10 | Random numbers | See the API notes below |
 | `clap` | 4 | CLI parsing (with `derive` feature) | — |
 | `tracing` | 0.1 | Structured logging | Emits nothing without a subscriber (`tracing-subscriber`) |
 | `criterion` | 0.8 (dev) | Benchmarks | Prefer `std::hint::black_box` over criterion's re-export |
 | `proptest` | 1 (dev) | Property-based testing | — |
 
-## rand 0.9+: the renamed API
+## rand: the current API
 
-Pre-0.9 examples all over the internet no longer compile: `thread_rng()` became `rand::rng()`, `gen()` became `random()`, `gen_range` became `random_range`. Worse, `gen` is a reserved keyword in edition 2024, so `rng.gen()` is a **syntax error**, not merely deprecated. As of 0.10, the convenience methods live on the `RngExt` trait (`Rng` is now the core trait, formerly `RngCore`), and `shuffle` still requires `SliceRandom` in scope:
+Entry point is `rand::rng()`; convenience methods (`random()`, `random_range()`) live on the `RngExt` trait, `Rng` is the core trait, and `shuffle` requires `SliceRandom` in scope. Note `gen` is a reserved keyword in edition 2024, so `rng.gen()` is a syntax error — the method is `random()`:
 
 ```rust
 use rand::seq::SliceRandom;
@@ -38,18 +38,16 @@ let mut nums = vec![1, 2, 3, 4, 5];
 nums.shuffle(&mut rng);
 ```
 
-## Std replaces crates
+## Std covers these — don't add a crate
 
-Reach for std first — these former staples are unnecessary in new code:
-
-| Was | Now in std | Since |
-|-----|-----------|-------|
-| `once_cell::sync::Lazy`, `lazy_static!` | `std::sync::LazyLock` | 1.80 |
-| `once_cell::sync::OnceCell` | `std::sync::OnceLock` | 1.70 |
-| `atty` | `std::io::IsTerminal` | 1.70 |
-| `criterion::black_box` | `std::hint::black_box` | 1.66 |
-| `cstr` crate | C-string literals `c"..."` | 1.77 |
-| `num_cpus` (basic use) | `std::thread::available_parallelism()` | 1.59 |
+| Need | Use std | Min Rust |
+|------|---------|----------|
+| Lazy statics | `std::sync::LazyLock` | 1.80 |
+| One-time initialization | `std::sync::OnceLock` | 1.70 |
+| TTY detection | `std::io::IsTerminal` | 1.70 |
+| Benchmark black box | `std::hint::black_box` | 1.66 |
+| C-string literals | `c"..."` | 1.77 |
+| CPU count | `std::thread::available_parallelism()` | 1.59 |
 
 ```rust
 use std::sync::LazyLock;
@@ -58,7 +56,7 @@ static CONFIG: LazyLock<Config> =
     LazyLock::new(|| Config::load().expect("failed to load config"));
 ```
 
-`once_cell` is still legitimate for its `unsync` types or when supporting MSRV below 1.80, but do not introduce it by default.
+`once_cell` is legitimate only for its `unsync` types or an MSRV below 1.80 — do not introduce it by default. Same for `lazy_static`: use `LazyLock`.
 
 ## See also
 

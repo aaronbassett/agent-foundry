@@ -73,7 +73,7 @@ uvx pip-audit -r reqs.txt --disable-pip     # → "No known vulnerabilities foun
 
 ## Ruff config placement
 
-Lint settings go under `[tool.ruff.lint]`; top-level `[tool.ruff] select` is deprecated:
+Lint settings go under `[tool.ruff.lint]` (only `line-length`-style global options sit at `[tool.ruff]`):
 
 ```toml
 [tool.ruff]

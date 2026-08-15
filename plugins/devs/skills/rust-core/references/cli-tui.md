@@ -1,6 +1,6 @@
 # CLI and TUI Development in Rust
 
-Clap for argument parsing, Ratatui for terminal UIs. Versions verified August 2026.
+Clap for argument parsing, Ratatui for terminal UIs.
 
 ```toml
 [dependencies]
@@ -68,7 +68,7 @@ Gotchas and one-liners:
 
 ## Ratatui (0.30)
 
-Use `f.area()`, not `f.size()` — deprecated since 0.28 (`#[deprecated = "use area() instead"]`, still emits warnings in 0.30). `ratatui::init()` enables raw mode + alternate screen and installs a panic hook that restores the terminal; `ratatui::restore()` undoes it. Import crossterm through `ratatui::crossterm` so event types can't version-skew against ratatui's own crossterm dependency.
+The frame's drawing region is `f.area()`. `ratatui::init()` enables raw mode + alternate screen and installs a panic hook that restores the terminal; `ratatui::restore()` undoes it. Import crossterm through `ratatui::crossterm` so event types can't version-skew against ratatui's own crossterm dependency.
 
 ```rust
 use ratatui::Frame;

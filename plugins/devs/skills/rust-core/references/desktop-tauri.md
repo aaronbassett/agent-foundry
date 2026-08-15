@@ -1,24 +1,6 @@
 # Desktop Development with Tauri 2
 
-Tauri 2 reference (Rust backend + system-webview frontend). All Rust snippets compile against `tauri = "2"` (2.11.x, Aug 2026).
-
-## v1 → v2 migration landmarks
-
-Do NOT emit v1 APIs. Every row's left column is gone in v2:
-
-| Tauri v1 | Tauri v2 |
-|---|---|
-| `"allowlist"` in `tauri.conf.json` | Capability files in `src-tauri/capabilities/` granting permissions |
-| Config keys `"package"`, `"tauri"`, `"devPath"`, `"distDir"` | Top-level `productName`/`version`/`identifier`; `"app"` section; `build.devUrl` / `build.frontendDist` |
-| `import { invoke } from '@tauri-apps/api/tauri'` | `import { invoke } from '@tauri-apps/api/core'` |
-| `tauri::api::path::*` | `app.path().app_data_dir()` etc. (`Manager` trait; returns `Result`) |
-| `tauri::api::dialog` | `tauri-plugin-dialog` (`DialogExt`) |
-| `WindowBuilder` / `WindowUrl` / `Window` | `WebviewWindowBuilder` / `WebviewUrl` / `WebviewWindow` |
-| `app.get_window("main")` | `app.get_webview_window("main")` |
-| `CustomMenuItem` / `SystemTray` / `SystemTrayMenu` | `tauri::menu::{Menu, MenuItem}` + `tauri::tray::TrayIconBuilder` (cargo feature `tray-icon`) |
-| `window.emit` via `Manager` | `Emitter` trait (`emit`, `emit_to`); `Listener` trait (`listen`) |
-| Built-in updater | `tauri-plugin-updater` |
-| `libwebkit2gtk-4.0-dev` | `libwebkit2gtk-4.1-dev` |
+Tauri desktop reference (Rust backend + system-webview frontend); snippets target `tauri = "2"`. The API surface: capability files grant permissions; paths come from `app.path().app_data_dir()` etc. (`Manager` trait, returns `Result`); dialogs from `tauri-plugin-dialog` (`DialogExt`); windows are `WebviewWindowBuilder`/`WebviewUrl`/`get_webview_window`; menus/tray are `tauri::menu::{Menu, MenuItem}` + `tauri::tray::TrayIconBuilder` (cargo feature `tray-icon`); events go through the `Emitter`/`Listener` traits; updates through `tauri-plugin-updater`; the JS entry is `@tauri-apps/api/core`.
 
 ## Setup
 
@@ -176,4 +158,4 @@ async fn update(app: AppHandle) -> tauri_plugin_updater::Result<()> {
 
 ## Plugin ecosystem
 
-Register with `.plugin(tauri_plugin_<name>::init())` (store and updater expose `Builder`), add the matching permission to a capability, and pair each crate with its `@tauri-apps/plugin-<name>` npm package (versions match). Current crate versions (Aug 2026): `tauri-plugin-store` 2.4, `tauri-plugin-updater` 2.10, `tauri-plugin-dialog` 2.7, `tauri-plugin-fs` 2.5, `tauri-plugin-http` 2.5, `tauri-plugin-notification` 2.3, `tauri-plugin-shell` 2.3, `tauri-plugin-sql` 2.4, `tauri-plugin-opener` 2.5. Pin as `"2"` and let the lockfile resolve. Store JS API: `import { load } from '@tauri-apps/plugin-store'; const store = await load('store.json');` then `store.get`/`set`/`save`.
+Register with `.plugin(tauri_plugin_<name>::init())` (store and updater expose `Builder`), add the matching permission to a capability, and pair each crate with its `@tauri-apps/plugin-<name>` npm package (versions match). Crate versions: `tauri-plugin-store` 2.4, `tauri-plugin-updater` 2.10, `tauri-plugin-dialog` 2.7, `tauri-plugin-fs` 2.5, `tauri-plugin-http` 2.5, `tauri-plugin-notification` 2.3, `tauri-plugin-shell` 2.3, `tauri-plugin-sql` 2.4, `tauri-plugin-opener` 2.5. Pin as `"2"` and let the lockfile resolve. Store JS API: `import { load } from '@tauri-apps/plugin-store'; const store = await load('store.json');` then `store.get`/`set`/`save`.

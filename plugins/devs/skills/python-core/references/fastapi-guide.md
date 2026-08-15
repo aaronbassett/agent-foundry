@@ -1,10 +1,10 @@
 # FastAPI Guide
 
-Current FastAPI idioms, execution-verified Aug 2026 against fastapi 0.141.1, pydantic 2.13.4, sqlalchemy 2.0.52, pwdlib 0.3.1, pyjwt 2.13.0, uvicorn 0.52.3 on Python 3.14.
+FastAPI service idioms: lifespan, pydantic models, async SQLAlchemy, auth, CORS, testing.
 
 ## Skeleton: lifespan, not on_event
 
-`@app.on_event("startup")` is deprecated. Put startup/shutdown in a lifespan context manager — it runs under the server and under lifespan-aware test clients, unlike module-scope setup.
+Startup/shutdown goes in a lifespan context manager (not `@app.on_event`) — it runs under the server and under lifespan-aware test clients, unlike module-scope setup.
 
 ```python
 from contextlib import asynccontextmanager
@@ -84,7 +84,7 @@ async def create_user(body: UserIn, db: DbSession):
 
 ## Auth: pwdlib + PyJWT, secret from env
 
-Do not use passlib (unreleased since 2020; its bcrypt backend crashes against bcrypt >= 4.1) or python-jose — current FastAPI practice is pwdlib (argon2) and PyJWT. `datetime.utcnow()` is deprecated and yields a naive `exp`; use `datetime.now(timezone.utc)`. Load the secret from the environment via pydantic-settings and make it at least 32 bytes — PyJWT emits `InsecureKeyLengthWarning` for shorter HS256 keys.
+Use pwdlib (argon2) for password hashing and PyJWT for tokens — not passlib (dead; its bcrypt backend crashes against current bcrypt) or python-jose. Timestamps for `exp` must be timezone-aware: `datetime.now(timezone.utc)` (`utcnow()` yields naive datetimes). Load the secret from the environment via pydantic-settings and make it at least 32 bytes — PyJWT emits `InsecureKeyLengthWarning` for shorter HS256 keys.
 
 ```python
 from datetime import datetime, timedelta, timezone
@@ -177,12 +177,3 @@ async def test_signup_login_me():
 ```
 
 Generic pytest setup, fixtures, parametrize: [testing.md](testing.md).
-
-## Version landmarks
-
-- `@app.on_event` → `lifespan=` parameter
-- pydantic v1 → v2: `Field(regex=)` removed (use `pattern=`; raises `PydanticUserError`), `@validator` → `@field_validator`, `class Config` → `model_config`, `.dict()` → `.model_dump()`
-- python-jose → PyJWT (`jwt.encode`/`jwt.decode`, `jwt.InvalidTokenError`)
-- passlib + bcrypt → pwdlib `PasswordHash.recommended()`
-- `declarative_base()` / `sessionmaker(class_=AsyncSession)` → `DeclarativeBase` / `async_sessionmaker`
-- `datetime.utcnow()` → `datetime.now(timezone.utc)`

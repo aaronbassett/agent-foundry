@@ -1,6 +1,6 @@
 # Logging and Observability in Rust
 
-Use `tracing` for anything new — async-aware, structured, spans for context. `log`-based events from dependencies are captured automatically by `tracing-subscriber`'s fmt layer (`tracing-log` default feature). Versions verified August 2026: tracing 0.1 / tracing-subscriber 0.3, opentelemetry + opentelemetry_sdk + opentelemetry-otlp 0.32, tracing-opentelemetry 0.33, metrics 0.24, metrics-exporter-prometheus 0.18, console-subscriber 0.5, tower-http 0.7.
+Use `tracing` for anything new — async-aware, structured, spans for context. `log`-based events from dependencies are captured automatically by `tracing-subscriber`'s fmt layer (`tracing-log` default feature). Versions: tracing 0.1 / tracing-subscriber 0.3, opentelemetry + opentelemetry_sdk + opentelemetry-otlp 0.32, tracing-opentelemetry 0.33, metrics 0.24, metrics-exporter-prometheus 0.18, console-subscriber 0.5, tower-http 0.7.
 
 ## tracing essentials
 
@@ -40,7 +40,7 @@ Gotcha: never hold `span.enter()`/`entered()` guards across `.await` — the spa
 
 ## OpenTelemetry (OTLP)
 
-The pre-0.24 `new_pipeline()...install_batch(runtime::Tokio)` API no longer exists. Current shape:
+Current shape:
 
 ```toml
 [dependencies]
@@ -79,11 +79,11 @@ fn init_otel() -> Result<SdkTracerProvider, Box<dyn std::error::Error>> {
 }
 ```
 
-`global::shutdown_tracer_provider()` was removed: hold the returned provider and call `provider.shutdown()?` before exit, or batched spans are silently dropped.
+Hold the returned provider and call `provider.shutdown()?` before exit (there is no global shutdown function), or batched spans are silently dropped.
 
 ## Metrics + Prometheus
 
-The recorder is a global — install it exactly once; a second `install()` returns an error and older docs that installed twice panicked. One builder call sets up both the recorder and the scrape endpoint, and must run inside the Tokio runtime:
+The recorder is a global — install it exactly once (a second `install()` returns an error). One builder call sets up both the recorder and the scrape endpoint, and must run inside the Tokio runtime:
 
 ```rust
 use metrics::{counter, gauge, histogram};
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Sampling high-volume events
 
-rand renamed `thread_rng()`/`gen_ratio()` to `rng()`/`random_ratio()` in 0.9; in 0.10 the method moved to the `RngExt` trait:
+Sample with `rand::rng()` and `random_ratio()` (on the `RngExt` trait):
 
 ```rust
 use rand::RngExt;

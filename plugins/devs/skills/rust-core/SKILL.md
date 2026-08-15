@@ -1,11 +1,11 @@
 ---
 name: devs:rust-core
-description: "Use when writing, debugging, reviewing, or architecting Rust code — compiler or borrow-checker errors, async/tokio work, error handling (thiserror/anyhow), testing and benchmarking, performance tuning, web services (axum/actix-web), CLI/TUI tools (clap/ratatui), Tauri desktop apps, AI/LLM API integration, Cargo workspace and dependency management, or scaffolding a new Rust project. Contains version-verified references, a breaking-change landmarks table, scaffolding scripts, and lint/rustfmt/deny config templates."
+description: "Use when writing, debugging, reviewing, or architecting Rust code — compiler or borrow-checker errors, async/tokio work, error handling (thiserror/anyhow), testing and benchmarking, performance tuning, web services (axum/actix-web), CLI/TUI tools (clap/ratatui), Tauri desktop apps, AI/LLM API integration, Cargo workspace and dependency management, or scaffolding a new Rust project. Contains verified references, scaffolding scripts, and lint/rustfmt/deny config templates."
 ---
 
 # Rust Core Development
 
-Reference hub for Rust work. Everything version-sensitive in here was verified against crates.io and the stable toolchain in August 2026 — when in doubt, re-verify with `cargo info <crate>`; never trust trained knowledge for versions or ecosystem APIs.
+Reference hub for Rust work. Verify versions and crate APIs with the toolchain (`cargo info <crate>`, docs.rs) — never from trained knowledge.
 
 ## Reference routing
 
@@ -24,28 +24,11 @@ Load references on demand — not all at once.
 | [crates-core.md](references/crates-core.md) | Version-verified essential-crates table; std-replaces-crate list |
 | [web-frameworks.md](references/web-frameworks.md) | axum (default), actix-web; framework selection |
 | [cli-tui.md](references/cli-tui.md) | clap, ratatui, CLI testing with assert_cmd |
-| [desktop-tauri.md](references/desktop-tauri.md) | Tauri v2 (capabilities model, v1→v2 migration landmarks) |
+| [desktop-tauri.md](references/desktop-tauri.md) | Tauri desktop apps: capabilities model, command IPC, tray, updater |
 | [ai-llm.md](references/ai-llm.md) | Calling LLM APIs from Rust (Anthropic/OpenAI-compatible/ollama) |
 | [logging-observability.md](references/logging-observability.md) | tracing, OpenTelemetry, Prometheus metrics |
 
 For code-review checklists use the `devs:code-review` skill; for dependency auditing workflows use `devs:deps-core`.
-
-## Breaking-change landmarks (as of Aug 2026)
-
-Models trained earlier routinely emit the old forms. Do not.
-
-| Crate/area | Landmark |
-|---|---|
-| edition | 2024 is current (`gen` is a keyword — `rng.gen()` is a syntax error) |
-| axum 0.8 | Route params are `/users/{id}`; `/:id` panics at router build. No `#[async_trait]` on extractors |
-| rand 0.9/0.10 | `thread_rng()`→`rng()`, `gen*`→`random*`; 0.10 moved `random*` to `RngExt` |
-| thiserror | 2.x current |
-| Tauri | v2: capabilities/permissions (no allowlist), `tauri::api` removed, `@tauri-apps/api/core` |
-| once_cell / lazy_static | Use `std::sync::LazyLock` / `OnceLock` (stable since 1.80/1.70) |
-| criterion | Use `std::hint::black_box`, not `criterion::black_box` |
-| cargo | `cargo update --recursive` (not `--aggressive`); commit `Cargo.lock` everywhere; resolver "3" is MSRV-aware |
-| cargo-deny | v2 schema: no `vulnerability`/`unmaintained`/`copyleft` keys |
-| rustfmt | `imports_granularity`/`group_imports` are still nightly-only; `fn_args_layout` → `fn_params_layout` |
 
 ## Decision guides
 

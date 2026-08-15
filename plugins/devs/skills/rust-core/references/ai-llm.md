@@ -1,6 +1,6 @@
 # AI & LLM Integration
 
-Calling LLM APIs and running local models from Rust; versions verified against crates.io, August 2026.
+Calling LLM APIs and running local models from Rust.
 
 ## Model IDs rot
 

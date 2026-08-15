@@ -66,7 +66,7 @@ tokio = { workspace = true, features = ["macros"] }  # members can add features,
 ```bash
 cargo update              # latest versions compatible with Cargo.toml ranges
 cargo update -p serde     # one package
-cargo update --recursive  # also force-update its dependencies (renamed from --aggressive)
+cargo update --recursive  # also force-update its dependencies
 cargo outdated            # cargo install cargo-outdated
 ```
 

@@ -10,8 +10,8 @@ unsafe_code = "forbid"
 unwrap_used = "deny"
 expect_used = "deny"
 # Curated selection from clippy::pedantic — signal without the noise of enabling
-# the whole group. Extend deliberately, not wholesale. (must_use_candidate was
-# evaluated and rejected: it fires on cargo new's own lib boilerplate.)
+# the whole group. Extend deliberately, not wholesale. (must_use_candidate is
+# deliberately absent: it fires on cargo new's own lib boilerplate.)
 semicolon_if_nothing_returned = "warn"
 uninlined_format_args = "warn"
 redundant_closure_for_method_calls = "warn"
