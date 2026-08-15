@@ -39,3 +39,16 @@ jobs:
 
       - name: Smoke test rust-core skill scripts and configs
         run: bash scripts/ci/smoke-rust-core.sh
+
+  smoke-python-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Smoke test python-core skill scripts and configs
+        run: bash scripts/ci/smoke-python-core.sh

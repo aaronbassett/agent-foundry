@@ -1,38 +1,52 @@
-# Essential Python Libraries
+# Python Library Choices
 
-## Web Frameworks
-- **FastAPI**: Modern async web framework
-- **Django**: Full-featured web framework
-- **Flask**: Lightweight web framework
+Hand-curated defaults; versions verified against PyPI August 2026. Anything with no release in 18+ months was dropped, not listed.
 
-## HTTP Clients
-- **httpx**: Async HTTP client
-- **requests**: Simple HTTP library
+## Core
 
-## Data Validation
-- **pydantic**: Data validation using type hints
-- **marshmallow**: Object serialization
+| Library | Version | Use when | Gotcha |
+|---|---|---|---|
+| httpx | 0.28.1 | Any HTTP client work, sync or async | 5 s default timeout; `raise_for_status()` is not automatic. Stable API; 1.0 is in pre-release |
+| pydantic | 2.13.4 | Validation/serialization at boundaries | v1 API (`.dict()`, `.parse_obj()`) is gone — use `model_dump`/`model_validate` |
+| pydantic-settings | 2.15.0 | Typed config from env vars/.env | Separate package since v2; nested env vars need `env_nested_delimiter` |
+| structlog | 26.1.0 | Structured (JSON) application logging | Route stdlib `logging` into it, or third-party logs bypass your pipeline |
+| rich | 15.0.0 | Terminal output, tracebacks, progress | Markup parses `[...]` — escape untrusted strings |
+| typer | 0.27.1 | CLIs — the default: type-hint-native, built on click | Use `Annotated[...]` parameter style; bare default-value style is legacy |
 
-## Database
-- **SQLAlchemy**: SQL toolkit and ORM
-- **Prisma**: Modern ORM
-- **asyncpg**: Async PostgreSQL
+Use click (8.4.2) directly only when you need its decorator/plugin ecosystem without typer's layer.
 
-## Testing
-- **pytest**: Testing framework
-- **pytest-asyncio**: Async test support
-- **pytest-cov**: Coverage plugin
+## Data
 
-## CLI
-- **typer**: Modern CLI framework
-- **click**: Command-line interfaces
-- **rich**: Terminal formatting
+| Library | Version | Use when | Gotcha |
+|---|---|---|---|
+| polars | 1.43.2 | Default for new DataFrame/ETL work — lazy engine, multicore | Not pandas-API-compatible; don't port idiom-for-idiom |
+| pandas | 3.0.5 | Ecosystem interop demands it (sklearn, plotting, niche formats) | 3.0 defaults to copy-on-write + Arrow-backed strings; chained-assignment code breaks |
+| duckdb | 1.5.5 | In-process SQL over Parquet/CSV/DataFrames | Single writer per database file |
 
-## Async
-- **aiohttp**: Async HTTP client/server
-- **anyio**: High-level async library
+## Web
 
-## Utilities
-- **python-dotenv**: Environment variables
-- **loguru**: Simple logging
-- **pendulum**: Better datetimes
+| Library | Version | Use when | Gotcha |
+|---|---|---|---|
+| fastapi | 0.141.1 | Async APIs — see [fastapi-guide.md](fastapi-guide.md) | Still 0.x: minor bumps can break; uv.lock is your pin |
+| sqlalchemy | 2.0.52 | Any relational DB access | Write 2.0-style (`select()`, `Session.execute`), not legacy `Query` |
+| litestar | 2.24.0 | FastAPI alternative — msgspec-fast, class controllers, built-in DI | — |
+
+## Tooling
+
+| Library | Version | Use when | Gotcha |
+|---|---|---|---|
+| uv | 0.12.5 | All packaging/env work — see [dependencies.md](dependencies.md) | `uv pip` bypasses uv.lock |
+| ruff | 0.16.3 | Lint and format, one tool | Lint config belongs under `[tool.ruff.lint]` |
+| mypy | 2.3.1 | Type checking | Run as `uv run mypy .` so it sees the project env; `strict = true` is opt-in |
+| pytest | 9.1.1 | All testing — see [testing.md](testing.md) | Config lives in `[tool.pytest.ini_options]` |
+
+## Superseded — do not recommend
+
+| Old habit | Use instead |
+|---|---|
+| requests by default | httpx — same ergonomics, plus async and HTTP/2 |
+| black + isort | ruff format + ruff check (`I` rules) |
+| poetry / pipenv for new projects | uv |
+| Prisma Python client (last release Aug 2024 — dead) | sqlalchemy |
+| python-jose | PyJWT (2.13.0) |
+| passlib (last release 2020) | pwdlib (0.3.1) |

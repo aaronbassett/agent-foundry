@@ -1,107 +1,108 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Scaffold a new Python project per the python-core greenfield spec, delegating
+# layout to `uv init` so the structure always matches current uv conventions.
+# Self-verifying: the scaffold must pass ruff (lint + format), mypy, and pytest
+# before this script reports success.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIGS="$SCRIPT_DIR/../assets/configs"
+
 PROJECT_NAME="${1:-}"
-PROJECT_TYPE="${2:-package}"  # package or fastapi
+PROJECT_TYPE="${2:-package}"  # package | fastapi
 
 if [[ -z "$PROJECT_NAME" ]]; then
-    echo "Usage: $0 <project-name> [package|fastapi]"
+    echo "Usage: $0 <project-name> [package|fastapi]" >&2
+    exit 1
+fi
+case "$PROJECT_TYPE" in
+    package|fastapi) ;;
+    *) echo "Project type must be 'package' or 'fastapi', got '$PROJECT_TYPE'" >&2; exit 1 ;;
+esac
+if ! command -v uv >/dev/null 2>&1; then
+    echo "uv is required (https://docs.astral.sh/uv/ — brew install uv)" >&2
     exit 1
 fi
 
 echo "Creating Python project: $PROJECT_NAME (type: $PROJECT_TYPE)"
-
 if [[ "$PROJECT_TYPE" == "fastapi" ]]; then
-    mkdir -p "$PROJECT_NAME/app"
-    cd "$PROJECT_NAME"
-    
-    # Create FastAPI structure
-    cat > app/main.py << 'PY'
+    # --package: src layout with the project installed into the venv, so tests
+    # import the app package instead of relying on sys.path tricks.
+    uv init --package "$PROJECT_NAME"
+else
+    uv init --lib "$PROJECT_NAME"
+fi
+cd "$PROJECT_NAME"
+PKG_NAME="$(echo "$PROJECT_NAME" | tr '-' '_')"
+
+# Lint/type/test policy: append the [tool.*] tables (uv init emits none).
+cat "$CONFIGS/pyproject-tools.toml" >> pyproject.toml
+
+# Dev tools live in the PEP 735 dev dependency group.
+uv add --dev pytest mypy ruff
+
+mkdir -p tests
+if [[ "$PROJECT_TYPE" == "fastapi" ]]; then
+    uv add fastapi uvicorn
+    uv add --dev httpx  # required by starlette's TestClient
+    cat > "src/$PKG_NAME/main.py" <<'PY'
 from fastapi import FastAPI
 
-app = FastAPI(title="My API")
+app = FastAPI(title="API")
+
 
 @app.get("/")
-async def root():
-    return {"message": "Hello World"}
+async def root() -> dict[str, str]:
+    return {"status": "ok"}
 PY
-    
-    cat > app/__init__.py << 'PY'
-PY
+    cat > tests/test_smoke.py <<PY
+from fastapi.testclient import TestClient
 
+from ${PKG_NAME}.main import app
+
+
+def test_root() -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+PY
+    echo "Run the API with: uv run uvicorn ${PKG_NAME}.main:app --reload"
 else
-    mkdir -p "$PROJECT_NAME/src/$PROJECT_NAME"
-    mkdir -p "$PROJECT_NAME/tests"
-    cd "$PROJECT_NAME"
-    
-    cat > "src/$PROJECT_NAME/__init__.py" << 'PY'
-"""$PROJECT_NAME package."""
-__version__ = "0.1.0"
-PY
+    cat > tests/test_smoke.py <<PY
+import ${PKG_NAME}
 
-    cat > "src/$PROJECT_NAME/main.py" << 'PY'
-def main() -> None:
-    """Main function."""
-    print("Hello from $PROJECT_NAME!")
 
-if __name__ == "__main__":
-    main()
+def test_import() -> None:
+    assert ${PKG_NAME} is not None
 PY
 fi
 
-# Create pyproject.toml
-cat > pyproject.toml << 'TOML'
-[project]
-name = "$PROJECT_NAME"
-version = "0.1.0"
-description = ""
-requires-python = ">=3.11"
-dependencies = []
+# Make sure standard artefacts are ignored regardless of how uv init behaved.
+touch .gitignore
+for pattern in ".venv" "__pycache__/" ".pytest_cache/" ".mypy_cache/" ".ruff_cache/"; do
+    grep -qxF "$pattern" .gitignore || echo "$pattern" >> .gitignore
+done
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "mypy>=1.5.0",
-    "ruff>=0.1.0",
-]
+cat > CLAUDE.md <<EOF
+# $PROJECT_NAME
 
-[tool.ruff]
-line-length = 100
-select = ["E", "F", "I", "N", "W"]
+Scaffolded by python-core init_python_project.sh on $(date +%Y-%m-%d).
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
+Conventions are machine-enforced, not implicit:
+- uv manages the environment; dev tools are in the PEP 735 \`dev\` dependency group; \`uv.lock\` is committed.
+- Lint/format: ruff (\`[tool.ruff.lint]\` in pyproject.toml). Types: mypy strict. Tests: pytest in \`tests/\`.
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-TOML
+Verification gauntlet (CI must match):
+\`uv run ruff format --check . && uv run ruff check . && uv run mypy . && uv run pytest\`
+EOF
 
-# Create .gitignore
-cat > .gitignore << 'IGNORE'
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-ENV/
-.env
-.venv
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-IGNORE
+echo "Verifying scaffold..."
+uv run ruff format --quiet .
+uv run ruff format --check --quiet .
+uv run ruff check --quiet .
+uv run mypy . > /dev/null
+uv run pytest -q
 
-echo "✅ Project created: $PROJECT_NAME"
-echo "Next steps:"
-echo "  cd $PROJECT_NAME"
-echo "  python -m venv venv"
-echo "  source venv/bin/activate"
-echo "  pip install -e '.[dev]'"
+echo "✅ $PROJECT_NAME scaffolded and verified (ruff + mypy + pytest clean)."

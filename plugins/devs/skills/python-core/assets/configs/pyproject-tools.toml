@@ -1,0 +1,32 @@
+# [tool.*] policy tables for pyproject.toml — append to a project's pyproject
+# (uv init generates no [tool.*] tables, so appending is safe). Not a complete
+# pyproject.toml on its own.
+
+[tool.ruff]
+line-length = 100
+# target-version is intentionally unset: ruff infers it from requires-python.
+
+[tool.ruff.lint]
+# Curated selection — useful signal without whole-group noise. Extend deliberately.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade (auto-migrates stale typing/syntax idioms)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-native rules
+]
+
+[tool.mypy]
+strict = true
+# No python_version pin: mypy targets the interpreter it runs under, which the
+# project's requires-python already constrains. Pinning an old version here
+# makes mypy reject modern syntax (e.g. PEP 695 generics).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# If the project uses pytest-asyncio, add: asyncio_mode = "auto"

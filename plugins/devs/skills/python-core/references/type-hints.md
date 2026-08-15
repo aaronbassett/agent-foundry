@@ -1,100 +1,99 @@
-# Type Hints in Python
+# Type Hints
 
-Modern Python uses type hints for better IDE support, documentation, and error catching.
+Targets 3.12+; everything here passes `mypy --strict` (mypy 2.3.1) on 3.14. Write `X | None`, lowercase builtin generics (`list[str]`, `dict[str, int]`), and PEP 695 syntax. The pre-3.12 spellings — `Optional`/`Union`, capital-letter container aliases imported from `typing`, manual `TypeVar` + `Generic` base classes — are legacy; don't write them, and let ruff's `UP` rules (pyupgrade) auto-migrate them on sight.
 
-## Basic Types
+## Generics and aliases (PEP 695)
 
-```python
-def greet(name: str) -> str:
-    return f"Hello, {name}"
-
-age: int = 25
-price: float = 19.99
-is_active: bool = True
-items: list[str] = ["apple", "banana"]
-scores: dict[str, int] = {"alice": 95, "bob": 87}
-```
-
-## Optional and Union
+Type parameters are declared inline; no `TypeVar` boilerplate, and `type` aliases are lazily evaluated (forward references just work).
 
 ```python
-from typing import Optional, Union
+type Pair[T] = tuple[T, T]          # lazily evaluated; forward refs just work
 
-# Python 3.10+
-def process(data: str | None = None) -> int | float:
-    pass
+class Box[T]:
+    def __init__(self, item: T) -> None:
+        self.item = item
 
-# Older syntax
-def process_old(data: Optional[str] = None) -> Union[int, float]:
-    pass
-```
-
-## Generic Types
-
-```python
-from typing import TypeVar, Generic
-
-T = TypeVar('T')
-
-class Box(Generic[T]):
-    def __init__(self, content: T) -> None:
-        self.content = content
-    
     def get(self) -> T:
-        return self.content
+        return self.item
 
-box = Box[int](42)
+def first[T](items: list[T]) -> T:
+    return items[0]
+
+def total[N: (int, float)](xs: list[N]) -> N:   # constrained
+    return max(xs)
 ```
 
-## Protocol (Structural Subtyping)
+Bound: `[T: Hashable]`. Variance is inferred — never declared.
+
+## Self and @override
 
 ```python
-from typing import Protocol
+from typing import Self, override
 
-class Drawable(Protocol):
-    def draw(self) -> None: ...
+class Builder:
+    def add(self, part: str) -> Self:    # subclass chains keep the subclass type
+        return self
 
-def render(obj: Drawable) -> None:
-    obj.draw()
+class Loud(Builder):
+    @override                            # flags a typo'd/renamed base method
+    def add(self, part: str) -> Self:
+        return super().add(part)
 ```
 
-## TypedDict
+Enable `explicit-override` (config below) to require the decorator.
+
+## TypeIs vs TypeGuard
+
+`TypeIs` (3.13+) narrows **both** branches; `TypeGuard` only the positive one. Prefer `TypeIs` whenever the narrowed type is a subtype of the input — reach for `TypeGuard` only for non-subtype rewrites like `list[object]` → `list[str]`.
 
 ```python
-from typing import TypedDict
+from typing import TypeIs, reveal_type
+
+def is_str(x: object) -> TypeIs[str]:
+    return isinstance(x, str)
+
+def handle(x: int | str) -> None:
+    if is_str(x):
+        reveal_type(x)   # str
+    else:
+        reveal_type(x)   # int — TypeIs narrows BOTH branches
+```
+
+mypy output: `Revealed type is "str"` / `Revealed type is "int"`.
+
+## Structural + data shapes
+
+```python
+from typing import Annotated, Literal, NotRequired, Protocol, ReadOnly, TypedDict
+
+class Closable(Protocol):            # structural: no inheritance needed
+    def close(self) -> None: ...
 
 class User(TypedDict):
+    id: ReadOnly[int]                # checker rejects mutation
     name: str
-    age: int
-    email: str
+    email: NotRequired[str]
 
-user: User = {"name": "Alice", "age": 30, "email": "alice@example.com"}
+type Mode = Literal["r", "w", "a"]
+
+PositiveInt = Annotated[int, "gt=0"]   # metadata Pydantic/FastAPI consume
 ```
 
-## Literal
+`Protocol` for duck-typed call sites; `runtime_checkable` only if you need `isinstance`. `Literal` beats str-typed mode flags; `Annotated` carries validator metadata without changing the runtime type.
 
-```python
-from typing import Literal
+## mypy config
 
-def set_mode(mode: Literal["read", "write", "append"]) -> None:
-    pass
+```toml
+[tool.mypy]
+strict = true
+warn_unreachable = true
+enable_error_code = ["explicit-override", "possibly-undefined"]
 ```
 
-## Mypy Configuration
+**Do not pin `python_version`** unless you genuinely target an older runtime — a stale pin like `3.11` makes mypy *reject* PEP 695 syntax outright. Unset, mypy assumes the interpreter it runs under.
 
-```ini
-# mypy.ini
-[mypy]
-python_version = 3.11
-warn_return_any = True
-warn_unused_configs = True
-disallow_untyped_defs = True
-```
+## Gotchas
 
-## Best Practices
-
-1. Add type hints to all public functions
-2. Use `mypy` for static type checking
-3. Prefer `str | None` over `Optional[str]` (Python 3.10+)
-4. Use `list[T]` over `List[T]` (Python 3.9+)
-5. Leverage Pydantic for runtime validation
+- `type` aliases aren't runtime types: no `isinstance(x, Pair)`.
+- PEP 695 params are scoped to their declaration — no leaking a class `T` into unrelated methods.
+- Pydantic models want real annotations, not `type` alias indirection for field discrimination.

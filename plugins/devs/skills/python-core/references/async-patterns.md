@@ -1,114 +1,99 @@
-# Async Patterns in Python
+# Async Patterns
 
-Guide to asyncio and async/await in Python.
+Assumes 3.11+. Every block below is a complete runnable program unless marked as a fragment. `await` is only legal inside `async def` — never at module level.
 
-## Basic Async/Await
+## Default: TaskGroup + asyncio.timeout
+
+Structured concurrency: children can't leak, one child's exception cancels siblings and surfaces as `ExceptionGroup` (catch with `except*`).
 
 ```python
 import asyncio
 
-async def fetch_data(url: str) -> dict:
-    # Simulated async operation
-    await asyncio.sleep(1)
-    return {"url": url, "data": "..."}
+async def fetch(url: str) -> str:
+    await asyncio.sleep(0.1)
+    return url
 
-async def main():
-    result = await fetch_data("https://api.example.com")
-    print(result)
+async def main() -> None:
+    async with asyncio.timeout(5):          # cancels the whole block on expiry
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(fetch(f"u{i}")) for i in range(3)]
+    print([t.result() for t in tasks])      # all done, or ExceptionGroup raised
 
 asyncio.run(main())
 ```
 
-## Running Multiple Tasks
+`asyncio.timeout()` supersedes `wait_for` (it doesn't wrap the coroutine, composes with TaskGroup, raises `TimeoutError`).
+
+## gather vs TaskGroup
+
+| Need | Use |
+|---|---|
+| Fail-fast, no orphaned tasks | `TaskGroup` (default) |
+| Collect all results *including* exceptions | `gather(*aws, return_exceptions=True)` |
+| Fire-and-forget background task | `asyncio.create_task` — but **keep a reference** (bare tasks get GC'd mid-flight) and add a done-callback |
+
+Plain `gather()` without `return_exceptions` leaves siblings running after one fails — the classic leak.
+
+## Producer/consumer that terminates
+
+A `while True` consumer with no shutdown path deadlocks the program: producer finishes, consumer blocks on `get()` forever. Use a sentinel (one per consumer):
 
 ```python
-async def main():
-    # Concurrent execution
-    results = await asyncio.gather(
-        fetch_data("url1"),
-        fetch_data("url2"),
-        fetch_data("url3"),
-    )
-    
-    # With timeout
-    try:
-        result = await asyncio.wait_for(fetch_data("url"), timeout=5.0)
-    except asyncio.TimeoutError:
-        print("Timeout!")
+import asyncio
+
+STOP = object()
+
+async def producer(q: asyncio.Queue) -> None:
+    for i in range(5):
+        await q.put(i)
+    await q.put(STOP)                       # one sentinel per consumer
+
+async def consumer(q: asyncio.Queue) -> None:
+    while (item := await q.get()) is not STOP:
+        print("got", item)
+
+async def main() -> None:
+    q: asyncio.Queue = asyncio.Queue(maxsize=2)   # bounded = backpressure
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(producer(q))
+        tg.create_task(consumer(q))
+
+asyncio.run(main())
 ```
 
-## Async Context Managers
+Alternative for N workers: keep `while True` + `q.task_done()`, then `await q.join()` and `task.cancel()` each worker. `task_done()` is pointless unless something calls `join()`.
+
+## Blocking calls
+
+One blocking call stalls the whole event loop. Escape hatches:
 
 ```python
-class DatabaseConnection:
-    async def __aenter__(self):
-        await self.connect()
-        return self
-    
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
+import asyncio, hashlib
 
-async with DatabaseConnection() as db:
-    await db.query("SELECT * FROM users")
+async def main() -> None:
+    digest = await asyncio.to_thread(hashlib.sha256, b"x" * 10_000_000)
+    print(digest.hexdigest()[:8])
+
+asyncio.run(main())
 ```
 
-## Async Generators
+`asyncio.to_thread` for blocking I/O or GIL-releasing C calls; `loop.run_in_executor(ProcessPoolExecutor(), ...)` for pure-Python CPU work. Never call `time.sleep`, `requests`, or sync DB drivers in a coroutine.
+
+## Holding a lock across await (fragment — bug pattern)
 
 ```python
-async def fetch_pages(url: str):
-    page = 1
-    while page <= 10:
-        await asyncio.sleep(0.5)
-        yield f"Page {page} from {url}"
-        page += 1
-
-async for page in fetch_pages("example.com"):
-    print(page)
+# FRAGMENT: the await inside the critical section suspends while
+# holding the lock; slow peers serialize the whole system, and
+# re-entering the same lock in a callee deadlocks.
+async with self._lock:
+    data = await slow_network_call()   # move this OUT of the lock
+    self._cache[key] = data            # keep only mutation inside
 ```
 
-## Common Patterns
+Do the awaiting first, take the lock only around shared-state mutation.
 
-### Producer-Consumer
+## Gotchas
 
-```python
-async def producer(queue: asyncio.Queue):
-    for i in range(10):
-        await queue.put(i)
-        await asyncio.sleep(0.1)
-
-async def consumer(queue: asyncio.Queue):
-    while True:
-        item = await queue.get()
-        print(f"Processing {item}")
-        queue.task_done()
-
-async def main():
-    queue = asyncio.Queue()
-    await asyncio.gather(
-        producer(queue),
-        consumer(queue),
-    )
-```
-
-### Semaphore (Rate Limiting)
-
-```python
-sem = asyncio.Semaphore(5)  # Max 5 concurrent
-
-async def limited_task(n: int):
-    async with sem:
-        await asyncio.sleep(1)
-        return n
-
-tasks = [limited_task(i) for i in range(100)]
-results = await asyncio.gather(*tasks)
-```
-
-## Best Practices
-
-1. Use `asyncio.run()` for the entry point
-2. Prefer `asyncio.gather()` over manual task management
-3. Use async context managers for resources
-4. Add timeouts to prevent hanging
-5. Use semaphores for rate limiting
-6. Avoid `asyncio.create_task()` unless necessary
+- Semaphore for concurrency limits: `async with sem:` inside the task fn, tasks still all created up front.
+- `asyncio.run()` once, at the entry point — not per call.
+- Async generators/context managers run fine under TaskGroup; don't span a generator across tasks.
