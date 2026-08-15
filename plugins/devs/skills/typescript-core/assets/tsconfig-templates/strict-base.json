@@ -1,0 +1,28 @@
+{
+  // Shared strict baseline (TypeScript 7-verified). The variant templates in
+  // this directory extend this file — copy both into your project, or inline.
+  // Flags implied by "strict" (noImplicitAny, strictNullChecks, ...) are
+  // deliberately not repeated here.
+  "compilerOptions": {
+    "strict": true,
+
+    // Valuable checks NOT implied by strict:
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    // Module hygiene:
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    // Checking your own code, not your dependencies':
+    "skipLibCheck": true,
+
+    "sourceMap": true
+  }
+}

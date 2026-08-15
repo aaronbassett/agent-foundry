@@ -1,184 +1,154 @@
-# Testing Guidelines
+# Testing
 
-Testing is crucial to ensure our TypeScript code works as intended and to prevent regressions. We use Vitest (or Jest in legacy cases) as our test runner, along with appropriate libraries for the environment (e.g., React Testing Library for React components, and MSW for API calls).
+Vitest-first: config, mocking, DOM testing, MSW, coverage, and a zero-dependency `node:test` option.
 
-## Table of Contents
+| Tool | Version | Role |
+|---|---|---|
+| `vitest`, `@vitest/coverage-v8` | 4.1.10 | runner + V8 coverage |
+| `@testing-library/react` | 16.3.2 | component tests (react 19.2.8) |
+| `@testing-library/jest-dom` | 7.0.1 | DOM matchers via `/vitest` entry |
+| `@testing-library/user-event` | 14.6.4 | interactions — always awaited |
+| `msw` | 2.15.0 | HTTP mocking at the network layer |
+| `@faker-js/faker` | 10.6.0 | test data (scoped name; bare `faker` is a different, dead package) |
+| `jsdom` | 30.0.1 | DOM environment (`happy-dom` 20.11.2 is the faster alternative) |
 
-- [Testing Philosophy](#testing-philosophy)
-- [Tools & Stack](#tools--stack)
-- [Unit Testing](#unit-testing)
-- [Integration Testing](#integration-testing)
-- [End-to-End (E2E) Testing](#end-to-end-e2e-testing)
-- [Testing Best Practices](#testing-best-practices)
-- [What Not to Test](#what-not-to-test)
-
-## Testing Philosophy
-
-- **Test Behavior, Not Implementation**: Write tests to verify what the code should do (outputs, UI rendered, side effects observed), not how it does it. Avoid testing internal function calls or private state.
-- **Fast, Automated, Frequent**: Tests should be runnable quickly (ideally in watch mode during development and in CI). Aim to run the unit test suite on each commit or push.
-- **Deterministic**: Tests must produce the same results every run. Avoid relying on external services or non-deterministic inputs (time can be controlled via faking timers, random values via seeding, etc.).
-- **Isolated Units, Realistic Integration**: Unit tests isolate a single function or component (no external calls). Integration tests can use a more realistic environment (database, network stubs) to ensure parts work together.
-- **BDD Mindset**: Think in terms of scenarios: given some setup, when an action happens, then expect a result. This helps write clear, descriptive tests (potentially using BDD libraries or simply structuring tests with arrange-act-assert sections).
-
-## Tools & Stack
-
-**Testing frameworks**:
-
-- **Vitest** – our default unit test runner (fast, TS-native, Vite-compatible). It supports JSDOM for component testing and is very similar to Jest.
-- **React Testing Library (RTL)** – for React components. Encourages testing UI by interacting as a user (queries by text, clicking, etc.), not testing implementation details.
-- **MSW (Mock Service Worker)** – for simulating API calls in tests. MSW intercepts `fetch`/`XHR` and returns mocked responses, allowing integration-like testing without real network calls.
-- **Playwright or Cypress** – for end-to-end tests if applicable (browser automation, not covered deeply here, but mention for completeness).
-- **Supertest** (for Node/Express) – for simulating HTTP calls to our API in integration tests.
-
-**Coverage**: We aim for ~80%+ code coverage, but value meaningful coverage over number. Critical logic should be thoroughly tested.
-
-## Unit Testing
-
-Unit tests target a single function, module, or component in isolation:
-
-- For pure functions, this is straightforward: call function with various inputs, assert outputs.
-- For functions with dependencies, use dependency injection or module-mocking to pass in fake dependencies. (Vitest can stub imports easily via `vi.mock()`).
-- For React components:
-  - Use RTL’s `render(<MyComponent props={...}/>)` in a test. Assert on the rendered output or behavior (query text, simulate user events using `userEvent`).
-  - Avoid reaching into component internals (state, or DOM structure not visible to user). Test what a user would perceive: text on screen, button enabled/disabled, etc..
-  - Each test should ideally cover one logical scenario or edge case.
-
-**Example (function)**:
+## Config
 
 ```ts
-// Function to test
-function toSlug(input: string): string { ... }
+// vitest.config.ts
+import { configDefaults, defineConfig } from "vitest/config";
 
-// Test
-import { describe, it, expect } from 'vitest';
-import { toSlug } from './string-utils';
-
-describe('toSlug', () => {
-  it('converts spaces to hyphens and lowercases', () => {
-    expect(toSlug('Hello World')).toBe('hello-world');
-  });
-  it('trims and removes special chars', () => {
-    expect(toSlug(' Test !!! ')).toBe('test');
-  });
+export default defineConfig({
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    exclude: [...configDefaults.exclude, "node-tests/**"],
+    coverage: { provider: "v8" },
+  },
 });
 ```
 
-**Example (React)**:
-
-```tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import LoginForm from './LoginForm';
-
-test('submits user data when form is filled and submitted', async () => {
-  render(<LoginForm onSubmit={jest.fn()} />);
-  await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
-  await userEvent.type(screen.getByLabelText(/password/i), 'password123');
-  userEvent.click(screen.getByRole('button', { name: /login/i }));
-
-  expect(screen.queryByText(/logging in/i)).toBeInTheDocument();
-});
+```ts
+// tests/setup.ts — registers toBeInTheDocument, toHaveTextContent, …
+import "@testing-library/jest-dom/vitest";
 ```
 
-This is testing the visible behavior: after clicking login, maybe a loading message appears, etc.
+Without that setup import, jest-dom matchers don't exist. Run `npx vitest run`; coverage with `npx vitest run --coverage`.
 
-## Integration Testing
+## Mocking: vi.fn / vi.mock
 
-Integration tests cover multiple units interacting:
-
-- Test an API endpoint by calling it (e.g., using Supertest to hit an Express route, with a test database or an in-memory DB).
-- Test a complex React component that makes network calls by rendering it and using MSW to mock network responses. Verify that after the component mounts, it calls the API and correctly renders the results (using MSW to supply the response).
-- Use Vitest or Jest to spin up needed background (perhaps a SQLite memory DB, or a fake Redis, etc.) if your code interacts with those.
-
-**Key**: don’t call the real production services. Instead:
-
-- Use a test database or transactions that get rolled back.
-- Use MSW for external HTTP calls (or `nock`/`axios-mock` if MSW isn't applicable).
-- Use Node’s ability to simulate environment (e.g., set `process.env.TEST=true` to alter certain behaviors, like shorter timeouts).
-
-**Example: Testing an Express route**:
+Vitest has no `jest.*` globals — the API is `vi`:
 
 ```ts
-import request from 'supertest';
-import app from '../src/server'; // Express app
+import { expect, test, vi } from "vitest";
+import { sendWelcome } from "../src/notify.js";
+import { sendEmail } from "../src/email.js";
 
-test('GET /api/items returns list of items', async () => {
-  // Insert some known data in test DB (or mock DB calls)
-  await db.item.create({ name: 'TestItem' });
-  const res = await request(app).get('/api/items');
-  expect(res.status).toBe(200);
-  expect(res.body).toEqual(
-    expect.arrayContaining([ expect.objectContaining({ name: 'TestItem' }) ])
+vi.mock("../src/email.js", () => ({
+  sendEmail: vi.fn().mockResolvedValue(true),
+}));
+
+test("sends a welcome email", async () => {
+  await sendWelcome("ada@example.com");
+  expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
+    "ada@example.com",
+    expect.stringContaining("Welcome"),
   );
 });
 ```
 
-This hits the real routing and checks integration with DB.
+`vi.mock` is hoisted; its path must match the import specifier exactly. `vi.mocked()` gives the typed handle.
 
-## End-to-End (E2E) Testing
+## Components: Testing Library + userEvent
 
-End-to-end tests simulate user interaction in a fully running application (frontend and backend together):
+```tsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { expect, test } from "vitest";
 
-- These tests are slower and run in a real browser or headless browser environment.
-- We might use Playwright to launch the app (possibly against a test server or a deployed staging environment) and then script a user journey: e.g., "open page, login, see dashboard".
-- Because our focus is on TypeScript code and integration, we typically keep E2E tests limited (just covering critical flows), relying more on unit/integration for most coverage.
+function Counter() {
+  const [n, setN] = useState(0);
+  return <button onClick={() => setN(n + 1)}>count: {n}</button>;
+}
 
-If E2E tests are included:
+test("increments on click", async () => {
+  const user = userEvent.setup();
+  render(<Counter />);
 
-- They should run in CI on merge to `main` or on release (not every commit, due to time).
-- Use test accounts or seeded data.
-- Clean up side effects (e.g. if creating a record via UI, ensure it’s deleted or use a dev environment that resets).
+  const button = screen.getByRole("button", { name: /count: 0/i });
+  expect(button).toBeInTheDocument();
 
-## Testing Best Practices
+  await user.click(button);
+  expect(button).toHaveTextContent("count: 1");
+});
+```
 
-### Organizing Test Files
+Every `user.*` call returns a promise — an un-awaited `user.click` races the assertion. Use `userEvent.setup()`, not direct calls. Query by role and accessible name, not DOM structure.
 
-- Co-locate tests with implementation when possible, naming them `*.test.ts` or `*.spec.ts`. This makes it easy to find tests and encourages keeping tests updated with code changes.
-- Alternatively, use a parallel structure under `src/__tests__/` mirroring the source files if co-location gets messy.
-- For React, also consider Storybook interaction tests (which run in browser) for visual or behavioral tests of components in isolation, but that’s supplementary.
+## HTTP: MSW
 
-### Before/After Hooks
+Mock at the network layer once, not per HTTP client:
 
-Use `beforeAll`, `beforeEach`, `afterEach`, `afterAll` for repetitive setup/teardown:
+```ts
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 
-- Example: start a test server once before all tests in a file, close it after.
-- Clean database or reset state before each test to avoid leakage between tests.
+const server = setupServer(
+  http.get("https://api.example.com/user", () =>
+    HttpResponse.json({ name: "Ada" }),
+  ),
+);
 
-### Factories & Test Data
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
-Generate test data using factory functions or libraries (e.g., `faker` for random but realistic values).
+test("returns the mocked payload", async () => {
+  const res = await fetch("https://api.example.com/user");
+  expect(await res.json()).toEqual({ name: "Ada" });
+});
+```
 
-- This avoids repeating object literals in many tests and makes it easy to adjust if your model changes.
-- Ensure randomness is controlled or at least not affecting the logic (random user name is fine; random number of items could cause flaky tests if logic not expecting extreme values, so be careful).
+The same handlers serve `fetch`, axios, or anything else; `onUnhandledRequest: "error"` turns forgotten endpoints into failures instead of live calls.
 
-### Focus on Edge Cases
+## Test data: @faker-js/faker
 
-Write tests not only for the “happy path” but also:
+```ts
+import { faker } from "@faker-js/faker";
+import { expect, test } from "vitest";
 
-- Empty inputs (e.g., empty array to a function).
-- Boundary values (e.g., string at max length allowed).
-- Error conditions (simulate a function throwing or API returning error and ensure our code handles it gracefully).
+test("seeded faker is deterministic", () => {
+  faker.seed(42);
+  const first = { name: faker.person.fullName(), email: faker.internet.email() };
+  faker.seed(42);
+  expect({ name: faker.person.fullName(), email: faker.internet.email() }).toEqual(first);
+});
+```
 
-### Use TypeScript in Tests
+Seed in factories or a setup hook so failures reproduce exactly.
 
-Our tests are also TypeScript, so use that to your advantage:
+## Zero-dep option: node:test
 
-- Define types for test data if complex.
-- Leverage the compiler to catch wrong usage of tested APIs – e.g., if a function signature changes, tests using it will fail to compile, alerting you to update tests.
+When a package must carry no dev dependencies, Node 26 runs TypeScript natively (type stripping — note the literal `.ts` specifier):
 
-### Continuous Integration
+```ts
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { toSlug } from "../src/slug.ts";
 
-All tests must pass in CI. Flaky tests are not acceptable – if a test is flaky, mark it as `skipped` and fix it ASAP.
+test("toSlug", () => {
+  assert.equal(toSlug("Hello World"), "hello-world");
+});
+```
 
-- Run tests with `--runInBand` or similar if concurrency causes issues (or use proper test isolation).
-- Use coverage reports to identify untested code.
+`node --test node-tests/slug.node.test.ts` — passes with no installs. Keep these files out of Vitest's glob (the `exclude` above), and pass file paths rather than a bare directory.
 
-## What Not to Test
+## Ground rules
 
-- **Library Code**: Don’t test internal behavior of third-party libraries (e.g., that React `useState` works – assume library code works as documented).
-- **Styling/CSS**: Don’t test exact CSS class names or styles (those can change without affecting behavior). Instead, test visual outcomes or presence of elements.
-- **Trivial Code**: Simple getters/setters or value-object constructors that don’t contain logic don’t need dedicated tests (they’ll be exercised via other tests).
-- **Console Output**: If using our logging, you generally don’t test that “`logger.info` was called” unless critical for logic. Focus on state changes, returns, UI output rather than logging side effects.
-- **Timing Specifics**: Avoid tests that rely on real timers (use fake timers for waiting, or better yet design code to be testable without real time passing).
-
-By following these guidelines, our test suite will be fast, reliable, and provide confidence in our codebase’s correctness. Remember, a well-tested codebase is easier to refactor and maintain, enabling us to move quickly with fewer bugs.
+- Test behavior, not implementation; unit tests stay isolated, integration tests use MSW or a disposable database — never live services.
+- Deterministic always: `vi.useFakeTimers()` for time, seeded faker for data.
+- `--runInBand` is a Jest flag and does not exist here. Vitest's isolation knobs are `--no-file-parallelism` and `pool` options — reach for them only after fixing the shared state that made tests order-dependent.
+- Co-locate as `*.test.ts` / `*.test.tsx`; keep E2E in Playwright, small and limited to critical flows.
+- Coverage: the v8 provider is built in via `@vitest/coverage-v8`; target meaningful coverage of branching logic over a headline percentage.

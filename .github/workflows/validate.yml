@@ -52,3 +52,13 @@ jobs:
 
       - name: Smoke test python-core skill scripts and configs
         run: bash scripts/ci/smoke-python-core.sh
+
+  smoke-typescript-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test typescript-core templates and references
+        run: bash scripts/ci/smoke-typescript-core.sh

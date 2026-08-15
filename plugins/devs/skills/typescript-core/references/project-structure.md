@@ -1,110 +1,83 @@
 # Project Structure
 
-Our projects follow a consistent, feature-oriented structure to ensure scalability and clarity.
+Verified on Node 26 / TypeScript 7.0.
 
-## Directory Layout (Front-end Web Example)
+## Source layout
 
-```
-src/
-├─ app/               # Next.js app directory (routes, layouts, pages) or main app entry
-├─ assets/            # Static files (images, fonts, etc.)
-├─ components/        # Reusable presentational components
-│  ├─ ui/             # Shared low-level UI primitives (buttons, inputs)
-│  └─ common/         # Higher-level reusable components (Navbar, Footer)
-├─ features/          # Feature modules (group by business domain)
-│  ├─ <featureName>/
-│  │   ├─ components/    # Feature-specific UI components
-│  │   ├─ hooks/         # Feature-specific hooks or logic (if not using Effect)
-│  │   ├─ routes/        # Pages or API routes related to this feature (Next.js or Express routes)
-│  │   ├─ services/      # Feature-specific business logic (could use Effect)
-│  │   └─ types.ts       # Feature-specific TypeScript types
-├─ lib/              # Utilities and library code (not feature-specific)
-│  ├─ api/            # API clients or networking code
-│  ├─ config/         # Configuration (perhaps tsdown config, tailwind config, etc.)
-│  ├─ hooks/          # Reusable hooks (if not using Effect exclusively)
-│  └─ utils/          # Generic utility functions (dates, strings, etc.)
-├─ state/            # Global state management (e.g., Zustand stores or context providers)
-├─ tests/            # Test utilities or integration test setups (if not colocated)
-└─ index.tsx         # App entry (for React/Vite) or main server file (for Node)
-```
-
-This structure groups by feature, which scales better than grouping strictly by technical type. Features encapsulate their UI, logic, and types, reducing cross-module coupling.
-
-For backend Node projects (Express, etc.), a similar approach applies:
+All source under `src/`, entry at `src/index.ts`, build output to `dist/` (gitignored). Group by **feature, not technical type**:
 
 ```
 src/
-├─ modules/          # Business domains or bounded contexts
-│   └─ <moduleName>/
-│        ├─ routes/        # Express routers or API endpoints
-│        ├─ controllers/   # Route handlers controlling request flow
-│        ├─ services/      # Core business logic (pure logic, or using Effect)
-│        ├─ models/        # Data models (DB schema or domain models)
-│        └─ types.ts       # Module-specific types
-├─ lib/               # Shared libraries (database client setup, external API clients)
-├─ middleware/        # Express (or other framework) middleware
-├─ config/            # Configuration files (loaded via env or similar)
-└─ index.ts           # Entry point to start the server
+├─ features/<name>/     # UI + logic + types for one business domain
+│   ├─ components/  hooks/  services/  types.ts
+├─ components/ui/       # context-free primitives; common/ for cross-feature pieces
+├─ lib/                 # shared utilities, API clients, config
+├─ state/               # global stores
+└─ index.ts(x)
 ```
 
-In Node, also consider grouping by context (e.g. a monorepo might have `packages/server` and `packages/shared` etc., but within a service, use feature modules as above).
+Backend: same idea with `modules/<name>/{routes,services,models}` plus `middleware/`. Co-locate tests (`foo.test.ts` next to `foo.ts`). A helper used by one feature lives in that feature, not `lib/`.
 
-## Feature-Focused Organization
+Layering: UI → services (pure logic / Effect) → data access. UI never queries directly; data modules expose a clean interface.
 
-Why feature modules? It limits the mental load. A developer can go to the `features/shoppingCart` directory and see everything about shopping cart logic in one place (UI, hooks, logic, types). This reduces hopping around and makes refactoring simpler.
+## package.json `exports` and `imports`
 
-Within a feature:
+Every package declares `exports` — it defines the public API and blocks deep imports:
 
-- Keep internal structure consistent (e.g., if one feature has a `hooks` folder, all should if they have custom hooks).
-- Co-locate tests with the code when practical (e.g., `MyComponent.test.tsx` next to `MyComponent.tsx`) to make it easy to find tests.
-
-## Shared vs Feature Code
-
-Use `components/ui` for extremely reusable, context-agnostic pieces (e.g., a `Button` component). Use `components/common` for moderately reusable pieces that might span a couple of features (e.g., a generic modal). Everything domain-specific goes in a feature folder.
-
-Similarly, utilities that are widely useful (like a date format function) go in `lib/utils`. But a helper function only relevant to orders should live in `features/orders` (possibly in `services` or `utils` under that feature).
-
-## Layering and Boundaries
-
-Observe clear separation between:
-
-- **UI Layer**: React components or CLI output formatting. These should not directly perform data fetching or complex computations; they call into hooks or services.
-- **Service/Logic Layer**: Pure functions or Effect pipelines that implement business rules, do calculations, etc., oblivious to UI. They may call lower-level libraries (like a database client).
-- **Data Layer**: Modules interfacing with external systems (database, filesystem, external APIs). Encapsulate these so that the rest of the app calls a clean interface (e.g., functions or Effect services) rather than raw queries.
-
-For example, an Express route handler (in `routes`) calls a service function (in `services`) which might use an ORM or query (in `data` layer or `models`). The service returns a result (or throws), and the controller decides HTTP response. This layering improves testability and clarity.
-
-## Project Config and Scripts
-
-Keep project-wide configs in dedicated files/folders:
-
-- **TSConfig**: have a base `tsconfig.json` and possibly extend for tests or build.
-- **ESLint and Prettier** configs at root (ensure they cover all relevant files).
-- If using `pnpm` workspaces (monorepo), ensure each package has a clear boundary (no cross-imports except via package exports).
-- Leverage a root `README` to explain the structure to newcomers, and possibly a `CONTRIBUTING.md` that references these guidelines.
-
-## Monorepo Considerations
-
-If the project is part of a monorepo (common with `pnpm` workspaces):
-
-- Each package follows a similar internal structure as above.
-- Shared code goes in a `/packages/shared` or similar library package.
-- Ensure no circular dependencies between packages; design with layering (e.g., a `core` library is used by both frontend and backend packages).
-- Use tools like Nx or Turborepo if necessary to manage building and testing across packages, but keep each package cohesive.
-
-## Example: CLI Tool Structure
-
-For CLI projects (using Oclif):
-
-```
-src/
-├─ commands/      # Oclif commands (each command as a file or folder with subcommands)
-├─ core/          # Core logic that can be unit-tested (business logic behind commands)
-├─ utils/         # CLI-specific utilities (parsing, formatting output)
-├─ lib/           # External library wrappers or integrations (if any)
-└─ index.ts       # CLI entry (initializes Oclif run)
+```jsonc
+{
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./plugin": { "types": "./dist/plugin.d.ts", "default": "./dist/plugin.js" }
+  },
+  "imports": { "#/*": "./src/*" }
+}
 ```
 
-This ensures commands remain thin (just argument parsing and calling core logic), which follows the same separation of concerns principle.
+The `imports` field gives `#/*` subpath aliases (`import { db } from '#/lib/db.js'`) — resolved by Node and by `tsc` under `moduleResolution: "nodenext"` with no bundler config (verified on Node 26 + TS 7.0). Prefer it over `paths`, which is compile-time-only. Validate published `exports` with publint/attw (see [dependencies.md](dependencies.md)).
 
-In all cases, strive for a project structure where finding things is intuitive (by feature or layer) and adding new features doesn’t require massive reorganization.
+## Monorepos: workspaces + project references
+
+pnpm workspaces for package boundaries; internal deps use the workspace protocol so they never resolve from the registry:
+
+```jsonc
+"dependencies": { "@acme/core": "workspace:*" }
+```
+
+Pair with TypeScript project references so `tsc --build` type-checks incrementally in dependency order:
+
+- Each package: `"composite": true` in its tsconfig.
+- Dependents list `"references": [{ "path": "../core" }]`.
+- Root tsconfig references all packages; CI runs `tsc --build`.
+
+No cyclic package deps; cross-package imports only via each package's `exports`.
+
+## Shared tsconfig with `${configDir}`
+
+`${configDir}` (TS 5.5+) resolves to the directory of the **final** tsconfig, so one shared base can set paths that land correctly in every package:
+
+```jsonc
+// tsconfig.base.json — extended by every package
+{
+  "compilerOptions": {
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src"
+  }
+}
+```
+
+Without it, `outDir` in an extended config resolves relative to the base file — the classic monorepo trap. Compiler flags themselves belong in [strict-configuration.md](strict-configuration.md).
+
+## Running TS directly (ts-node is legacy)
+
+- **Node runs `.ts` files natively**: `node src/index.ts` works with no flag on current Node (type stripping; verified on Node 26). Constraint: **erasable syntax only** — `enum`, `namespace`, and constructor parameter properties throw at load unless you pass `--experimental-transform-types`. Enforce compatibility in tsconfig with `"erasableSyntaxOnly": true` (TS 5.8+; emits TS1294 on violations — verified).
+- **tsx** (4.x, current) when you need watch mode, older Node, or non-erasable syntax: `tsx watch src/index.ts`.
+- Don't add ts-node to new projects.
+
+Type-checking stays a separate step (`tsc --build` / `tsc --noEmit`) — neither Node nor tsx checks types.
+
+## Config hygiene
+
+- Root: lint/format configs, `pnpm-workspace.yaml`, base tsconfig; per-package tsconfigs extend the base.
+- CLI projects: same core/commands split; framework choice and structure are owned by [packages-cli.md](packages-cli.md).

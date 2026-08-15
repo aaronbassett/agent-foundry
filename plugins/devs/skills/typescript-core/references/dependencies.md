@@ -1,60 +1,51 @@
-# Dependencies Guidelines
+# Dependencies
 
-Not every library belongs in our codebase. We must be very selective about adding dependencies. This guide helps decide whether a package should be added as a dependency (and if so, which version and source).
+Every dependency is code we now maintain.
 
-## Guiding Principles for Adding Dependencies
+## Adding a dependency
 
-- **Necessity**: First ask, do we truly need this dependency? Can the problem be solved with the standard library or existing code? Every dependency comes with cost (maintenance, bundle size, security).
-- **Maintainability**: Is the package well-maintained? This is the highest priority factor:
-  - Check the repository for recent activity (commits in the last few months, recent releases).
-  - Look at open issues and PRs: are they addressed promptly or stagnating?
-  - Many downloads/stars don’t always mean well-maintained, but it’s a clue. A critical project with a lone maintainer might be a risk if they step away.
-  - If a project hasn’t had any update or communication in > 1 year, treat it as potentially abandoned – prefer alternatives.
-- **Compatibility**: Does it work well with our frameworks/tools (React, Express/Node, Next.js, Vite)? Avoid packages that require awkward workarounds to integrate.
-- **Unique Value**: Does this library provide something we cannot easily build ourselves or combine from smaller utilities? If it’s a thin wrapper or something trivial, better to implement in-house for control. If it provides a complex algorithm or significant functionality (e.g., a proven state management library), that might justify inclusion.
-- **Bundle/Performance Impact**: For frontend projects especially, consider bundle size. Is the library small or tree-shakeable? If it’s large (like a whole UI framework) and we need just one function, maybe find a smaller alternative or copy the needed code with attribution.
-- **License**: Ensure the license is compatible with our project (e.g., MIT, Apache are fine; avoid copyleft like GPL in proprietary projects).
-- **Security**: Does the library have known vulnerabilities? Check advisories (`npm audit` can help). Also, does it handle data safely (e.g., an HTML sanitizer lib should be robust)? We prefer dependencies that are battle-tested for security in their domain.
-- **TypeScript Support**: It must have good TypeScript types. Ideally written in TS, or provides official `.d.ts`. We should not add a lib that forces us to write a lot of custom typings or use `@types/*` that are incomplete.
-- **Community & Documentation**: A library with good documentation and community adoption is easier for devs to learn and use correctly. If docs are lacking, adding the dependency might lead to misuse or bugs.
-- **Long-Term Outlook**: Is the library's approach aligned with our long-term tech stack? Avoid trendy libraries that solve a very narrow problem or use unconventional patterns that might not be supported in future (unless that problem is crucial and no standard solution exists).
+Ask in order; any "no" is usually a rejection:
 
-## Red Flags (When Not to Add)
+1. **Needed?** Can stdlib, existing deps, or ~50 lines of our own code do it? (Node's stdlib now covers `fetch`, test runner, `glob`, `parseArgs`, `styleText` — check before adding a package.)
+2. **Maintained?** Releases/commits within the last year, issues getting responses. A finished, stable micro-library can pass with less; a lone-maintainer package on your critical path is a risk either way.
+3. **Typed?** Written in TS or ships official `.d.ts`. Incomplete `@types/*` is a red flag.
+4. **Right size?** Tree-shakeable, no kitchen-sink framework for one function, no legacy-JS polyfills.
+5. **Licensed & clean?** MIT/Apache/BSD; no unresolved advisories or a history of them.
 
-- **Unmaintained**: No commits for > 6-12 months, many unanswered issues. (Exception: if the library is very stable/mature and needs no changes, but be cautious).
-- **Single Maintainer Burnout**: Project depends on one person and they show signs of burnout or disinterest (issues piling up). Bus factor is low.
-- **Low Usage / Niche**: If it’s obscure and not used widely, it could vanish or lack community knowledge for help.
-- **Overly Complex**: The library does a lot more than we need (kitchen-sink) – introducing complexity and potential conflicts. E.g., pulling in a heavy framework just for one small utility.
-- **Polyfills for Old JS**: Avoid adding dependencies that polyfill or support older JS environments we don’t target (since we always use latest environment with our bundlers).
-- **Frequent Breaking Changes**: If release notes show the library often introduces breaking changes, that’s a maintenance burden on us (unless we pin a version, but then we might not get fixes).
-- **Size vs Benefit Mismatch**: If a library is huge (say 500KB) and we only need a 5KB function from it, that’s a bad trade-off especially for frontend. Maybe extract or find a smaller alternative.
-- **Proprietary or No License**: If license is unclear or problematic, definitely no-go.
-- **Security History**: A library with a history of multiple vulnerabilities (especially if unmaintained now) – avoid. E.g., some abandoned npm packages might have known vulns with no fixes.
+Before merging: spike it on a branch, note the evaluation in the PR (alternatives, downloads, last release, size), and record the choice in [packages-always-use.md](packages-always-use.md) so the next dev doesn't add a competitor.
 
-## Green Flags (When to Consider Adding)
+## Version policy
 
-- The library is industry-standard for the problem (e.g., Zod for schema validation is widely adopted and maintained[13], or React Query for data fetching).
-- It significantly reduces our development time/complexity for a feature, more than offsetting the cost of added dependency.
-- The maintainers are trustworthy (e.g., library is by a reputable organization or author, or part of a known toolkit like The Guild’s libraries or Vercel’s Next.js ecosystem).
-- It integrates directly with our stack with minimal fuss (e.g., an official plugin for a tool we use).
-- The library has excellent documentation and type definitions, meaning we can use it with confidence and onboard new devs to it easily.
-- The library is modular or tree-shakeable, so we can include just what we need.
-- We’ve evaluated alternatives (including in-house) and this clearly stands out as the best option.
+**Caret ranges + committed lockfile + automated update PRs.** (Supersedes older guidance to pin exact versions or to "always use latest" — both were wrong: exact pins without automation rot silently; chasing latest without a lockfile makes builds unreproducible.)
 
-## Process for Introducing a New Dependency
+- `package.json`: default `^x.y.z` ranges. Exact-pin only tools where minor drift breaks output determinism (e.g. formatters in CI).
+- Lockfile (`pnpm-lock.yaml`) is always committed; CI installs with `pnpm install --frozen-lockfile`. The lockfile — not the ranges — is what makes builds reproducible.
+- Renovate or Dependabot opens update PRs so upgrades arrive as small, tested diffs. Majors get a human read of the changelog first.
+- No alpha/beta in production code without an explicit decision.
 
-- **Research & Prototype**: Before adding, do a quick spike. Include the library in a sandbox or branch, try using it for our use case. Ensure it works as expected.
-- **Review by Peers**: Open a discussion or RFC. Describe why the dependency is needed, what alternatives were considered, maintenance stats (e.g., “Library X last release 1 month ago, ~100k weekly downloads, MIT licensed”), and impact (bundle size if front-end).
-- **Version Selection**: We always install the latest stable version (pin exact version in `package.json` to avoid surprise upgrades). No alpha/beta versions for production code unless absolutely necessary.
-- **Check for Tree Shaking**: If front-end, verify that unused parts of the library are not bundled. Sometimes this means using import paths to specific submodules.
-- **Add Documentation**: Update our internal docs (maybe in a `packages-always-use.md` or relevant section) that we use this library for X purpose, so future devs don’t add a different library for the same purpose.
-- **Monitor**: After adding, keep an eye on the library’s releases. Subscribe to notifications or dependabot alerts. If a breaking change is coming, plan the upgrade, or if maintainers disappear, start looking for alternatives proactively.
+## Tooling
 
-## Upgrading and Removing Dependencies
+| Task | Tool |
+|---|---|
+| Find outdated deps, plan majors | `npm-check-updates` (`ncu`, `ncu -i` interactive) |
+| Unused deps, exports, and files | `knip` |
+| Published-package correctness (`exports`, files, ESM/CJS) | `publint` |
+| Type-resolution correctness of published packages | `@arethetypeswrong/cli` (`attw --pack`) |
+| Vulnerability scan | `pnpm audit --prod` (or `npm audit --omit=dev`) | built-in |
 
-- **Stay Updated**: We update dependencies regularly (via `pnpm update` or dependabot PRs). Minor/patch updates should be applied unless there’s known issues. Major updates require planning and testing.
-- **Deprecation**: If maintainers deprecate the library or project direction shifts incompatibly, plan to migrate off. It’s better to remove early than be stuck with abandonware.
-- **Replacing**: If a better solution emerges (e.g., a new standard in the community), evaluate if switching is worth it. Consider the cost of migration vs benefits.
-- **Removing Unused**: Periodically audit for dependencies that are no longer used. Remove them to reduce bloat (both in bundle and cognitive load in `package.json`).
+- Run `knip` in CI: it catches both unused dependencies and dead exports, so removal is continuous rather than an annual purge.
+- If we publish a package, `publint` + `attw --pack .` run in CI before release; they catch broken `exports` maps and mispackaged types that only surface in consumers.
+- Audit findings in production deps block release; dev-dep findings are triaged.
 
-In summary, treat adding a dependency as a last resort when the benefits strongly outweigh the costs. If added, treat that external code as part of our codebase in terms of diligence: we must understand how to use it, keep it updated, and have a fallback plan if it falters. By being strict with this process, we ensure our projects remain lean, secure, and maintainable.
+## Supply-chain hygiene
+
+- **Install scripts**: pnpm 10+ blocks dependency lifecycle scripts by default — keep that, and allowlist only packages that genuinely need builds (`onlyBuiltDependencies`). With npm, use `--ignore-scripts` in CI.
+- **Provenance**: publish our packages with `npm publish --provenance` (from CI/OIDC); prefer dependencies that ship provenance attestations.
+- Never install from a gist/tarball URL; git deps only pinned to a commit SHA, and only as a stopgap.
+- New-package risk: a just-published package or brand-new maintainer on a popular name warrants a day's cooldown and a closer look (typosquats, hijacks).
+
+## Upgrading and removing
+
+- Majors: read the changelog/migration guide, upgrade in an isolated PR, run the full test suite.
+- A dep that's deprecated, unmaintained, or superseded by the platform gets a migration plan now, not when it breaks.
+- `knip` output trends to zero: if nothing imports it, it ships out of `package.json` the same week.

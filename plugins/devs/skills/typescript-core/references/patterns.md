@@ -1,87 +1,81 @@
-# Component & Code Patterns
+# Code & Type-Level Patterns
 
-## One Module, One Responsibility
+## Railway-oriented errors
 
-Each module (or component, for front-end) should have a single well-defined responsibility. If you find “and” in the description of a module’s purpose, it likely should be split.
+Functions that can fail return true-myth `Result` or run in Effect's error channel; exceptions only at boundaries. Full guidance in [error-handling.md](error-handling.md).
 
-- **Cohesion**: Group related functionality and separate unrelated. For example, a UserProfile component displays user info, and a separate UserProfileLoader handles data fetching.
-- **No God Objects**: Avoid huge classes or modules that do everything. Break them into smaller pieces (utilities, helpers, sub-components) that are easier to test and maintain.
+## Pattern matching with ts-pattern
 
-## Composition Over Inheritance
-
-Favor composing functionality by combining small functions/objects over class inheritance.
-
-- Use functional composition or higher-order functions to extend behavior.
-- In React, prefer composition via children or hooks rather than deep prop drilling or inheritance.
-- Only use classes/inheritance in TypeScript if there is a clear “is-a” relationship and polymorphic behavior needed. Even then, consider interfaces and composition first.
-
-## Composition Over Configuration
-
-When designing components or modules, allow composition instead of endless configuration flags.
-
-- Instead of a single complex function with many boolean flags or options, provide smaller composable functions.
-- For React: rather than a prop to conditionally show/hide part of component, consider letting callers pass children or supply a render prop for flexible composition.
-- In APIs: prefer allowing the caller to pass in strategy objects or callbacks (composition) rather than adding more parameters for every variation.
-
-**Example**: Instead of a Table component with a prop for `sortable` and `filterable`, provide composable higher-order components or hooks to enhance a basic Table with sorting or filtering.
-
-## Immutability and Pure Functions
-
-Adopt a functional mindset for business logic:
-
-- Use pure functions (no side effects, return value only depends on input parameters) for core computations. They are easier to test and reuse.
-- Avoid mutating inputs; instead return new values. If using libraries like Immer or seamless-immutable, ensure team is aligned.
-- Keep side effects (I/O, state mutations) at the edges (in Effect pipelines, in React effects, or specific service classes). This is akin to the "functional core, imperative shell" pattern.
-
-## Railway-Oriented Flow for Errors
-
-Use a consistent pattern for error propagation:
-
-- If using Effect, chain computations with `Effect.flatMap`/`andThen` and handle failures with `catch` combinators. This prevents throwing exceptions and instead returns a predictable error container[1][2].
-- If not using Effect, use `Result`/`Either` monads (like True Myth’s Result or neverthrow) to return errors instead of throwing. This allows composing functions without `try/catch` and clearly signals which functions can fail.
-- Structure code so that errors flow through the system in a controlled way (e.g. at a high level you might log and present an error message, but deeper functions just return errors up the call chain).
-
-## Pattern Matching for Clarity
-
-Leverage pattern matching techniques to handle union types clearly (with libraries like `ts-pattern` if needed).
-
-- Rather than many `if/else` or `switch` statements checking types/tags, a pattern matching utility can make code more declarative and ensure all cases are handled (exhaustive checking).
-- This is particularly useful for complex discriminated unions or `Result` handling (Ok vs Err): a pattern match can handle each variant in one expression, making the code more readable.
-
-**Example using ts-pattern**:
+Use `ts-pattern` (5.x) for discriminated unions instead of `if`/`switch` chains — `.exhaustive()` makes missing variants a compile error:
 
 ```ts
-import { match } from 'ts-pattern';
-match(result)
-  .with({ status: 'ok', value: P.select() }, value => { /* handle success */ })
-  .with({ status: 'error', error: P.select() }, err => { /* handle error */ })
+import { match, P } from 'ts-pattern';
+
+const message = match(result)
+  .with({ status: 'ok', value: P.select() }, (value) => `got ${value}`)
+  .with({ status: 'error', error: P.select() }, (err) => `failed: ${err}`)
   .exhaustive();
 ```
 
-This ensures both `Ok` and `Error` cases are covered, and if a new variant is added to `result`, TypeScript will flag the pattern match as incomplete[3].
+Note `P` must be imported alongside `match` — `P.select()` extracts the matched slice into the handler argument.
 
-## Reactive & Concurrency Patterns
+For a plain `switch`, get the same guarantee with a `never` check in `default` (assign the discriminant to a `never`-typed variable).
 
-When dealing with concurrency (especially on backend or with asynchronous tasks):
+## Type-level idioms
 
-- Use Effect fibers to handle concurrency with safety (e.g., `Effect.race` for racing tasks, `Effect.forEach` with a concurrency limit to process collections in parallel).
-- Avoid manual `Promise.then` chaining – prefer `async/await` or `Effect.gen` for sequential logic; it’s easier to read.
-- Avoid deeply nested callbacks or promise chains (callback hell). Use abstraction (helper functions or Effect pipeline) to linearize the flow.
+Version tags mark the minimum TypeScript required.
 
-## Clean Error Handling Pattern
+**`satisfies` (4.9)** — validate against a type without widening; literal types survive:
 
-Design functions to either return a `Result`/`Either` or to throw exceptions in a controlled manner at boundaries (not both). Our preference is returning structured results:
+```ts
+const routes = { home: '/', user: '/users/:id' } satisfies Record<string, `/${string}`>;
+// routes.home is still type '/', not string
+```
 
-- For example, use `Result<SuccessType, ErrorType>` for a function that could fail, and document that it never throws.
-- At high-level boundary (like an Express route or a CLI command handler), convert these to user-facing messages or throw if it will be caught by a global handler.
-- This pattern, combined with pattern matching, leads to robust error management where nothing gets swallowed silently.
+Prefer `satisfies` over an annotation whenever you want both checking *and* precise inference (config objects, lookup tables, exhaustive `Record<UnionType, …>` maps).
 
-## Plugin/Hook Architecture for Extensibility
+**`const` type parameters (5.0)** — literal/tuple inference at the call site without callers writing `as const`:
 
-When building a system that might need extension (like a CLI with plugins, or an app that runs user-defined modules), design with hooks or plugin points:
+```ts
+function tuple<const T extends readonly unknown[]>(...args: T): T { return args; }
+const t = tuple('a', 'b'); // readonly ["a", "b"], not string[]
+```
 
-- Define interfaces or callback signatures for the extension points.
-- Use dependency injection or event emitters to decouple core logic from extensions.
-- Ensure that the plugin interface is stable and clearly documented, as changes will propagate to all implementations.
+**`NoInfer` (5.4)** — exclude a position from inference so it's checked against the type inferred elsewhere:
 
-Keep the core minimal and let plugins add optional features, keeping them isolated.
+```ts
+function exec<T extends string>(states: T[], initial: NoInfer<T>): void {}
+exec(['open', 'closed'], 'open');
+exec(['open', 'closed'], 'missing'); // error: not 'open' | 'closed'
+```
+
+Without `NoInfer`, the bad call widens `T` to include `'missing'` and compiles.
+
+**`using` / `Disposable` (5.2)** — deterministic cleanup at scope exit; Node 26 supports `Symbol.dispose` natively:
+
+```ts
+function readOnce(): string {
+  using f = openFile('data.txt'); // f[Symbol.dispose]() runs when scope exits
+  return f.read();
+}
+```
+
+Use for locks, temp files, DB handles; `await using` for `AsyncDisposable`. In Effect code, prefer `Effect.acquireRelease`/scopes instead.
+
+## Immutability and pure functions
+
+- Pure functions for core computations; side effects at the edges (Effect pipelines, React effects, service modules) — functional core, imperative shell.
+- Never mutate inputs. For deep updates on plain data, Immer (11.x, current) is fine; for most code, spread/`toSorted`/`toSpliced` and `readonly` types suffice.
+
+## Concurrency
+
+- Use Effect fibers for structured concurrency: `Effect.race`, `Effect.forEach` with a `concurrency` option, `Effect.gen` for sequential logic.
+- Outside Effect, `async/await` plus `Promise.all`/`AbortController`; never bare `.then` chains.
+
+## Composition over configuration
+
+Small composable functions over boolean-flag options; strategy callbacks over parameter explosions; in React, children/render props over show/hide props.
+
+## Extensibility
+
+For plugin points: define the extension interface explicitly, decouple via DI or events, keep the core minimal, and treat the plugin interface as a public API (changes propagate to every implementation).
