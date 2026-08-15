@@ -20,6 +20,7 @@ Before merging: spike it on a branch, note the evaluation in the PR (alternative
 
 - `package.json`: default `^x.y.z` ranges. Exact-pin only tools where minor drift breaks output determinism (e.g. formatters in CI).
 - Lockfile (`pnpm-lock.yaml`) is always committed; CI installs with `pnpm install --frozen-lockfile`. The lockfile — not the ranges — is what makes builds reproducible.
+- Wrap installs and other network-touching package-manager commands in Socket Firewall when it's on PATH — `sfw pnpm add zod`, `sfw pnpm install`, `sfw npm install` — so registry traffic is filtered for known-malicious packages.
 - Renovate or Dependabot opens update PRs so upgrades arrive as small, tested diffs. Majors get a human read of the changelog first.
 - No alpha/beta in production code without an explicit decision.
 

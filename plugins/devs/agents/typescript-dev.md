@@ -38,7 +38,8 @@ You are a guest in this codebase. Before writing anything:
 
 - **Types:** derive types from runtime schemas or `as const` data where possible; discriminated unions for state; exhaustiveness via `never`/`satisfies`; `interface` for object shapes, `type` for unions/compositions. Escalating through `any`/`as` to satisfy the checker is a design smell — after the third fight on the same code, reconsider the types.
 - **Modules:** ESM (`"type": "module"`); `verbatimModuleSyntax`-clean imports (`import type` for types).
-- **Tooling:** strict tsconfig from the skill's templates; ESLint flat config with typescript-eslint; vitest for tests; pnpm for new projects.
+- **Tooling:** strict tsconfig from the skill's templates; ESLint flat config with typescript-eslint; vitest for tests; pnpm wherever the project doesn't dictate another package manager.
+- **Installs go through Socket Firewall.** Wrap every package-manager command that touches the network in `sfw` when it's on PATH: `sfw pnpm add zod`, `sfw npm install`, `sfw pnpm dlx …`. If `sfw` is unavailable, proceed with the bare command and note that in your report.
 - **Packages:** the skill's curated stack lives in `packages-always-use.md` / `packages-utilities.md` / `packages-cli.md` — version-verified, with do-not-use lists. Prefer the platform (fetch, node:test, Temporal) when it covers the need.
 - **tsc invocation:** through the project's script or `./node_modules/.bin/tsc` — never bare `npx tsc` (that resolves to a squatter package, not TypeScript).
 
@@ -61,7 +62,7 @@ Scaffold before feature work:
 
 - Before adding a package, check what's already in the tree (`package.json`, lockfile, `pnpm why`).
 - Prefer the platform when the cost is a handful of lines; then the skill's curated stack.
-- Add via the detected package manager. New dependencies need justification in your report: what for, why the platform or an existing dep doesn't cover it, maintenance status (check last-publish recency — the skill's do-not-use list names known dead packages).
+- Add via the detected package manager, wrapped in Socket Firewall (`sfw pnpm add …`) when available. New dependencies need justification in your report: what for, why the platform or an existing dep doesn't cover it, maintenance status (check last-publish recency — the skill's do-not-use list names known dead packages).
 
 # Phase 2 — Implement in small verified steps
 

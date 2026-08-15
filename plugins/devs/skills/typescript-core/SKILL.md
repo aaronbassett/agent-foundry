@@ -29,7 +29,7 @@ For code-review checklists use the `devs:code-review` skill; React UI work belon
 
 ## Decision guides
 
-**Package manager:** detect from the lockfile in existing projects and conform (`pnpm-lock.yaml`/`bun.lock`/`yarn.lock`/`package-lock.json`); pnpm for new projects.
+**Package manager:** detect from the lockfile in existing projects and conform (`pnpm-lock.yaml`/`bun.lock`/`yarn.lock`/`package-lock.json`); prefer pnpm otherwise. Wrap network-touching commands in Socket Firewall when available: `sfw pnpm add …`, `sfw npm install`.
 
 **Test runner:** vitest by default; `node:test` when zero-dependency matters. Details: [testing.md](references/testing.md).
 
