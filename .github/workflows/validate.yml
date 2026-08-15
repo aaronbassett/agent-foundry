@@ -21,3 +21,21 @@ jobs:
 
       - name: Validate plugins and marketplace
         run: bash scripts/ci/validate.sh
+
+  smoke-rust-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select stable Rust toolchain
+        run: rustup default stable && rustc --version
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Smoke test rust-core skill scripts and configs
+        run: bash scripts/ci/smoke-rust-core.sh

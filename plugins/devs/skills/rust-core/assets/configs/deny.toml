@@ -1,46 +1,43 @@
-# cargo-deny configuration
+# cargo-deny configuration (schema: cargo-deny 0.18+; validate with `cargo deny check`)
+# Hand-curated template — adjust the license allowlist to your project's policy.
 
 [advisories]
-version = 2
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
+# RUSTSEC advisories are denied by default in current cargo-deny.
+# Add specific advisory IDs here only with a written justification:
 ignore = [
-    # Add specific advisories to ignore here
-    # Example: "RUSTSEC-2020-0001",
+    # "RUSTSEC-0000-0000",  # reason, link to issue
 ]
 
 [licenses]
-version = 2
-# Deny licenses that are not explicitly allowed
-unlicensed = "deny"
-# Allow common permissive licenses
+# Permissive licenses common across the crates.io dependency graph.
+# Unicode-3.0 is required by unicode-ident (dependency of syn/proc-macro2).
 allow = [
     "MIT",
     "Apache-2.0",
-    "BSD-3-Clause",
+    "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
+    "BSD-3-Clause",
     "ISC",
-    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "Zlib",
 ]
-copyleft = "warn"
-# Warn if license cannot be determined
 confidence-threshold = 0.8
+
+# Don't lint licenses of this workspace's own unpublished (publish = false) crates.
+[licenses.private]
+ignore = true
 
 [bans]
 multiple-versions = "warn"
-wildcards = "allow"
+wildcards = "deny"
 highlight = "all"
-
-# Deny specific crates
 deny = [
-    # Add crates to ban here
-    # Example: { name = "openssl", wrappers = ["native-tls"] }
+    # Ban specific crates here, e.g.:
+    # { crate = "openssl", reason = "use rustls", wrappers = ["native-tls"] }
 ]
 
 [sources]
 unknown-registry = "deny"
-unknown-git = "warn"
+unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

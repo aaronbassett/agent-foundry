@@ -1,72 +1,24 @@
 # Performance Optimization in Rust
 
-Guide to writing high-performance Rust code and identifying bottlenecks.
+Profile before optimizing; always measure release builds.
 
-## Profiling
+## Tooling
 
-### CPU Profiling with cargo-flamegraph
+- **samply** — sampling profiler with the Firefox Profiler UI: `samply record ./target/release/app`. Lowest-friction option on macOS/Linux.
+- **cargo-flamegraph** — `cargo flamegraph --bin app`. Set `[profile.release] debug = true` while profiling so frames resolve.
+- **criterion** — statistical benchmarks; setup and examples live in [testing.md](testing.md) (canonical, not repeated here). **divan** is a lighter alternative with near-zero boilerplate.
+- **cargo-bloat** — what's contributing to binary size.
+- **cargo-show-asm** — inspect generated assembly: `cargo install cargo-show-asm`, then `cargo asm my_crate::my_fn` (the subcommand is `cargo asm`, but the crate to install is `cargo-show-asm`).
+- **PGO** — profile-guided optimization exists (`cargo-pgo` wraps the workflow); worth trying on hot server binaries after the cheaper wins.
 
-```bash
-cargo install flamegraph
-cargo flamegraph --bin my-app
-# Opens flamegraph in browser
-```
+## Allocation
 
-### Benchmarking with Criterion
-
-```toml
-[dev-dependencies]
-criterion = "0.5"
-
-[[bench]]
-name = "my_benchmark"
-harness = false
-```
-
-```rust
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 | 1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
-    }
-}
-
-fn benchmark(c: &mut Criterion) {
-    c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-}
-
-criterion_group!(benches, benchmark);
-criterion_main!(benches);
-```
-
-## Memory Optimization
-
-### Avoid Unnecessary Clones
-
-```rust
-// Bad
-fn process(data: Vec<String>) {
-    for item in &data {
-        println!("{}", item.clone());  // Unnecessary
-    }
-}
-
-// Good
-fn process(data: &[String]) {
-    for item in data {
-        println!("{}", item);
-    }
-}
-```
-
-### Use `Cow` for Conditional Ownership
+Take `&[T]`/`&str` parameters instead of owned values; use `Cow` when you only sometimes need to allocate:
 
 ```rust
 use std::borrow::Cow;
 
-fn process<'a>(input: &'a str) -> Cow<'a, str> {
+fn sanitize(input: &str) -> Cow<'_, str> {
     if input.contains("bad") {
         Cow::Owned(input.replace("bad", "good"))
     } else {
@@ -75,146 +27,54 @@ fn process<'a>(input: &'a str) -> Cow<'a, str> {
 }
 ```
 
-### Stack vs Heap
+Pre-allocate collections (`Vec::with_capacity`, `String::with_capacity`). For small, usually-tiny vectors, `smallvec` keeps elements on the stack.
+
+String building:
 
 ```rust
-// Heap allocation (slower)
-let vec = vec![1, 2, 3, 4, 5];
+use std::fmt::Write;
 
-// Stack allocation (faster) when size is known
-let arr = [1, 2, 3, 4, 5];
+fn build() -> String {
+    // Bad: `s = s + &x` re-allocates and copies every iteration
+    // Also bad: (0..1000).map(|i| i.to_string()).collect::<String>()
+    //   — one intermediate String allocation per element
 
-// Use SmallVec for small collections
-use smallvec::{SmallVec, smallvec};
-let small: SmallVec<[i32; 8]> = smallvec![1, 2, 3];  // Stack if <= 8 items
+    // Good: pre-allocate once, write! formats directly into the buffer
+    let mut s = String::with_capacity(4000);
+    for i in 0..1000 {
+        write!(s, "{i}").unwrap();
+    }
+    s
+}
 ```
 
-## Algorithm Optimization
+## Iterators and bounds checks
 
-### Use Iterators
+Iterate rather than index — `for item in &vec` lets LLVM elide bounds checks that `vec[i]` in a manual `0..vec.len()` loop may not. Chain lazily; don't `collect()` intermediates between `map` and `filter`.
 
-```rust
-// Bad: Allocates intermediate vectors
-let result: Vec<_> = data.iter()
-    .map(|x| x * 2)
-    .collect::<Vec<_>>()
-    .iter()
-    .filter(|x| x > &10)
-    .collect();
+## Data structures
 
-// Good: Lazy evaluation, no intermediate allocations
-let result: Vec<_> = data.iter()
-    .map(|x| x * 2)
-    .filter(|x| x > &10)
-    .collect();
-```
+- `HashMap` O(1) unordered; `BTreeMap` O(log n) ordered iteration/range queries; sorted `Vec` + `binary_search` often beats both for read-heavy small data.
+- `rustc_hash::FxHashMap` is a drop-in `HashMap` replacement with a much faster hash — **but FxHash is not HashDoS-resistant. Only use it when keys are trusted (internal IDs, interned symbols). Keep the default SipHash for anything attacker-controlled.**
 
-### Parallel Processing
-
-```toml
-[dependencies]
-rayon = "1.8"
-```
+## Parallelism
 
 ```rust
 use rayon::prelude::*;
 
-// Sequential
-let sum: i32 = data.iter().map(|x| expensive(x)).sum();
-
-// Parallel
-let sum: i32 = data.par_iter().map(|x| expensive(x)).sum();
+fn sum(data: &[i64]) -> i64 {
+    data.par_iter().map(|x| x * 2).sum() // par_iter: drop-in for CPU-bound work
+}
 ```
 
-## Data Structure Selection
-
-```rust
-// O(1) lookup
-use std::collections::HashMap;
-let map: HashMap<String, Value> = HashMap::new();
-
-// Ordered O(log n) lookup
-use std::collections::BTreeMap;
-let btree: BTreeMap<String, Value> = BTreeMap::new();
-
-// Fast for small collections
-use smallvec::SmallVec;
-
-// Fast hash function
-use rustc_hash::FxHashMap;
-let fast_map: FxHashMap<String, Value> = FxHashMap::default();
-```
-
-## Compilation Optimization
-
-### Release Profile
+## Build configuration
 
 ```toml
 [profile.release]
-opt-level = 3           # Maximum optimization
-lto = "fat"             # Link-time optimization
-codegen-units = 1       # Better optimization, slower compile
-strip = true            # Remove debug symbols
+opt-level = 3
+lto = "fat"             # whole-program LTO; "thin" compiles much faster, nearly as good
+codegen-units = 1       # better codegen, slower compile
+strip = true
 ```
 
-### Target CPU
-
-```bash
-# Optimize for current CPU
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-```
-
-## Common Patterns
-
-### String Building
-
-```rust
-// Bad: Reallocates
-let mut s = String::new();
-for i in 0..1000 {
-    s = s + &i.to_string();
-}
-
-// Good: Pre-allocate
-let mut s = String::with_capacity(4000);
-for i in 0..1000 {
-    s.push_str(&i.to_string());
-}
-
-// Better: Use format!
-let s = (0..1000).map(|i| i.to_string()).collect::<String>();
-```
-
-### Avoiding Bounds Checks
-
-```rust
-// With bounds check
-for i in 0..vec.len() {
-    process(vec[i]);
-}
-
-// Iterator eliminates bounds checks
-for item in &vec {
-    process(*item);
-}
-
-// Or use get_unchecked (unsafe but fast)
-unsafe {
-    for i in 0..vec.len() {
-        process(*vec.get_unchecked(i));
-    }
-}
-```
-
-## Best Practices
-
-1. **Profile first**: Don't optimize without measuring
-2. **Use release builds**: Always benchmark in release mode
-3. **Prefer iterators**: Lazy, composable, optimized
-4. **Avoid clones**: Use references when possible
-5. **Pre-allocate**: Use `with_capacity` for collections
-6. **Choose right data structure**: HashMap vs BTreeMap vs Vec
-7. **Use parallel iterators**: Rayon for CPU-bound work
-8. **Enable LTO**: Link-time optimization for release builds
-9. **Benchmark changes**: Verify optimizations work
-10. **Read assembly**: `cargo asm` to see generated code
+`RUSTFLAGS="-C target-cpu=native" cargo build --release` for machine-local binaries (not portable artifacts).

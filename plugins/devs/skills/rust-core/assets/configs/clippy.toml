@@ -1,17 +1,11 @@
-# Clippy configuration for strict linting
+# Clippy lint *configuration* (behavior knobs). Lint *levels* belong in
+# Cargo.toml's [lints] table — see lints.toml in this directory.
 
-# Deny warnings in CI
-# Set in .cargo/config.toml:
-# [target.'cfg(all())']
-# rustflags = ["-D", "warnings"]
+# The lints.toml template denies clippy::unwrap_used / clippy::expect_used.
+# These two settings exempt test code, where unwrap/expect are idiomatic —
+# without them, every idiomatic test fails a -D warnings gauntlet.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
 
-# Pedantic lints (enable selectively)
-# Too strict for all projects, but good to review
-
-# Warn on:
-# - Missing documentation
-# - Inefficient code patterns
-# - Potential bugs
-# - Style inconsistencies
-
-# Note: Place this file in project root or .cargo/config.toml
+# Uncomment when the project declares an MSRV so clippy won't suggest newer APIs:
+# msrv = "1.85"

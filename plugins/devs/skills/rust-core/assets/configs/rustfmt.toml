@@ -1,26 +1,6 @@
-# Rustfmt configuration
-
-# Use stable features only
-unstable_features = false
-
-# Formatting options
+# Stable-channel rustfmt options only. Nightly-only options (imports_granularity,
+# group_imports, ...) are silently ignored on stable — do not add them here.
 max_width = 100
-hard_tabs = false
-tab_spaces = 4
 newline_style = "Unix"
-use_small_heuristics = "Default"
-reorder_imports = true
-reorder_modules = true
-remove_nested_parens = true
-edition = "2021"
-
-# Function formatting
-fn_args_layout = "Tall"
-fn_single_line = false
-
-# Import formatting
-imports_granularity = "Crate"
-group_imports = "StdExternalCrate"
-
-# Chain formatting
-chain_width = 60
+use_field_init_shorthand = true
+use_try_shorthand = true

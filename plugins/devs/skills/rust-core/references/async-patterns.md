@@ -1,737 +1,208 @@
-# Async Patterns in Rust
+# Async Patterns (Tokio)
 
-Comprehensive guide to asynchronous programming in Rust using Tokio and async/await.
+Canonical home for retry-with-backoff and the actor pattern.
 
-## Async Basics
+## Async Closures (Rust 1.85+)
 
-### Async Functions
-
-```rust
-async fn fetch_data(url: &str) -> Result<String, Error> {
-    let response = reqwest::get(url).await?;
-    let body = response.text().await?;
-    Ok(body)
-}
-
-// Calling async function
-#[tokio::main]
-async fn main() {
-    let data = fetch_data("https://example.com").await.unwrap();
-    println!("{}", data);
-}
-```
-
-### Async Blocks
+Bound generic callers with `AsyncFn` / `AsyncFnMut` / `AsyncFnOnce`:
 
 ```rust
-let future = async {
-    let data = fetch_data("https://example.com").await?;
-    process_data(&data).await
-};
-
-let result = future.await?;
-```
-
-### Async Closures
-
-```rust
-let fetch = |url: &str| async move {
-    reqwest::get(url).await?.text().await
-};
-
-let data = fetch("https://example.com").await?;
-```
-
-## Tokio Runtime
-
-### Runtime Flavors
-
-```rust
-// Multi-threaded runtime (default)
-#[tokio::main]
-async fn main() {
-    // Your async code
-}
-
-// Equivalent to:
-fn main() {
-    tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(async {
-            // Your async code
-        })
-}
-
-// Single-threaded runtime
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
-    // Your async code
-}
-
-// Custom runtime
-fn main() {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(4)
-        .thread_name("my-worker")
-        .enable_all()
-        .build()
-        .unwrap();
-
-    runtime.block_on(async {
-        // Your async code
-    });
-}
-```
-
-### Spawning Tasks
-
-```rust
-use tokio::task;
-
-// Spawn a task
-let handle = task::spawn(async {
-    // Async work
-    fetch_data("https://example.com").await
-});
-
-// Wait for result
-let result = handle.await??;
-
-// Spawn multiple tasks
-let handles: Vec<_> = urls
-    .iter()
-    .map(|url| {
-        let url = url.clone();
-        task::spawn(async move {
-            fetch_data(&url).await
-        })
-    })
-    .collect();
-
-// Wait for all
-for handle in handles {
-    let data = handle.await??;
-    process(data);
-}
-```
-
-### Blocking Code in Async
-
-```rust
-use tokio::task;
-
-// Bad: Blocks the async runtime
-async fn bad_example() {
-    std::thread::sleep(Duration::from_secs(1));  // Don't do this!
-}
-
-// Good: Use spawn_blocking
-async fn good_example() {
-    task::spawn_blocking(|| {
-        // Blocking operation
-        std::thread::sleep(Duration::from_secs(1));
-        expensive_computation()
-    })
-    .await
-    .unwrap()
-}
-
-// CPU-intensive work
-async fn process_data() {
-    let result = task::spawn_blocking(|| {
-        // Runs on blocking thread pool
-        heavy_computation()
-    })
-    .await
-    .unwrap();
-}
-```
-
-## Concurrent Operations
-
-### Join Multiple Futures
-
-```rust
-use tokio::join;
-
-// Wait for all futures
-let (result1, result2, result3) = join!(
-    fetch_data("url1"),
-    fetch_data("url2"),
-    fetch_data("url3"),
-);
-
-// With error handling
-async fn fetch_all() -> Result<(), Error> {
-    let (r1, r2, r3) = join!(
-        fetch_data("url1"),
-        fetch_data("url2"),
-        fetch_data("url3"),
-    );
-
-    let data1 = r1?;
-    let data2 = r2?;
-    let data3 = r3?;
-
-    Ok(())
-}
-```
-
-### Select First Completed
-
-```rust
-use tokio::select;
-
-async fn race() {
-    select! {
-        result = fetch_from_cache() => {
-            println!("Got from cache: {:?}", result);
-        }
-        result = fetch_from_db() => {
-            println!("Got from DB: {:?}", result);
-        }
-        _ = tokio::time::sleep(Duration::from_secs(5)) => {
-            println!("Timeout!");
-        }
+async fn for_each<F>(items: &[u32], mut f: F)
+where
+    F: AsyncFnMut(u32),
+{
+    for &i in items {
+        f(i).await;
     }
 }
 
-// Biased selection (checks in order)
-select! {
-    biased;
-    result = high_priority() => { /* ... */ }
-    result = low_priority() => { /* ... */ }
+async fn demo() {
+    let mut total = 0;
+    // The body may borrow captures across .await — the pre-1.85
+    // `|n| async move { ... }` workaround couldn't.
+    for_each(&[1, 2, 3], async |n| total += n).await;
 }
 ```
 
-### Try Join (Fail Fast)
+## Blocking Work
+
+Blocking a worker thread (`std::thread::sleep`, sync I/O, CPU loops) stalls every task on it:
 
 ```rust
-use tokio::try_join;
-
-async fn fetch_all() -> Result<(), Error> {
-    let (data1, data2, data3) = try_join!(
-        fetch_data("url1"),
-        fetch_data("url2"),
-        fetch_data("url3"),
-    )?;
-
-    // All succeeded
-    Ok(())
-}
+tokio::time::sleep(dur).await;                                  // not std::thread::sleep
+let n = tokio::task::spawn_blocking(move || heavy_compute()).await?; // sync I/O + CPU work
 ```
+
+The blocking pool is separate (default 512 threads); a running closure is **not** stopped by `abort()`. For data-parallel CPU work, use rayon bridged via oneshot.
+
+## Concurrency
+
+- `join!` / `try_join!` (fail-fast) run futures concurrently **on the same task** — no parallelism unless each is `tokio::spawn`ed.
+- `select!` races branches and **drops the losers**, so every branch must be cancellation-safe (`mpsc::Receiver::recv` is; partial buffered reads are not). `biased;` makes polling order deterministic top-down.
+- Spawned-task panics surface only via `handle.await` → `Err(JoinError)`.
 
 ## Async Traits
 
-### Using async-trait
+`async fn` in a trait (1.75+) desugars to return-position `impl Trait` (RPITIT) with **no `Send` bound** — generic code can't `tokio::spawn` the result ("future cannot be sent between threads safely"):
 
 ```rust
-use async_trait::async_trait;
-
-#[async_trait]
-pub trait DataSource {
-    async fn fetch(&self, id: u64) -> Result<Data, Error>;
-    async fn save(&self, data: Data) -> Result<(), Error>;
+trait Fetch {
+    async fn fetch(&self, id: u64) -> String; // = `-> impl Future<...>` with NO Send bound
 }
 
-#[async_trait]
-impl DataSource for Database {
-    async fn fetch(&self, id: u64) -> Result<Data, Error> {
-        let data = sqlx::query_as("SELECT * FROM data WHERE id = $1")
-            .bind(id)
-            .fetch_one(&self.pool)
-            .await?;
-        Ok(data)
-    }
+// Fix 1: desugar and add the bound yourself:
+//   fn fetch(&self, id: u64) -> impl Future<Output = String> + Send;
+// Fix 2: let the trait-variant crate generate a Send variant:
+#[trait_variant::make(FetchSend: Send)]
+trait FetchLocal {
+    async fn fetch(&self, id: u64) -> String;
+}
 
-    async fn save(&self, data: Data) -> Result<(), Error> {
-        sqlx::query("INSERT INTO data VALUES ($1, $2)")
-            .bind(data.id)
-            .bind(data.value)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
+fn spawn_it<T: FetchSend + Sync + 'static>(t: T) -> tokio::task::JoinHandle<String> {
+    tokio::spawn(async move { t.fetch(1).await }) // fails to compile with plain `Fetch`
 }
 ```
 
-### Native Async Traits (Rust 1.75+)
-
-```rust
-// Return Position Impl Trait in Trait (RPITIT)
-trait DataSource {
-    async fn fetch(&self, id: u64) -> Result<Data, Error>;
-}
-
-// Equivalent to:
-trait DataSource {
-    fn fetch(&self, id: u64) -> impl Future<Output = Result<Data, Error>> + '_;
-}
-```
+`async fn` traits are also not dyn-compatible; for `Box<dyn Trait>` use the `async-trait` crate (boxes the future, `Send` by default).
 
 ## Streams
 
-### Creating Streams
+`chunks` and `buffered` are on `futures::StreamExt`, **not** `tokio_stream::StreamExt` (whose `filter` takes a sync predicate, unlike futures' async one); importing both causes ambiguity — pick one.
 
 ```rust
-use tokio_stream::{StreamExt, Stream};
+use futures::StreamExt; // NOT tokio_stream::StreamExt
 
-// From iterator
-let stream = tokio_stream::iter(vec![1, 2, 3, 4, 5]);
-
-// Manual stream
-use async_stream::stream;
-
-fn fibonacci() -> impl Stream<Item = u64> {
-    stream! {
-        let (mut a, mut b) = (0u64, 1u64);
-        loop {
-            yield a;
-            (a, b) = (b, a + b);
-        }
-    }
-}
-```
-
-### Processing Streams
-
-```rust
-use tokio_stream::StreamExt;
-
-async fn process_stream() {
-    let mut stream = fetch_stream();
-
-    // Iterate
-    while let Some(item) = stream.next().await {
-        process(item);
-    }
-
-    // Map
-    let mapped = stream.map(|x| x * 2);
-
-    // Filter
-    let filtered = stream.filter(|x| x % 2 == 0);
-
-    // Collect
-    let vec: Vec<_> = stream.collect().await;
-
-    // Fold
-    let sum = stream.fold(0, |acc, x| acc + x).await;
-}
-```
-
-### Chunking and Buffering
-
-```rust
-use tokio_stream::StreamExt;
-
-async fn buffered_processing() {
-    let stream = fetch_stream();
-
-    // Process in chunks
-    let mut chunks = stream.chunks(10);
-    while let Some(chunk) = chunks.next().await {
-        process_batch(chunk).await;
-    }
-
-    // Buffer futures
-    let results = stream
-        .map(|item| async move { process(item).await })
-        .buffered(10)  // Process up to 10 concurrently
-        .collect::<Vec<_>>()
-        .await;
-}
-```
-
-## Channels
-
-### MPSC (Multi-Producer, Single-Consumer)
-
-```rust
-use tokio::sync::mpsc;
-
-async fn mpsc_example() {
-    let (tx, mut rx) = mpsc::channel(32);  // Buffered
-
-    // Producer
-    tokio::spawn(async move {
-        for i in 0..10 {
-            tx.send(i).await.unwrap();
-        }
-    });
-
-    // Consumer
-    while let Some(value) = rx.recv().await {
-        println!("Got: {}", value);
+async fn batched(stream: impl futures::Stream<Item = Item>) {
+    // Combinators take `self`: chain once, pin, then iterate.
+    let mut chunks = std::pin::pin!(stream.chunks(10)); // yields Vec<Item>
+    while let Some(batch) = chunks.next().await {
+        process_batch(batch).await;
     }
 }
 
-// Unbounded channel
-let (tx, mut rx) = mpsc::unbounded_channel();
-tx.send(1).unwrap();  // Never blocks
-```
-
-### Broadcast
-
-```rust
-use tokio::sync::broadcast;
-
-async fn broadcast_example() {
-    let (tx, mut rx1) = broadcast::channel(16);
-    let mut rx2 = tx.subscribe();
-
-    // Send to all subscribers
-    tx.send("message").unwrap();
-
-    // Both receivers get it
-    assert_eq!(rx1.recv().await.unwrap(), "message");
-    assert_eq!(rx2.recv().await.unwrap(), "message");
+async fn concurrent(urls: Vec<String>) -> Vec<Data> {
+    futures::stream::iter(urls)
+        .map(fetch) // fetch: async fn(String) -> Data
+        .buffered(10) // ≤10 in flight, output order preserved (buffer_unordered: any order)
+        .collect()
+        .await
 }
 ```
 
-### Watch (Single-Producer, Multi-Consumer)
+## Channels (tokio::sync)
+
+| Channel | Shape | Notes |
+|---------|-------|-------|
+| `mpsc::channel(n)` | many → one | bounded; `send().await` is the backpressure |
+| `mpsc::unbounded_channel()` | many → one | `send` never waits — unbounded memory risk |
+| `oneshot` | one value | request/response reply |
+| `broadcast::channel(n)` | many → many | slow receivers get `Err(Lagged)`, skip ahead |
+| `watch` | one → many | latest value only; intermediates lost |
+
+## Locks
+
+Default to `std::sync::Mutex` for short, await-free critical sections; `tokio::sync::Mutex` only when a guard genuinely must live across `.await`:
 
 ```rust
-use tokio::sync::watch;
+// Bad: guard held across an await — serializes all tasks, deadlock-prone
+async fn bad(mutex: &Mutex<Data>) {
+    let mut guard = mutex.lock().await;
+    some_async_function().await; // still holding the lock!
+    *guard = new_value();
+}
 
-async fn watch_example() {
-    let (tx, mut rx) = watch::channel("initial");
-
-    tokio::spawn(async move {
-        // Watch for changes
-        while rx.changed().await.is_ok() {
-            println!("New value: {}", *rx.borrow());
-        }
-    });
-
-    // Update value
-    tx.send("updated").unwrap();
+// Good: drop the guard before awaiting; re-lock to write
+async fn good(mutex: &Mutex<Data>) {
+    let _snapshot = mutex.lock().await.clone(); // guard dropped immediately
+    some_async_function().await;
+    *mutex.lock().await = new_value();
 }
 ```
 
-### Oneshot
+clippy's `await_holding_lock` flags `std` guards held across `.await` (they usually fail the `Send` check anyway).
+
+## Bounding Concurrency
+
+Don't spawn a task per element of an unbounded collection — bound with `.buffered(n)` (above) or `tokio::sync::Semaphore` (clone the `Arc`, `acquire_owned().await`, move the permit into the task; dropping it releases).
+
+## Timeout and Cancellation
+
+`tokio::time::timeout(dur, fut).await` → `Err(Elapsed)`. Cancellation is dropping a future (all `select!` does); `handle.abort()` for spawned tasks; `tokio_util::sync::CancellationToken` for shutdown trees.
+
+## Retry with Backoff
 
 ```rust
-use tokio::sync::oneshot;
-
-async fn oneshot_example() {
-    let (tx, rx) = oneshot::channel();
-
-    tokio::spawn(async move {
-        let result = expensive_operation().await;
-        tx.send(result).unwrap();
-    });
-
-    // Wait for result
-    let result = rx.await.unwrap();
-}
-```
-
-## Synchronization Primitives
-
-### Mutex
-
-```rust
-use tokio::sync::Mutex;
-
-let data = Arc::new(Mutex::new(0));
-
-// Multiple tasks can access
-let data_clone = data.clone();
-tokio::spawn(async move {
-    let mut guard = data_clone.lock().await;
-    *guard += 1;
-});
-
-// No deadlocks across await points
-let mut guard = data.lock().await;
-some_async_function().await;  // Lock is held
-*guard += 1;
-```
-
-### RwLock
-
-```rust
-use tokio::sync::RwLock;
-
-let data = Arc::new(RwLock::new(HashMap::new()));
-
-// Multiple readers
-let read_guard = data.read().await;
-let value = read_guard.get(&key);
-
-// Exclusive writer
-let mut write_guard = data.write().await;
-write_guard.insert(key, value);
-```
-
-### Semaphore
-
-```rust
-use tokio::sync::Semaphore;
-
-let semaphore = Arc::new(Semaphore::new(3));  // Max 3 concurrent
-
-for i in 0..10 {
-    let permit = semaphore.clone().acquire_owned().await.unwrap();
-    tokio::spawn(async move {
-        // Only 3 tasks run concurrently
-        expensive_operation(i).await;
-        drop(permit);  // Release
-    });
-}
-```
-
-### Barrier
-
-```rust
-use tokio::sync::Barrier;
-
-let barrier = Arc::new(Barrier::new(10));
-
-for i in 0..10 {
-    let barrier = barrier.clone();
-    tokio::spawn(async move {
-        // Do work
-        println!("Task {} waiting", i);
-        barrier.wait().await;
-        println!("Task {} proceeding", i);
-    });
-}
-```
-
-## Error Handling Patterns
-
-### Timeout
-
-```rust
-use tokio::time::{timeout, Duration};
-
-async fn with_timeout() -> Result<Data, Error> {
-    match timeout(Duration::from_secs(5), fetch_data()).await {
-        Ok(Ok(data)) => Ok(data),
-        Ok(Err(e)) => Err(e),
-        Err(_) => Err(Error::Timeout),
-    }
-}
-```
-
-### Retry Logic
-
-```rust
-async fn retry_with_backoff<F, Fut, T, E>(
-    mut f: F,
-    max_attempts: u32,
-) -> Result<T, E>
+async fn retry_with_backoff<F, Fut, T, E>(mut op: F, max_attempts: u32) -> Result<T, E>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>,
 {
     let mut attempt = 0;
     loop {
-        match f().await {
-            Ok(result) => return Ok(result),
-            Err(e) if attempt >= max_attempts - 1 => return Err(e),
+        match op().await {
+            Ok(v) => return Ok(v),
+            Err(e) if attempt + 1 >= max_attempts => return Err(e),
             Err(_) => {
                 attempt += 1;
-                let delay = Duration::from_millis(2u64.pow(attempt) * 100);
-                tokio::time::sleep(delay).await;
+                tokio::time::sleep(Duration::from_millis(100 * 2u64.pow(attempt))).await;
             }
         }
     }
 }
-
-// Usage
-let result = retry_with_backoff(
-    || fetch_data("url"),
-    5
-).await?;
 ```
 
-### Cancellation
+Call: `retry_with_backoff(|| fetch_data("url"), 5).await?` — add jitter in production.
+
+## Actor Pattern
+
+One task owns the state; callers talk over channels — no locks; the bounded mailbox is backpressure:
 
 ```rust
-use tokio::select;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 
-async fn cancellable_operation(cancel: oneshot::Receiver<()>) -> Result<Data, Error> {
-    select! {
-        result = fetch_data() => result,
-        _ = cancel => Err(Error::Cancelled),
-    }
-}
-
-// Usage
-let (tx, rx) = oneshot::channel();
-
-let handle = tokio::spawn(cancellable_operation(rx));
-
-// Cancel after 5 seconds
-tokio::time::sleep(Duration::from_secs(5)).await;
-let _ = tx.send(());
-```
-
-## Common Patterns
-
-### Actor Pattern
-
-```rust
-use tokio::sync::mpsc;
-
-enum ActorMessage {
-    Get { respond_to: oneshot::Sender<Data> },
-    Update(Data),
+enum Msg {
+    Get { reply: oneshot::Sender<u64> },
+    Add(u64),
 }
 
 struct Actor {
-    receiver: mpsc::Receiver<ActorMessage>,
-    state: Data,
+    rx: mpsc::Receiver<Msg>,
+    state: u64,
 }
 
 impl Actor {
     async fn run(mut self) {
-        while let Some(msg) = self.receiver.recv().await {
+        while let Some(msg) = self.rx.recv().await {
             match msg {
-                ActorMessage::Get { respond_to } => {
-                    let _ = respond_to.send(self.state.clone());
+                Msg::Get { reply } => {
+                    let _ = reply.send(self.state);
                 }
-                ActorMessage::Update(data) => {
-                    self.state = data;
-                }
+                Msg::Add(n) => self.state += n,
             }
         }
-    }
+    } // loop ends when every Handle is dropped
 }
 
-struct ActorHandle {
-    sender: mpsc::Sender<ActorMessage>,
+#[derive(Clone)]
+pub struct Handle {
+    tx: mpsc::Sender<Msg>,
 }
 
-impl ActorHandle {
-    fn new(initial_state: Data) -> Self {
-        let (sender, receiver) = mpsc::channel(32);
-        let actor = Actor { receiver, state: initial_state };
-        tokio::spawn(actor.run());
-        ActorHandle { sender }
+impl Handle {
+    pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel(32);
+        tokio::spawn(Actor { rx, state: 0 }.run());
+        Handle { tx }
     }
 
-    async fn get(&self) -> Data {
-        let (tx, rx) = oneshot::channel();
-        self.sender.send(ActorMessage::Get { respond_to: tx }).await.unwrap();
-        rx.await.unwrap()
+    pub async fn add(&self, n: u64) {
+        self.tx.send(Msg::Add(n)).await.expect("actor died");
     }
-}
-```
 
-### Rate Limiting
-
-```rust
-use tokio::time::{interval, Duration};
-
-async fn rate_limited_requests() {
-    let mut interval = interval(Duration::from_millis(100));
-
-    for request in requests {
-        interval.tick().await;  // Wait for next interval
-        process_request(request).await;
+    pub async fn get(&self) -> u64 {
+        let (reply, rx) = oneshot::channel();
+        self.tx.send(Msg::Get { reply }).await.expect("actor died");
+        rx.await.expect("actor died")
     }
 }
 ```
-
-### Connection Pooling
-
-```rust
-use deadpool::managed;
-
-#[async_trait]
-impl managed::Manager for ConnectionManager {
-    type Type = Connection;
-    type Error = Error;
-
-    async fn create(&self) -> Result<Connection, Error> {
-        Connection::connect(&self.url).await
-    }
-
-    async fn recycle(&self, conn: &mut Connection) -> managed::RecycleResult<Error> {
-        conn.ping().await.map_err(Into::into)
-    }
-}
-
-// Usage
-let manager = ConnectionManager { url: "..." };
-let pool = Pool::builder(manager).max_size(16).build().unwrap();
-
-let conn = pool.get().await?;
-conn.query("SELECT ...").await?;
-```
-
-## Anti-Patterns
-
-### Blocking in Async
-
-```rust
-// Bad: Blocks the runtime
-async fn bad() {
-    std::thread::sleep(Duration::from_secs(1));
-}
-
-// Good: Use tokio::time::sleep
-async fn good() {
-    tokio::time::sleep(Duration::from_secs(1)).await;
-}
-```
-
-### Holding Locks Across Await
-
-```rust
-// Bad: Lock held across await
-async fn bad(mutex: &Mutex<Data>) {
-    let mut guard = mutex.lock().await;
-    some_async_function().await;  // Still holding lock!
-    *guard = new_value;
-}
-
-// Good: Release lock before await
-async fn good(mutex: &Mutex<Data>) {
-    let value = {
-        let guard = mutex.lock().await;
-        guard.clone()
-    };  // Lock released
-
-    some_async_function().await;
-
-    let mut guard = mutex.lock().await;
-    *guard = new_value;
-}
-```
-
-### Spawning Too Many Tasks
-
-```rust
-// Bad: Unbounded concurrency
-for item in large_list {
-    tokio::spawn(process(item));
-}
-
-// Good: Use buffered stream or semaphore
-use futures::stream::{self, StreamExt};
-
-stream::iter(large_list)
-    .map(|item| async move { process(item).await })
-    .buffered(10)  // Limit to 10 concurrent
-    .collect::<Vec<_>>()
-    .await;
-```
-
-## Best Practices
-
-1. **Use async only when needed**: Don't make everything async
-2. **Avoid blocking**: Use `spawn_blocking` for CPU-heavy work
-3. **Limit concurrency**: Use buffering or semaphores
-4. **Handle cancellation**: Clean up resources properly
-5. **Release locks early**: Don't hold locks across await points
-6. **Use appropriate channels**: Choose the right channel type
-7. **Test with timeouts**: Add timeouts to prevent hangs
-8. **Monitor task panics**: Use `JoinHandle` to detect failures
-9. **Prefer structured concurrency**: Use join/select over manual spawning
-10. **Profile and benchmark**: Async doesn't always mean faster

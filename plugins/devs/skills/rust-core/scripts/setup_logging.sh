@@ -1,50 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Set up tracing/logging for a Rust project
+# Add tracing-based logging to the current cargo project. Refuses to overwrite
+# an existing src/logging.rs.
 
-echo "📝 Setting up logging with tracing..."
+if [[ ! -f Cargo.toml ]]; then
+    echo "No Cargo.toml in $(pwd) — run from a cargo project root." >&2
+    exit 1
+fi
+if [[ -e src/logging.rs ]]; then
+    echo "src/logging.rs already exists — refusing to overwrite it." >&2
+    exit 1
+fi
 
-# Add dependencies
-echo "Adding tracing dependencies to Cargo.toml..."
+echo "Adding tracing dependencies..."
 cargo add tracing
 cargo add tracing-subscriber --features env-filter,json
 
-# Create logging module
 mkdir -p src
-cat > src/logging.rs << 'RUST'
+cat > src/logging.rs <<'RUST'
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+/// Initialize tracing. `RUST_LOG` controls filtering (defaults to `info`);
+/// set `LOG_FORMAT=json` for machine-readable output.
 pub fn init() {
-    tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into())
-        )
-        .with(fmt::layer())
-        .init();
-}
-
-pub fn init_json() {
-    tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into())
-        )
-        .with(fmt::layer().json())
-        .init();
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let registry = tracing_subscriber::registry().with(filter);
+    if std::env::var("LOG_FORMAT").is_ok_and(|v| v == "json") {
+        registry.with(fmt::layer().json()).init();
+    } else {
+        registry.with(fmt::layer()).init();
+    }
 }
 RUST
 
+echo "✅ Logging module created at src/logging.rs."
 echo ""
-echo "✅ Logging setup complete!"
-echo ""
-echo "Add to your main.rs:"
+echo "Wire it up in main.rs:"
 echo "  mod logging;"
 echo "  fn main() {"
 echo "      logging::init();"
-echo "      // your code"
 echo "  }"
 echo ""
-echo "Set log level with RUST_LOG environment variable:"
-echo "  RUST_LOG=debug cargo run"
+echo "Usage: RUST_LOG=debug cargo run    |    LOG_FORMAT=json cargo run"
