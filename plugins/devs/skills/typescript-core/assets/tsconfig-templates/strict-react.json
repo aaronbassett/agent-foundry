@@ -1,52 +1,21 @@
 {
+  // React application (bundler does the emitting; tsc only type-checks).
+  // Plain "dom" includes the iterable DOM APIs; "paths" needs no baseUrl.
+  "extends": "./strict-base.json",
   "compilerOptions": {
-    // Strict Type Checking
-    "strict": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "useUnknownInCatchVariables": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-
-    // Module Resolution
-    "module": "ESNext",
+    "module": "esnext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-
-    // Target & Libraries
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-
-    // JSX
+    "target": "es2024",
+    "lib": ["es2024", "dom"],
     "jsx": "react-jsx",
+    "noEmit": true,
 
-    // Emit
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    // Add your bundler's client types here, e.g. "types": ["vite/client"]
+    "types": [],
 
-    // Interop Constraints
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-
-    // Type Checking
-    "skipLibCheck": false,
-
-    // Advanced
-    "incremental": true,
-
-    // Path Mapping (optional - adjust as needed)
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+  "include": ["src/**/*"]
 }

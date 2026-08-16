@@ -1,688 +1,161 @@
-# Desktop Development with Tauri
+# Desktop Development with Tauri 2
 
-Building cross-platform desktop applications with Tauri, a lightweight alternative to Electron.
+Tauri desktop reference (Rust backend + system-webview frontend); snippets target `tauri = "2"`. The API surface: capability files grant permissions; paths come from `app.path().app_data_dir()` etc. (`Manager` trait, returns `Result`); dialogs from `tauri-plugin-dialog` (`DialogExt`); windows are `WebviewWindowBuilder`/`WebviewUrl`/`get_webview_window`; menus/tray are `tauri::menu::{Menu, MenuItem}` + `tauri::tray::TrayIconBuilder` (cargo feature `tray-icon`); events go through the `Emitter`/`Listener` traits; updates through `tauri-plugin-updater`; the JS entry is `@tauri-apps/api/core`.
 
-## Why Tauri?
+## Setup
 
-- **Small bundle size**: ~3MB vs 150MB+ for Electron
-- **Native performance**: Uses system webview
-- **Rust backend**: Type-safe, fast, secure
-- **Cross-platform**: Windows, macOS, Linux
-- **Web frontend**: Use any web framework (React, Vue, Svelte)
+Linux: `sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`. macOS: Xcode CLT. Windows: MSVC Build Tools + WebView2 runtime. Scaffold with `npm create tauri-app@latest`.
 
-## Getting Started
+`src-tauri/Cargo.toml`: `tauri = "2"`, `tauri-build = "2"` (build-dependency). npm: `@tauri-apps/api` 2.11, `@tauri-apps/cli` 2.11. `cargo tauri dev` / `cargo tauri build`.
 
-### Prerequisites
-
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Install system dependencies (Linux)
-sudo apt install libwebkit2gtk-4.0-dev \
-    build-essential \
-    curl \
-    wget \
-    libssl-dev \
-    libgtk-3-dev \
-    libayatana-appindicator3-dev \
-    librsvg2-dev
-```
-
-### Create New Project
-
-```bash
-# Using create-tauri-app
-npm create tauri-app@latest
-
-# Or manually
-cargo install create-tauri-app
-cargo create-tauri-app
-```
-
-### Project Structure
-
-```
-my-tauri-app/
-├── src-tauri/           # Rust backend
-│   ├── src/
-│   │   └── main.rs
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
-│   └── icons/
-└── src/                 # Frontend (React/Vue/etc)
-    ├── index.html
-    └── main.js
-```
-
-## Basic Tauri Application
-
-### src-tauri/src/main.rs
-
-```rust
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-fn main() {
-    tauri::Builder::default()
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-### tauri.conf.json
+## tauri.conf.json (v2 schema)
 
 ```json
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "my-app",
+  "version": "0.1.0",
+  "identifier": "com.example.myapp",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "My App",
-    "version": "0.1.0"
+  "app": {
+    "windows": [{ "title": "My App", "width": 800, "height": 600 }],
+    "security": { "csp": "default-src 'self'" }
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": {
-        "all": false,
-        "readFile": true,
-        "writeFile": true
-      }
-    },
-    "windows": [
-      {
-        "title": "My App",
-        "width": 800,
-        "height": 600
-      }
-    ]
-  }
+  "bundle": { "active": true, "targets": "all", "icon": ["icons/icon.png"] }
 }
 ```
 
-## Commands (Backend API)
+## Capabilities and permissions
 
-### Defining Commands
+Core/plugin IPC is deny-by-default; grant per window via `src-tauri/capabilities/*.json` (validated at build time — unknown identifiers fail compilation):
 
-```rust
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
-}
-
-#[tauri::command]
-async fn fetch_data(url: String) -> Result<String, String> {
-    reqwest::get(&url)
-        .await
-        .map_err(|e| e.to_string())?
-        .text()
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn complex_operation(data: Vec<i32>) -> Result<i32, String> {
-    if data.is_empty() {
-        return Err("Data cannot be empty".to_string());
+```json
+{
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$APPDATA/**" }]
     }
-
-    Ok(data.iter().sum())
-}
-
-fn main() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            greet,
-            fetch_data,
-            complex_operation
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+  ]
 }
 ```
 
-### Calling from Frontend
+Permission grammar: `<plugin>:default`, `<plugin>:allow-<command>`, `<plugin>:deny-<command>`; scoped entries take `identifier` + `allow`/`deny` arrays. Core permissions are `core:`-prefixed (`core:window:allow-set-title`, ...).
 
-```javascript
-import { invoke } from '@tauri-apps/api/tauri';
-
-// Simple command
-const greeting = await invoke('greet', { name: 'Alice' });
-console.log(greeting);  // "Hello, Alice!"
-
-// Async command
-const data = await invoke('fetch_data', { url: 'https://api.example.com/data' });
-
-// With error handling
-try {
-    const result = await invoke('complex_operation', { data: [1, 2, 3, 4, 5] });
-    console.log(result);  // 15
-} catch (error) {
-    console.error('Error:', error);
-}
-```
-
-## State Management
-
-### Application State
+## Commands, state, events
 
 ```rust
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{AppHandle, Emitter, Manager, State};
 
-struct AppState {
-    counter: Mutex<i32>,
-    config: Mutex<Config>,
+struct AppState { counter: Mutex<i32> }
+
+#[tauri::command]
+fn increment(state: State<AppState>) -> i32 {
+    let mut n = state.counter.lock().unwrap();
+    *n += 1;
+    *n
 }
 
 #[tauri::command]
-fn increment_counter(state: State<AppState>) -> i32 {
-    let mut counter = state.counter.lock().unwrap();
-    *counter += 1;
-    *counter
+async fn process(app: AppHandle) -> Result<(), String> {
+    app.emit("progress", 50).map_err(|e| e.to_string())?;      // every listener
+    app.emit_to("main", "done", ()).map_err(|e| e.to_string()) // one target
 }
 
 #[tauri::command]
-fn get_counter(state: State<AppState>) -> i32 {
-    *state.counter.lock().unwrap()
+fn data_dir(app: AppHandle) -> Result<String, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(dir.display().to_string())
 }
 
-fn main() {
-    tauri::Builder::default()
-        .manage(AppState {
-            counter: Mutex::new(0),
-            config: Mutex::new(Config::default()),
-        })
-        .invoke_handler(tauri::generate_handler![
-            increment_counter,
-            get_counter
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-## Events
-
-### Emitting Events from Rust
-
-```rust
-use tauri::Manager;
-
-#[tauri::command]
-async fn process_files(window: tauri::Window) -> Result<(), String> {
-    for i in 0..100 {
-        // Emit progress event
-        window.emit("progress", i).map_err(|e| e.to_string())?;
-
-        // Do work
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-    }
-
-    window.emit("complete", ()).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-```
-
-### Listening in Frontend
-
-```javascript
-import { listen } from '@tauri-apps/api/event';
-
-// Listen for progress updates
-const unlisten = await listen('progress', (event) => {
-    console.log(`Progress: ${event.payload}%`);
-    updateProgressBar(event.payload);
-});
-
-// Listen for completion
-await listen('complete', () => {
-    console.log('Processing complete!');
-    showNotification('Done!');
-});
-
-// Clean up listener
-unlisten();
-```
-
-### Frontend to Backend Events
-
-```javascript
-import { emit } from '@tauri-apps/api/event';
-
-// Emit event from frontend
-await emit('user-action', { action: 'click', target: 'button-1' });
-```
-
-```rust
-use tauri::Manager;
-
-fn main() {
-    tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-
-            window.listen("user-action", |event| {
-                println!("User action: {:?}", event.payload());
-            });
-
-            Ok(())
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-## File System Access
-
-### Reading and Writing Files
-
-```rust
-use tauri::api::path::app_data_dir;
-use std::fs;
-
-#[tauri::command]
-fn read_config(app: tauri::AppHandle) -> Result<String, String> {
-    let app_dir = app_data_dir(&app.config())
-        .ok_or("Failed to get app data dir")?;
-
-    let config_path = app_dir.join("config.json");
-
-    fs::read_to_string(config_path)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn write_config(app: tauri::AppHandle, data: String) -> Result<(), String> {
-    let app_dir = app_data_dir(&app.config())
-        .ok_or("Failed to get app data dir")?;
-
-    fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
-
-    let config_path = app_dir.join("config.json");
-
-    fs::write(config_path, data)
-        .map_err(|e| e.to_string())
-}
-```
-
-### Using File Dialog
-
-```rust
-use tauri::api::dialog::FileDialogBuilder;
-
-#[tauri::command]
-async fn select_file() -> Result<String, String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-
-    FileDialogBuilder::new()
-        .pick_file(move |file_path| {
-            let _ = tx.send(file_path);
-        });
-
-    let path = rx.await.map_err(|e| e.to_string())?;
-
-    path.map(|p| p.to_string_lossy().to_string())
-        .ok_or_else(|| "No file selected".to_string())
-}
-```
-
-## Database Integration
-
-### Using SQLite
-
-```toml
-[dependencies]
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
-```
-
-```rust
-use sqlx::{sqlite::SqlitePool, Row};
-use tauri::State;
-
-struct Database(SqlitePool);
-
-#[tauri::command]
-async fn get_users(db: State<'_, Database>) -> Result<Vec<User>, String> {
-    let users = sqlx::query_as::<_, User>("SELECT * FROM users")
-        .fetch_all(&db.0)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(users)
-}
-
-#[tauri::command]
-async fn create_user(db: State<'_, Database>, name: String, email: String) -> Result<(), String> {
-    sqlx::query("INSERT INTO users (name, email) VALUES (?, ?)")
-        .bind(name)
-        .bind(email)
-        .execute(&db.0)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tokio::main]
-async fn main() {
-    let pool = SqlitePool::connect("sqlite://database.db")
-        .await
-        .expect("Failed to create pool");
-
-    tauri::Builder::default()
-        .manage(Database(pool))
-        .invoke_handler(tauri::generate_handler![get_users, create_user])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-## Window Management
-
-### Creating Multiple Windows
-
-```rust
-use tauri::Manager;
-
-#[tauri::command]
-fn open_settings_window(app: tauri::AppHandle) {
-    tauri::WindowBuilder::new(
-        &app,
-        "settings",
-        tauri::WindowUrl::App("settings.html".into())
-    )
-    .title("Settings")
-    .inner_size(400.0, 600.0)
-    .build()
-    .unwrap();
-}
-
-#[tauri::command]
-fn close_window(window: tauri::Window) {
-    window.close().unwrap();
-}
-```
-
-### Window Communication
-
-```rust
-use tauri::Manager;
-
-#[tauri::command]
-fn send_to_window(app: tauri::AppHandle, label: String, event: String, payload: String) {
-    if let Some(window) = app.get_window(&label) {
-        window.emit(&event, payload).unwrap();
-    }
-}
-```
-
-## System Tray
-
-```rust
-use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu, SystemTrayEvent};
-use tauri::Manager;
-
-fn main() {
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let show = CustomMenuItem::new("show".to_string(), "Show");
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(show)
-        .add_item(quit);
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
-
-    tauri::Builder::default()
-        .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => {
-                match id.as_str() {
-                    "quit" => {
-                        std::process::exit(0);
-                    }
-                    "show" => {
-                        let window = app.get_window("main").unwrap();
-                        window.show().unwrap();
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-## Official Plugins
-
-### tauri-plugin-store (Persistent Storage)
-
-```toml
-[dependencies]
-tauri-plugin-store = "0.1"
-```
-
-```rust
-use tauri_plugin_store::StoreBuilder;
-
-fn main() {
+pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(AppState { counter: Mutex::new(0) })
+        .invoke_handler(tauri::generate_handler![increment, process, data_dir])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 ```
 
-```javascript
-import { Store } from 'tauri-plugin-store-api';
+Sync commands run on a separate thread (blocking OK, e.g. `app.dialog().file().blocking_pick_file()` via `DialogExt`); async commands run on the async runtime. Rust-side listening: `app.listen("evt", |event| { ... })` (`Listener` trait).
 
-const store = new Store('.settings.dat');
+Frontend:
 
-// Save data
-await store.set('theme', 'dark');
-await store.set('user', { name: 'Alice', id: 42 });
+```js
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
-// Load data
-const theme = await store.get('theme');
-const user = await store.get('user');
-
-// Save to disk
-await store.save();
+const n = await invoke('increment');
+const unlisten = await listen('progress', (e) => console.log(e.payload));
 ```
 
-### tauri-plugin-notification
+## Windows
 
 ```rust
-use tauri_plugin_notification::NotificationExt;
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 
 #[tauri::command]
-fn show_notification(app: tauri::AppHandle) {
-    app.notification()
-        .builder()
-        .title("New Message")
-        .body("You have a new notification!")
-        .show()
-        .unwrap();
-}
-```
-
-### tauri-plugin-http
-
-```rust
-use tauri_plugin_http::reqwest;
-
-#[tauri::command]
-async fn fetch_api_data() -> Result<String, String> {
-    let response = reqwest::get("https://api.example.com/data")
-        .await
-        .map_err(|e| e.to_string())?
-        .text()
-        .await
+async fn open_settings(app: AppHandle) -> Result<(), String> {
+    WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
+        .title("Settings")
+        .inner_size(400.0, 600.0)
+        .build()
         .map_err(|e| e.to_string())?;
-
-    Ok(response)
+    Ok(())
 }
 ```
 
-## Security Best Practices
+Lookup: `app.get_webview_window("main")` (needs `Manager` in scope).
 
-### Command Allowlist
+## Tray
 
-```json
-{
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": {
-        "scope": ["$APPDATA/**", "$RESOURCE/**"]
-      },
-      "http": {
-        "scope": ["https://api.example.com/*"]
-      }
-    }
-  }
-}
-```
-
-### Content Security Policy
-
-```json
-{
-  "tauri": {
-    "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
-    }
-  }
-}
-```
-
-### Input Validation
+Requires `tauri = { version = "2", features = ["tray-icon"] }`. Call from `.setup(|app| ...)`:
 
 ```rust
-#[tauri::command]
-fn process_user_input(input: String) -> Result<String, String> {
-    // Validate input
-    if input.len() > 1000 {
-        return Err("Input too long".to_string());
-    }
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
 
-    if input.contains("<script>") {
-        return Err("Invalid input".to_string());
-    }
-
-    // Process validated input
-    Ok(sanitize(input))
+fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&quit])?;
+    TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .build(app)?;
+    Ok(())
 }
 ```
 
-## Building and Distribution
-
-### Development
-
-```bash
-# Run in development mode
-npm run tauri dev
-
-# Or
-cargo tauri dev
-```
-
-### Production Build
-
-```bash
-# Build for production
-npm run tauri build
-
-# Output in src-tauri/target/release/bundle/
-```
-
-### Code Signing
-
-```json
-{
-  "tauri": {
-    "bundle": {
-      "macOS": {
-        "signing": {
-          "identity": "Developer ID Application: Your Name (TEAM_ID)"
-        }
-      },
-      "windows": {
-        "certificateThumbprint": "YOUR_CERT_THUMBPRINT",
-        "digestAlgorithm": "sha256",
-        "timestampUrl": "http://timestamp.digicert.com"
-      }
-    }
-  }
-}
-```
-
-### Auto-Updates
-
-```toml
-[dependencies]
-tauri-plugin-updater = "2.0"
-```
+## Updater
 
 ```rust
 use tauri_plugin_updater::UpdaterExt;
 
-fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
-            let handle = app.handle();
-            tauri::async_runtime::spawn(async move {
-                let response = handle.updater().check().await;
-                // Handle update
-            });
-            Ok(())
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+async fn update(app: AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = app.updater()?.check().await? {
+        update.download_and_install(|_chunk, _total| {}, || {}).await?;
+        app.restart();
+    }
+    Ok(())
 }
 ```
 
-## Testing
+## Plugin ecosystem
 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_greet() {
-        assert_eq!(greet("Test"), "Hello, Test!");
-    }
-
-    #[tokio::test]
-    async fn test_fetch_data() {
-        let result = fetch_data("https://httpbin.org/get".to_string()).await;
-        assert!(result.is_ok());
-    }
-}
-```
-
-## Best Practices
-
-1. **Minimize allowlist**: Only enable needed APIs
-2. **Use CSP**: Prevent XSS attacks
-3. **Validate inputs**: Never trust frontend data
-4. **Handle errors**: Return Result from commands
-5. **Use State**: For shared data between commands
-6. **Async for I/O**: Use async commands for network/file operations
-7. **Type safety**: Leverage Rust's type system
-8. **Test backend**: Write unit tests for commands
-9. **Code signing**: Sign production builds
-10. **Auto-updates**: Implement update mechanism
-
-## Resources
-
-- [Tauri Documentation](https://tauri.app/)
-- [Tauri Examples](https://github.com/tauri-apps/tauri/tree/dev/examples)
-- [Awesome Tauri](https://github.com/tauri-apps/awesome-tauri)
+Register with `.plugin(tauri_plugin_<name>::init())` (store and updater expose `Builder`), add the matching permission to a capability, and pair each crate with its `@tauri-apps/plugin-<name>` npm package (versions match). Crate versions: `tauri-plugin-store` 2.4, `tauri-plugin-updater` 2.10, `tauri-plugin-dialog` 2.7, `tauri-plugin-fs` 2.5, `tauri-plugin-http` 2.5, `tauri-plugin-notification` 2.3, `tauri-plugin-shell` 2.3, `tauri-plugin-sql` 2.4, `tauri-plugin-opener` 2.5. Pin as `"2"` and let the lockfile resolve. Store JS API: `import { load } from '@tauri-apps/plugin-store'; const store = await load('store.json');` then `store.get`/`set`/`save`.

@@ -1,133 +1,59 @@
-# Python Dependency Management
+# Python Dependency Management — Command Surface
 
-## Package Manager Detection
+Policy lives in python-core's dependencies reference: uv owns the whole workflow (project metadata, lockfile, venv, Python versions), version-constraint rules, and migration off pip/poetry. Where that reference speaks, it wins — this file is the verified command surface. Environment policy, once: supply-chain hooks here hard-block bare `pip install`, `uv add`, `uv pip install`, `uv tool install`, `uvx`, and `pipx`. The sanctioned mutation route is the Socket Firewall wrapper — `sfw uv add <pkg>` passes the guard. Read-only commands need no wrapper. Prefer built-in auditors; a missing tool is a reported gap, never installed around the block.
 
-Identify the package manager from project files:
+## uv (the default)
 
-| Indicator | Package Manager | Config |
+Detection: `uv.lock` present. Commands marked **current uv** exist in today's uv but not in older installs — probe with `uv audit --help` before relying on them. If the probe fails, the fix is upgrading uv, not layering external tools.
+
+| Task | Command | Availability |
 |---|---|---|
-| `pyproject.toml` with `[tool.poetry]` | poetry | `pyproject.toml` |
-| `pyproject.toml` with `[tool.uv]` or `uv.lock` present | uv | `pyproject.toml` |
-| `pyproject.toml` (other) | pip | `pyproject.toml` |
-| `requirements.txt` only (no `pyproject.toml`) | pip | `requirements.txt` |
-| `setup.py` or `setup.cfg` only | pip (legacy) | `setup.py` / `setup.cfg` |
-| `Pipfile` | pipenv | `Pipfile` |
+| Vulnerability audit (whole lockfile, OSV-backed; also flags adverse statuses like deprecation and quarantine) | `uv audit` | current uv |
+| Audit, machine output | `uv audit --output-format json` (also `sarif`) | current uv |
+| Suppress an advisory by ID | `uv audit --ignore <ID>`; `--ignore-until-fixed <ID>` resurfaces it once a fix version exists | current uv |
+| Audit uv-installed tools | `uv tool audit <name>` or `uv tool audit --all` | current uv |
+| Dependency tree | `uv tree` | any uv |
+| Why is X here (reverse tree) | `uv tree --invert --package <pkg>` | any uv |
+| Outdated, lockfile-level | `uv tree --outdated` (annotates latest available versions) | any uv |
+| Outdated, active-venv-level | `uv pip list --outdated`; `uv pip list --format json` | any uv |
+| Lockfile fresh? (CI gate) | `uv lock --check` | any uv |
+| Export lockfile | `uv export -o requirements.txt` (current uv also emits `pylock.toml` and CycloneDX via `--format`) | any uv |
+| Add / remove | `sfw uv add <pkg>` · `sfw uv add --dev <pkg>` · `uv remove <pkg>` | any uv |
+| Make `.venv` match the lock | `uv sync` | any uv |
+| Cache | `uv cache clean [pkg]` · `uv cache dir` | any uv |
 
-To confirm the version:
-- pip: `pip --version`
-- poetry: `poetry --version`
-- uv: `uv --version`
+`uv pip …` inspects whatever environment is active — useful in containers and CI images uv doesn't manage — but bypasses `uv.lock`; inside a uv project treat it as read-only debugging.
 
-## Virtual Environment Awareness
+## pip (unmanaged environments only)
 
-**Always check if a virtual environment is active** before running commands. Look for:
-- `$VIRTUAL_ENV` environment variable
-- `.venv/` or `venv/` directory in project root
-- `poetry env info` for poetry-managed environments
-- `uv venv` for uv-managed environments
+For environments with no `uv.lock`: bare `requirements.txt` projects, system images, someone else's venv. Pin the interpreter with `python -m pip` when several Pythons are installed.
 
-If no venv is active and you need to install packages, warn the user about installing into the system Python.
+| Task | Command |
+|---|---|
+| Outdated | `pip list --outdated --format json` |
+| Package metadata | `pip show <pkg>` |
+| Available versions on the index | `pip index versions <pkg>` |
+| Clear cache | `pip cache purge` (inspect with `pip cache dir`, `pip cache info`) |
 
-## Command Reference
+pip has no built-in vulnerability audit. The external auditor is **pip-audit**: bare `pip-audit` audits the current environment, `pip-audit -r requirements.txt` audits a requirements file, `-f json` for machine output. It must already be installed (`pip-audit --version` to confirm) or be run in an environment that has it — the ephemeral pipx/uvx route is blocked here, so a missing pip-audit is a reported gap. `--disable-pip` is valid only against hashed requirements files or together with `--no-deps`.
 
-### List Dependencies
+`safety scan` is an alternative auditor, but it requires a Safety account (`safety auth` login flow) — use pip-audit unless the project already uses Safety.
 
-| pip | poetry | uv |
+## poetry (legacy projects)
+
+For maintaining existing poetry projects (`poetry.lock` present). Whether and how to migrate them to uv is python-core policy, not this file's.
+
+| Task | Command | Notes |
 |---|---|---|
-| `pip list` | `poetry show` | `uv pip list` |
-| `pip list --format json` | `poetry show --no-ansi` | `uv pip list --format json` |
-| `pip freeze` (pinned versions) | `poetry export -f requirements.txt` | `uv pip freeze` |
+| Outdated | `poetry show --outdated` | `--top-level` limits to direct deps |
+| Machine output | `poetry show --format json` | not combinable with `--tree` |
+| Dependency tree | `poetry show --tree` | `--why` marks direct vs required-by |
+| Activate env | `poetry env activate` | prints the activation command; `poetry shell` moved to the `poetry-plugin-shell` plugin |
+| Env details | `poetry env info` | `--path` for just the venv path |
+| Export lockfile | `poetry export` | requires `poetry-plugin-export`, no longer bundled — confirm it's installed before relying on it |
+| Preview an update | `poetry update --dry-run` | `--lock` updates the lockfile only |
+| Lockfile consistent? | `poetry check --lock` | verifies `poetry.lock` matches `pyproject.toml` |
+| Clear PyPI cache | `poetry cache clear PyPI --all` | `poetry cache list` names the caches |
+| Add / remove | `sfw poetry add <pkg>` · `poetry remove <pkg>` | |
 
-### Check for Outdated Packages
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip list --outdated` | `poetry show --outdated` | `uv pip list --outdated` |
-| `pip list --outdated --format json` | — | — |
-
-### Security Audit
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip-audit` | `pip-audit` (in poetry shell) | `uv pip audit` |
-| `pip-audit --json` | — | — |
-| `safety check` | `safety check` | — |
-
-`pip-audit` requires installation: `pip install pip-audit`
-`safety` requires installation: `pip install safety`
-
-### Install a Package
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip install <pkg>` | `poetry add <pkg>` | `uv add <pkg>` |
-| `pip install <pkg>==<ver>` | `poetry add <pkg>@<ver>` | `uv add <pkg>==<ver>` |
-| `pip install -e .` (editable) | `poetry install` | `uv pip install -e .` |
-| `pip install -r requirements.txt` | `poetry install` | `uv pip install -r requirements.txt` |
-| — | `poetry add --group dev <pkg>` | `uv add --dev <pkg>` |
-
-### Uninstall a Package
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip uninstall <pkg>` | `poetry remove <pkg>` | `uv remove <pkg>` |
-| `pip uninstall -y <pkg>` (no confirm) | — | — |
-
-### View Package Information
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip show <pkg>` | `poetry show <pkg>` | `uv pip show <pkg>` |
-| `pip index versions <pkg>` | — | — |
-| Open `https://pypi.org/project/<pkg>/` | — | — |
-
-### Why Is This Package Installed?
-
-| pip | poetry | uv |
-|---|---|---|
-| `pipdeptree -r -p <pkg>` | `poetry show --tree` | `uv pip tree` |
-
-`pipdeptree` requires installation: `pip install pipdeptree`
-
-### Clear Cache
-
-| pip | poetry | uv |
-|---|---|---|
-| `pip cache purge` | `poetry cache clear --all .` | `uv cache clean` |
-| `pip cache info` | `poetry cache list` | `uv cache dir` |
-
-## Lock Files
-
-| Package Manager | Lock File | Format | Commit? |
-|---|---|---|---|
-| pip | `requirements.txt` (via `pip freeze`) | Plain text | Yes (applications) |
-| poetry | `poetry.lock` | TOML | Yes, always |
-| uv | `uv.lock` | TOML | Yes, always |
-| pipenv | `Pipfile.lock` | JSON | Yes, always |
-
-**Reading lock files:** Use `pip list` / `poetry show` / `uv pip list` to see resolved versions rather than parsing lock files directly.
-
-**Updating the lock file:**
-- pip: `pip freeze > requirements.txt`
-- poetry: `poetry lock` (update lock without installing), `poetry update` (update + install)
-- uv: `uv lock` (update lock), `uv sync` (update + install)
-
-## Finding Release Notes
-
-1. Get the project URL: `pip show <pkg>` → check "Home-page" or "Project-URL" fields
-2. Check PyPI: `https://pypi.org/project/<pkg>/#history`
-3. Check GitHub releases if the project is on GitHub
-4. Check CHANGELOG.md or CHANGES.rst in the repository
-
-## Upgrade Report
-
-To prepare an upgrade report for a package:
-
-1. Check current version: `pip show <pkg>` (or `poetry show <pkg>` / `uv pip show <pkg>`)
-2. Check available versions: `pip index versions <pkg>` or check PyPI
-3. Check for breaking changes:
-   - Find the repository and read CHANGELOG.md or GitHub releases
-   - Major version bumps (e.g., 3.x → 4.x) typically have breaking changes
-   - Check migration guides (many major Python packages provide them)
-4. Check who depends on it: `pipdeptree -r -p <pkg>` or `poetry show --tree`
-5. For projects with type stubs, check if stub packages need updating too
+poetry has no built-in vulnerability audit — use pip-audit (above) against the project's environment, or osv-scanner directly on `poetry.lock` (see cross-ecosystem.md).

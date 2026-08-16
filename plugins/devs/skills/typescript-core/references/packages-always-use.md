@@ -1,150 +1,113 @@
 # Packages – Always Use (Our Standard Toolkit)
 
-Some packages have proven their value across many projects and are effectively part of our “standard library.” We include these by default in new projects (ensuring latest versions) and encourage their use.
+These packages go into every new project by default; APIs shown match the packages' installed `.d.ts` files.
 
-## 1. Effect (Functional Effect System)
+## Baseline toolchain
 
-We always use **Effect** for managing async and concurrent operations, instead of raw `Promise` or miscellaneous utility libs. Effect provides a comprehensive framework for:
+| Tool | Verified | Notes |
+| --- | --- | --- |
+| Node.js | 26.x current, 24.x Active LTS | `fetch` and `Temporal` (TC39 Stage 4) are built in. Node 18 is EOL — never target it. |
+| TypeScript | 7.0.2 | All strict flags on; see `strict-configuration.md`. |
+| pnpm | 11.22.0 | Package manager everywhere. |
+| tsdown | 0.22.14 | Bundler for libraries and CLIs. |
 
-- Concurrency (fiber-based) with high scalability[14].
-- Typed effects that encode failure modes (no more unhandled promise rejections).
-- Resource management (safely acquire/release resources).
-- Great dev experience (structured logs, traces of computations).
+## Core packages
 
-All asynchronous business logic or complex sync logic should be done with Effect where possible. This yields more predictable, testable code.
+| Package | Verified | When | Gotcha |
+| --- | --- | --- | --- |
+| `effect` | 3.22.1 | All async/concurrent business logic, resource management, typed errors | The API is `Effect.try` / `Effect.tryPromise`; `Effect.tryCatch` does not exist. |
+| `zod` | 4.4.3 | Validation at every boundary: request bodies, env vars, external responses | The slim build is the `zod/mini` **subpath** of zod. The npm package `zod-mini` is an unrelated 0.0.1 placeholder — never install it. |
+| `@logtape/logtape` | 2.3.1 | Structured logging in apps and libraries | Sinks are wired once via `configure({ sinks, loggers })`; `Logger` has no `addSink` method. |
+| `@logtape/pretty` | 2.3.1 | Human-friendly dev log output | Exports `prettyFormatter` / `getPrettyFormatter`; there is no `pretty` export. |
+| `true-myth` | 9.4.0 | `Maybe`/`Result` in sync code and React components, outside the Effect runtime | Convert at Effect boundaries (`Effect.option`, `Effect.either`) rather than mixing styles. |
+| `vitest` | 4.1.10 | Test runner, with `@testing-library/react` and `msw` 2.15.0 | Use Vitest's built-in types for `describe`/`it`/`expect`; never add `@types/jest`. |
 
-**Why always**: Effect reduces the need for other libraries like Redux-saga, async utils, or task runners – one tool covers it all with better type safety[15]. It integrates with Node (see `@effect/platform` for FS, etc.) and with front-end (though primarily our use is backend/CLI).
+## Effect
 
-👉 Use `effect-getting-started.md` for a quickstart, and refer to `effect-full-docs.md` for advanced usage. We keep these docs handy as Effect’s API is rich.
-
-## 2. Zod (Schema Validation)
-
-We use **Zod** everywhere for schema validation and type-safe parsing of external data:
-
-- Validating inputs to APIs (e.g. request bodies, query params).
-- Validating responses from external APIs or config files.
-- Enforcing types at boundaries (e.g., parsing environment variables into correct types).
-
-Zod v4 is fast and powerful, providing features like super refining, pipeline, and native coercion (e.g., transform strings to numbers)[16][17]. It’s our go-to instead of custom validation logic or legacy libraries like Joi or Yup.
-
-We always install the latest Zod 4.x – it’s actively maintained by Colinhacks and community. Major improvements in v4 (performance 10x+ faster than v3[18], better error messages, smaller bundle via `zod-mini`[19]) mean we should stay up-to-date.
-
-**Integration**: Zod works seamlessly with:
-
-- React (for form validation, often with React Hook Form – we use RHF’s `zodResolver`).
-- Express/Next API: parse `req.body` or `req.query` with zod schemas and immediately get typed data or throw a 400 with helpful message.
-- Effect: can integrate via `Effect.tryCatch` to wrap Zod parsing in an Effect, or using Effect’s own `Schema` if needed (Effect’s Schema is Zod-like; our preference is Zod since we’re familiar).
-
-## 3. TypeScript Target & Tools (Latest Always)
-
-We always use the latest stable TypeScript. At time of writing (2026), that’s TS 5.x. This ensures we have modern syntax and features:
-
-- We enable all strict flags as per `strict-configuration.md`.
-- Use `tsdown` to bundle libraries/CLIs (discussed below).
-- `pnpm` as our package manager – always updated to latest stable (pnpm has frequent improvements; e.g., better workspace handling).
-- ESLint & Prettier latest versions with our strict config.
-
-Essentially, our baseline stack (TypeScript + build tool + linter) is a “must use” set. It’s not optional to turn off strict mode or to not format code, etc.
-
-## 4. LogTape (Structured Logging)
-
-For logging, we always include **LogTape**. It gives us structured logging with pluggable sinks:
-
-- Use `@logtape/pretty` in development for human-friendly colored logs.
-- Use core `@logtape/logtape` with JSON output (or NDJSON) for production (so logs can be parsed by systems).
-- Redaction and sensitive info handling via `@logtape/redaction` (prevents secrets from leaking in logs by pattern or field[20][21]).
-- Integration with frameworks: `@logtape/express` to automatically log HTTP requests (with method, path, response time, etc.) and attach a request ID.
-- Error reporting: `@logtape/sentry` to send error logs to Sentry seamlessly.
-- Additional outputs: `@logtape/file` if we need to log to files, `@logtape/syslog` for server syslog integration.
-
-We consider LogTape essential because it standardizes logging across projects – same JSON structure, same approach to context (categories, severity). It’s better than `console.log` or `winston` because of zero-config in libraries (if library code uses LogTape and no logger is configured by app, it outputs nothing – so libs don’t spam logs unless enabled by app)[22][23].
-
-All new projects include a basic LogTape setup:
+Effect replaces raw `Promise` chains, async utility grab-bags, and ad-hoc task runners: fiber-based concurrency, typed failure channels, safe resource acquire/release. Wrap throwing code with `Effect.try`; wrap promise-returning code with `Effect.tryPromise` (which hands you an `AbortSignal`):
 
 ```ts
-import { getLogger } from '@logtape/logtape';
-import { pretty } from '@logtape/pretty';
-const logger = getLogger(['my-app']);
-if (process.env.NODE_ENV !== 'production') {
-  logger.addSink(pretty());  // human-readable logs in dev
-}
-export { logger };
+import { Effect } from 'effect';
+import { z } from 'zod';
+
+const User = z.object({ id: z.string(), name: z.string() });
+
+export const parseUser = (input: unknown) =>
+  Effect.try({
+    try: () => User.parse(input),
+    catch: (cause) => new Error(`Invalid user: ${String(cause)}`),
+  });
+
+export const fetchUser = (id: string) =>
+  Effect.tryPromise({
+    try: (signal) => fetch(`/api/users/${id}`, { signal }).then((r) => r.json()),
+    catch: (cause) => new Error(`Request failed: ${String(cause)}`),
+  }).pipe(Effect.flatMap(parseUser));
 ```
 
-And then use `logger.info({userId}, 'User login')`, etc., throughout.
+For platform APIs (FS, HTTP servers) use `@effect/platform`. Effect ships its own `Schema`, but Zod stays our validation standard; integrate as above.
 
-## 5. True Myth (Option/Result types)
+## Zod
 
-We include **True Myth** to handle null/undefined and error results in a functional style:
+Parse, don't validate: every external input crosses a Zod schema before it touches typed code. Zod 4 is fast, has excellent error reporting, and offers a bundle-conscious build via the `zod/mini` subpath. Pairs with React Hook Form via `zodResolver` on the front end.
 
-- Use `Maybe` for optional values instead of `null`. E.g., a function that might not find a user returns `Maybe<User>` (`Just(user)` or `Nothing`) instead of `User | undefined`.
-- Use `Result` for operations that can fail with an error. E.g., `Result<ParsedData, ParseError>` rather than throwing. True Myth’s `Result` is similar to `neverthrow`, and we prefer it to exceptions for many situations.
-- True Myth’s API (with methods like `.map`, `.andThen`, `.unwrapOr`) helps avoid a lot of `if`-checks. It also makes intent clear – if I see a function returns `Result`, I know I must handle both `Ok` and `Err`.
+## LogTape
 
-Even though Effect also provides `Option` and `Either`, True Myth is lightweight and can be used in places where we might not use the full Effect runtime. For example, in React components or simple synchronous functions, True Myth is handy for avoiding null checks (which our linter would warn about if not handled).
+One logging setup for apps and libraries. Libraries call `getLogger()` freely — if the consuming app never configures LogTape, output is silent, so library code can't spam. Configuration happens once, centrally:
 
-We particularly like True Myth for its safety (no more forgetting a null check) and its integration with TS (the `Result.match` or using `.toJSON()` for debug). It’s well-maintained and simple.
+```ts
+import { configure, getConsoleSink, getJsonLinesFormatter, getLogger } from '@logtape/logtape';
+import { prettyFormatter } from '@logtape/pretty';
 
-Thus, we often have:
+const dev = process.env.NODE_ENV !== 'production';
+
+await configure({
+  sinks: {
+    console: getConsoleSink({
+      formatter: dev ? prettyFormatter : getJsonLinesFormatter(),
+    }),
+  },
+  loggers: [{ category: ['my-app'], lowestLevel: dev ? 'debug' : 'info', sinks: ['console'] }],
+});
+
+export const logger = getLogger(['my-app']);
+logger.info('User logged in', { userId: 'user_123' });
+```
+
+Argument order is `logger.info(message, properties)` — message first. pino uses the reverse order; don't carry that habit over. Add-ons on the same 2.3.1 release train: `@logtape/redaction` (scrub secrets by field or pattern), `@logtape/file`, `@logtape/sentry`, `@logtape/syslog`.
+
+## True Myth
+
+`Maybe` instead of `null`/`undefined`, `Result` instead of thrown exceptions, in code that doesn't warrant the Effect runtime:
 
 ```ts
 import Maybe from 'true-myth/maybe';
 import Result from 'true-myth/result';
+
+export const findUser = (id: string): Maybe<string> =>
+  id === 'u1' ? Maybe.just('Alice') : Maybe.nothing();
+
+export const parsePort = (raw: string): Result<number, string> => {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? Result.ok(n) : Result.err(`not a port: ${raw}`);
+};
 ```
 
-and use `Maybe.just(x)`/`Maybe.nothing()` and `Result.ok(x)`/`Result.err(e)` instead of raw `null` or throwing. This prevents “Cannot read property of undefined” errors and keeps our functions total (always returning something of the declared type).
+`.map`, `.andThen`, `.unwrapOr`, and `match` keep handling explicit and total.
 
-**Note**: In an Effect-heavy codebase, we sometimes convert True Myth <-> Effect (Effect’s `Effect.option`, `Effect.either` can wrap/unwrap these). They complement each other.
+## Dates
 
-## 6. Oclif (for CLIs) and Related Tools
+`Temporal` is Stage 4 and built into Node 26 — default to it for new date/time code. Add `date-fns` (4.4.0) only when its formatting and interval helpers earn their keep.
 
-When building a CLI application, our default choice is **Oclif** (by Salesforce). It provides a robust framework for multi-command CLI tools with minimal setup:
+## CLI and utility stacks
 
-- Generators for a new CLI (`pnpm create oclif`).
-- Handles parsing arguments, generating help text, and plugin architecture.
-- We always use it with TypeScript (Oclif supports TS out of the box).
+CLIs (Oclif, Ink, `@inquirer/prompts`, Ora): see `packages-cli.md` for the decision table and verified versions. General utilities (`es-toolkit`, `type-fest`, `ts-pattern`, `typeid-js`): see `packages-utilities.md`.
 
-Alongside Oclif, a set of companion libraries are part of our standard CLI toolkit:
+## Do not reach for
 
-- **Ink**: For rich interactive CLI output using React-like components (use when building TUI elements beyond basic `console.log`). For example, render a dynamic UI with Ink’s `<Text>`, `<Box>` and even use hooks like `useInput`. It makes complex CLI UIs easier to manage.
-- **Inquirer**: For simpler CLI prompts (Y/N, select from list, ask for input). Oclif doesn’t provide prompt out of the box, so Inquirer is our go-to for quick questionnaires.
-- **Ora**: For spinners in CLI feedback. Use `ora()` to show a spinner during long operations (though Ink has components like `ink-spinner`[24]; we can use either).
-- **cli-progress**: For progress bars in the console (e.g., showing download progress). It's well-maintained and flexible (support multiple bars, etc.).
-
-We include these by default in CLI projects because almost every non-trivial CLI needs to prompt the user or show progress. Rather than custom-hacking a spinner or prompt, we use these reliable packages.
-
-They play well together: e.g., Oclif command can use Inquirer to ask user something, then use Ora spinner while doing an Effect-based async task, then perhaps use Ink to render a fancy summary table.
-
-All these are actively maintained:
-
-- Ink v6 is latest (by Vadim Demedes) – lots of community contributions, works with React 18.
-- Inquirer v9+ – still standard for node prompts.
-- Ora – simple, and if needed we can swap it, but it’s fine.
-- cli-progress – solid for progress.
-
-## 7. Testing Libraries (Vitest & RTL)
-
-We consider our testing stack as required dependencies:
-
-- **Vitest** as test runner, with `@vitest/ui` sometimes for UI runner.
-- **`@testing-library/react`** and **`@testing-library/dom`** for component testing.
-- **`msw`** (Mock Service Worker) for API mocking in tests.
-
-These are `devDependencies`, but they are part of every project’s setup. Always use the latest versions (we keep an eye on `testing-library` updates, etc.).
-
-Vitest is chosen over Jest now because it’s faster with Vite and handles ESM well, plus we can share config with Vite easily. It’s very similar API to Jest, so easy adoption.
-
-We also include types like `@types/jest` or rather use Vitest’s global types so that `describe`/`it`/`expect` are recognized.
-
-## 8. Utility Libraries
-
-Some utility libraries are broadly useful enough that we include them unless there’s a reason not to:
-
-- **lodash** (selective): We avoid full lodash to keep bundles small, but sometimes we use `lodash-es` or specific lodash functions (via cherry-pick import) for things not easily done otherwise (deep clone, etc.). However, with utility alternatives (like `es-toolkit`, see utilities doc), lodash may eventually be replaced. If used, ensure tree-shaking or use `import cloneDeep from 'lodash/cloneDeep'` style.
-- **date-fns**: For date/time manipulation we prefer `date-fns` (v3) because it’s tree-shakeable and pure. If a project deals with a lot of dates, `date-fns` is brought in (unless Luxon or Temporal API suffice, but Temporal is not finalized as of 2026).
-- **axios**: We actually often avoid `axios` now in favor of `fetch` (especially in Node 18+ which has `fetch` built-in). But for some projects that require advanced HTTP features or a different API, `axios` is okay. Given `fetch` is standard, `axios` is not an “always include” – more optional. So perhaps not in this list strictly.
-- **node-fetch** (for Node <18): If we need `fetch` in Node versions that didn’t have it, but since we’re on latest Node LTS, built-in `fetch` covers it.
-
-In summary, our “Always Use” package set includes the ones above. When bootstrapping a new project, you’ll typically see these in the `package.json` from the start. They form a stable foundation that we know, trust, and have documentation for internally.
-
-By consistently using this toolkit, we reduce the learning curve for new team members (they'll see familiar patterns across projects) and ensure high quality (these libraries have been vetted thoroughly).
+- `lodash` / `lodash-es` → `es-toolkit`, always (see `packages-utilities.md`).
+- `zod-mini` (npm package) → squatted placeholder; use the `zod/mini` subpath.
+- `@types/jest` → Vitest ships its own types.
+- `node-fetch` / `axios` → built-in `fetch`, wrapped in `Effect.tryPromise`; axios only for exotic interceptor/proxy needs, justified in review.
+- `winston` / `pino` → LogTape.
+- Moment / Luxon → built-in `Temporal`, or `date-fns` 4.x.

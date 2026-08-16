@@ -1,140 +1,55 @@
-# Rust Dependency Management
+# Rust Dependency Mechanics
 
-## Package Manager
+Verified cargo command surface for inspecting, auditing, and mutating dependencies. Policy — commit `Cargo.lock` for everything, caret ranges, workspace dependencies, feature discipline, `deny.toml` — lives in the rust-core skill's dependencies reference; never contradict it.
 
-Rust uses **cargo** as its package manager and build system. There are no alternative package managers to detect — if the project has a `Cargo.toml`, it uses cargo.
+## Install policy (this environment)
 
-Check version: `cargo --version`
+The supply-chain hooks that gate JavaScript package managers exempt the Rust toolchain: `cargo install <tool>` is permitted, as are cargo's own network commands (`cargo add`, `cargo update`, `cargo generate-lockfile`).
 
-## Command Reference
-
-### List Dependencies
+## Built-in surface
 
 | Task | Command |
 |---|---|
-| List direct dependencies | `cargo tree --depth 1` |
-| List full dependency tree | `cargo tree` |
-| List in inverted form (who depends on X) | `cargo tree -i <crate>` |
-| List with features | `cargo tree -f '{p} {f}'` |
-| List duplicates (multiple versions of same crate) | `cargo tree --duplicates` |
-| Machine-readable metadata | `cargo metadata --format-version 1` |
+| Full dependency tree | `cargo tree` |
+| Direct deps only | `cargo tree --depth 1` |
+| Reverse deps (who pulls in X) | `cargo tree -i <crate>` |
+| Duplicate versions | `cargo tree --duplicates` |
+| Feature resolution | `cargo tree -e features` |
+| Machine-readable graph | `cargo metadata --format-version 1` (JSON; pipe to `jq`) |
+| Update all within ranges | `cargo update` |
+| Update one crate | `cargo update -p <crate>` |
+| Pin lockfile to an exact version | `cargo update -p <crate> --precise <version>` |
+| Preview without writing | `cargo update --dry-run` (alias `-n`) |
+| Add a dependency | `cargo add <crate>` (`--dev`, `--build`, `--features a,b`, `--no-default-features`, `<crate>@<version>`) |
+| Remove a dependency | `cargo remove <crate>` (`--dev`) |
+| Crate metadata from the registry | `cargo info <crate>` |
+| Search the registry | `cargo search <query> --limit <n>` |
+| Future-incompatibility report | `cargo report future-incompat` |
 
-### Check for Outdated Packages
+`cargo update --breaking` (cross-major updates) is nightly-only: stable cargo rejects it as unstable and points at tracking issue rust-lang/cargo#12425. On stable, cross a major with `cargo add <crate>@<new-version>`.
 
-| Task | Command | Notes |
+Read resolved versions through `cargo tree` or `cargo metadata` rather than parsing `Cargo.lock` directly.
+
+## Plugins (each requires `cargo install` first)
+
+| Tool | Commands | Notes |
 |---|---|---|
-| Check outdated | `cargo outdated` | Requires `cargo-outdated`: `cargo install cargo-outdated` |
-| Check outdated (root only) | `cargo outdated --root-deps-only` | Skip transient dependencies |
+| cargo-audit | `cargo audit`; `cargo audit bin <paths>`; `-D warnings` (`--deny`) for CI gating; `--ignore RUSTSEC-...` | `cargo audit fix` exists only when installed with `cargo install cargo-audit --features=fix`; a default install rejects the subcommand. `fix` rewrites `Cargo.toml`; `--dry-run` previews. `bin` scans compiled binaries, fully accurate for `cargo auditable` builds. |
+| cargo-deny | `cargo deny check [advisories\|bans\|licenses\|sources\|all]` | Runs with built-in defaults and a warning when no `deny.toml` is present; start from rust-core's `deny.toml` asset rather than writing the schema from memory. |
+| cargo-outdated | `cargo outdated` | Not installed here. Fallback without it: `cargo update --dry-run` shows what would change within semver; `cargo info <crate>` gives the registry latest. |
+| cargo-machete | `cargo machete` | Unused-dependency scan (fast, syntactic). Live on crates.io. |
+| cargo-semver-checks | `cargo semver-checks` | Catches accidental API breaks before publishing a library. Live on crates.io. |
+| cargo-cache | `cargo cache`; `cargo cache --autoclean` | Dormant — last crates.io release is 0.8.3 (2022). It still works; the no-install alternative is removing `~/.cargo/registry/cache/` and `~/.cargo/registry/src/` directly. |
 
-If `cargo-outdated` is not installed, you can manually compare:
-1. Read versions from `Cargo.toml`
-2. Check latest on crates.io: `cargo search <crate> --limit 1`
+`cargo clean` (built in) removes the project's `target/` directory; it does not touch the shared registry cache.
 
-### Security Audit
+## Registry recipes
 
-| Task | Command | Notes |
-|---|---|---|
-| Audit for vulnerabilities | `cargo audit` | Requires `cargo-audit`: `cargo install cargo-audit` |
-| Audit with fix suggestions | `cargo audit fix` | Attempts automatic fixes |
-| Comprehensive policy check | `cargo deny check` | Requires `cargo-deny`: `cargo install cargo-deny` |
-| Check licenses | `cargo deny check licenses` | Check dependency licenses |
-| Check advisories | `cargo deny check advisories` | Check security advisories |
-| Check bans | `cargo deny check bans` | Check banned crates |
+The crates.io API rejects anonymous requests: send a User-Agent identifying the caller (its data-access policy requires one).
 
-### Install a Dependency
+```bash
+curl -s -H "User-Agent: my-tool (contact@example.com)" \
+  https://crates.io/api/v1/crates/<crate>
+```
 
-| Task | Command |
-|---|---|
-| Add a dependency | `cargo add <crate>` |
-| Add with specific version | `cargo add <crate>@<version>` |
-| Add as dev dependency | `cargo add --dev <crate>` |
-| Add as build dependency | `cargo add --build <crate>` |
-| Add with features | `cargo add <crate> --features feat1,feat2` |
-| Add with no default features | `cargo add <crate> --no-default-features` |
-
-### Remove a Dependency
-
-| Task | Command |
-|---|---|
-| Remove a dependency | `cargo remove <crate>` |
-| Remove a dev dependency | `cargo remove --dev <crate>` |
-
-### View Crate Information
-
-| Task | Command |
-|---|---|
-| Search for crates | `cargo search <query>` |
-| View crate info | `cargo info <crate>` |
-| View on crates.io | Open `https://crates.io/crates/<crate>` |
-| View docs | Open `https://docs.rs/<crate>` |
-
-### Clear Cache
-
-| Task | Command | Notes |
-|---|---|---|
-| Clean build artifacts | `cargo clean` | Removes `target/` directory |
-| Prune cache | `cargo cache --autoclean` | Requires `cargo-cache`: `cargo install cargo-cache` |
-| Manual cache clean | `rm -rf ~/.cargo/registry/cache/` | Removes downloaded crate archives |
-| Manual source clean | `rm -rf ~/.cargo/registry/src/` | Removes extracted crate sources |
-| View cache size | `cargo cache` | Requires `cargo-cache` |
-
-## Lock File
-
-| File | Format | Commit? |
-|---|---|---|
-| `Cargo.lock` | TOML | **Applications:** yes. **Libraries:** no (add to `.gitignore`) |
-
-**Why the difference:** Applications need reproducible builds (commit the lock). Libraries should be tested against the latest compatible versions (don't commit).
-
-**Reading the lock file:** Use `cargo tree` rather than parsing `Cargo.lock` directly. The tree command shows the resolved dependency graph with versions.
-
-**Updating the lock file:**
-- `cargo update` — update all dependencies to latest compatible versions
-- `cargo update -p <crate>` — update a specific crate
-- `cargo update -p <crate> --precise <version>` — pin to an exact version
-
-## Workspace Commands
-
-**Detection:** `Cargo.toml` with a `[workspace]` section containing `members`.
-
-| Task | Command |
-|---|---|
-| List workspace members | `cargo metadata --format-version 1 \| jq '.workspace_members'` |
-| Build all members | `cargo build --workspace` |
-| Test all members | `cargo test --workspace` |
-| Run command for specific member | `cargo <cmd> -p <package>` |
-| Tree for specific member | `cargo tree -p <package>` |
-| Add dep to specific member | `cd <member-dir> && cargo add <crate>` |
-
-## Finding Release Notes
-
-1. Find the repository: check `[package.repository]` in `Cargo.toml` or visit `https://crates.io/crates/<crate>`
-2. Check GitHub releases: `https://github.com/<owner>/<repo>/releases`
-3. Check CHANGELOG.md in the repo
-4. Check crates.io for version history: `https://crates.io/crates/<crate>/versions`
-
-## Upgrade Report
-
-To prepare an upgrade report for a crate:
-
-1. Check current version: `cargo tree -i <crate> --depth 0`
-2. Check available versions: `cargo search <crate> --limit 1` or check crates.io
-3. Check for breaking changes:
-   - Find the repository and read CHANGELOG.md or GitHub releases
-   - Major version bumps (e.g., 0.x → 1.0 or 1.x → 2.x) have breaking changes
-   - In Rust, 0.x.y → 0.x+1.0 is also a breaking change (pre-1.0 semver)
-4. Check who depends on it: `cargo tree -i <crate>` shows reverse dependencies
-5. For workspace projects, check if all members use compatible versions
-
-## Useful Cargo Plugins
-
-These extend cargo with additional capabilities. Install with `cargo install <plugin>`:
-
-| Plugin | Purpose |
-|---|---|
-| `cargo-outdated` | Check for outdated dependencies |
-| `cargo-audit` | Security vulnerability scanning |
-| `cargo-deny` | Comprehensive dependency policy (licenses, bans, advisories) |
-| `cargo-cache` | Cache management and cleanup |
-| `cargo-edit` | `cargo add`, `cargo rm` (included in cargo since 1.62) |
-| `cargo-udeps` | Find unused dependencies |
+The response carries `crate.max_stable_version`, `crate.newest_version`, `crate.updated_at`, and a `versions[]` array with `num`, `created_at`, and `yanked` per version — enough for version-currency and release-date checks (release-age gating, dormancy checks) without HTML scraping. For a single current version, `cargo info <crate>` answers from the terminal.

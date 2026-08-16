@@ -1,76 +1,33 @@
 ---
 name: devs:deps-core
-description: "Comprehensive dependency management expertise covering TypeScript (npm, yarn, pnpm, bun), Rust (cargo), and Python (pip, poetry, uv). Use when working on projects requiring: (1) Dependency auditing and listing, (2) Checking for outdated packages, (3) Security vulnerability scanning, (4) Finding release notes and changelogs, (5) Preparing upgrade reports with breaking change analysis, (6) Inspecting transient dependencies in lock files, (7) Installing or uninstalling packages, (8) Clearing package caches, (9) Monorepo workspace dependency management, or (10) Cross-ecosystem dependency health checks."
+description: "Use when auditing, inspecting, or changing project dependencies in TypeScript/JavaScript (npm, pnpm, yarn, bun), Rust (cargo), or Python (uv, pip, poetry) — vulnerability audits, outdated checks, dependency-tree tracing, upgrade reports, installs/removals, cache management, and cross-ecosystem health reports. Owns the verified command surface and ecosystem detection; dependency policy (version ranges, lockfile rules, supply-chain posture) belongs to the language skills."
 ---
 
-# Dependency Management
+# Dependency Management — Command Surface
 
-Comprehensive guidance for managing dependencies across TypeScript, Rust, and Python ecosystems.
+Mechanics for dependency work: detection, the verified commands per ecosystem, and cross-ecosystem orchestration. Policy lives with the language skills (typescript-core, rust-core, python-core dependency references) — where they speak, they win. Verify versions and vulnerability data with commands and registries at use-time, never from memory.
 
-## Core Principle
+## Detection
 
-**Commands over inference.** Always run the actual package manager command to get information rather than reading manifest or lock files and inferring state. The package manager is the authority on what is installed, what is outdated, and what is vulnerable.
+**Package manager — in this order, first match wins:**
 
-- `npm ls` tells you what is installed — `package.json` tells you what should be installed. These can differ.
-- `cargo tree` shows the resolved dependency graph — `Cargo.toml` shows declared dependencies.
-- `pip list` shows what is in the environment — `requirements.txt` shows what was requested.
+1. `packageManager` field in package.json (corepack declaration) — authoritative, outranks lockfile inference.
+2. Lockfile: `pnpm-lock.yaml` → pnpm; `package-lock.json` → npm; `yarn.lock` → yarn (classic vs modern from the `packageManager` field or `.yarnrc.yml` presence); `bun.lock` → bun (`bun.lockb` is the legacy binary form — flag it for migration).
+3. Python: `uv.lock` → uv; `poetry.lock` or `[build-system] requires = ["poetry-core"]` → poetry (don't key on `[tool.poetry]` alone — PEP 621 projects may not have it); `Pipfile.lock` → pipenv; bare `requirements.txt` → pip.
+4. Rust: `Cargo.toml` → cargo.
+5. **No JS lockfile → pnpm, and the missing lockfile is a finding.** Multiple conflicting lockfiles in one root is a finding, not a coin flip.
 
-Reading manifest files is useful for understanding project structure and intent, but command output is the source of truth for current state.
+**Workspaces:** `workspaces` field (npm/yarn/bun), `pnpm-workspace.yaml` (also pnpm's settings file — `minimumReleaseAge`, `onlyBuiltDependencies`, catalogs live there), `[workspace]` in Cargo.toml, `[tool.uv.workspace]`. When dispatched non-interactively, default to the workspace root and say so in the report.
 
-## Ecosystem Detection
+## Install policy (environment-enforced)
 
-If you are dispatched with a specific ecosystem (e.g., "typescript"), skip detection and load the relevant reference directly.
+Supply-chain hooks in this environment hard-block bare `npx`, `npm install/add`, `pnpm install/add/dlx`, `yarn install/add/dlx`, `bun add`, `bun x`, `pip install`, `uv add`, `uv pip install`, `uvx`, `pipx`, and pipe-to-shell. Clean installs pass (`npm ci`, `pnpm install --frozen-lockfile`, `yarn install --immutable`, `bun install --frozen-lockfile`), and `cargo add`/`cargo install` are exempt. The sanctioned route for everything else is the Socket Firewall wrapper: `sfw pnpm add <pkg>`, `sfw uv add <pkg>` — mandatory when `sfw` is on PATH. Prefer built-in auditors (`pnpm audit`, `bun audit`, `uv audit`, `cargo audit`) before considering any plugin; a missing tool is reported, not installed around the block.
 
-If you need to detect the ecosystem, scan the project root for these files:
+## Reference routing
 
-| Files Found | Ecosystem | Package Manager |
-|---|---|---|
-| `package.json` + `package-lock.json` | TypeScript/JS | npm |
-| `package.json` + `yarn.lock` | TypeScript/JS | yarn |
-| `package.json` + `pnpm-lock.yaml` | TypeScript/JS | pnpm |
-| `package.json` + `bun.lockb` | TypeScript/JS | bun |
-| `package.json` (no lock file) | TypeScript/JS | npm (default, warn about missing lock file) |
-| `Cargo.toml` | Rust | cargo |
-| `pyproject.toml` with `[tool.poetry]` section | Python | poetry |
-| `pyproject.toml` with `[tool.uv]` section or `uv.lock` present | Python | uv |
-| `pyproject.toml` (no poetry/uv markers) | Python | pip |
-| `requirements.txt` (no `pyproject.toml`) | Python | pip |
-
-## Monorepo Detection
-
-Check for workspace configurations:
-
-| Indicator | Type |
+| Reference | Use when |
 |---|---|
-| `package.json` with `"workspaces"` field | npm/yarn workspace |
-| `pnpm-workspace.yaml` | pnpm workspace |
-| `Cargo.toml` with `[workspace]` section | cargo workspace |
-
-When a monorepo is detected:
-- Report it to the user
-- Ask whether to operate on the workspace root or a specific package (unless already scoped)
-- Use workspace-aware commands where available
-
-## Task Reference
-
-Once you know the ecosystem, load the appropriate reference file for specific commands:
-
-| Task | What It Does | Reference |
-|---|---|---|
-| **Locate dependencies** | List all direct and dev dependencies from manifest files | [typescript.md](references/typescript.md), [rust.md](references/rust.md), [python.md](references/python.md) |
-| **Check for updates** | Compare installed versions against latest available | Per-ecosystem reference |
-| **Security audit** | Scan for known vulnerabilities (CVEs, advisories) | Per-ecosystem reference |
-| **Find release notes** | Locate changelogs or release notes for a package version | Per-ecosystem reference |
-| **Upgrade report** | Identify breaking changes, deprecated APIs, migration guides | Per-ecosystem reference |
-| **Transient dependencies** | Inspect lock files and dependency trees for indirect deps | Per-ecosystem reference |
-| **List installed** | Show what is actually installed (not just declared) | Per-ecosystem reference |
-| **Install / uninstall** | Add or remove packages with correct flags | Per-ecosystem reference |
-| **Clear caches** | Clean package manager caches and stores | Per-ecosystem reference |
-
-## Additional Principles
-
-- **Security audits before upgrades** — know what is vulnerable before changing versions
-- **Never upgrade without understanding breaking changes** — check changelogs first
-- **Lock file changes should be committed separately** from code changes when possible
-- **Prefer exact versions in applications**, semver ranges in libraries
-- **Check the lock file, not just the manifest** — what is declared and what is installed can differ
+| [typescript.md](references/typescript.md) | npm/pnpm/yarn/bun command matrices: audit, outdated, why, tree, cache, workspaces |
+| [rust.md](references/rust.md) | cargo built-in surface and the plugin table (cargo-audit, cargo-deny, …) with install gating |
+| [python.md](references/python.md) | uv-first commands; pip for unmanaged environments; poetry for legacy projects |
+| [cross-ecosystem.md](references/cross-ecosystem.md) | osv-scanner, registry query recipes, severity normalization, merging multi-ecosystem reports |

@@ -21,3 +21,64 @@ jobs:
 
       - name: Validate plugins and marketplace
         run: bash scripts/ci/validate.sh
+
+  smoke-rust-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select stable Rust toolchain
+        run: rustup default stable && rustc --version
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Smoke test rust-core skill scripts and configs
+        run: bash scripts/ci/smoke-rust-core.sh
+
+  smoke-python-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Smoke test python-core skill scripts and configs
+        run: bash scripts/ci/smoke-python-core.sh
+
+  smoke-typescript-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test typescript-core templates and references
+        run: bash scripts/ci/smoke-typescript-core.sh
+
+  smoke-react:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test react-core templates and react-components scaffold
+        run: bash scripts/ci/smoke-react.sh
+
+  smoke-review-deps-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test code-review, deps-core, and security-core skills
+        run: bash scripts/ci/smoke-review-deps-security.sh

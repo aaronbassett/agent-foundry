@@ -1,134 +1,149 @@
-# TypeScript / JavaScript Dependency Management
+# TypeScript / JavaScript Dependency Mechanics
 
-## Package Manager Detection
+Verified command surface for inspecting, auditing, and mutating dependencies under npm, pnpm, yarn, and bun. Policy — version ranges, lockfile discipline, provenance, cooldowns, package selection — lives in the typescript-core skill's dependencies reference; never contradict it: the policy is caret ranges plus a committed lockfile, not exact pins.
 
-Identify the package manager from the lock file present in the project root:
+## Install policy (this environment)
 
-| Lock File | Package Manager | Config File |
+Supply-chain hooks hard-block bare `npx`, `npm install`/`i`/`add`, `pnpm install`/`i`/`add`/`dlx`, `yarn install`/`add`/`dlx`, `bun add`, and `bun x`. Lockfile-respecting installs pass unblocked: `npm ci`, `pnpm install --frozen-lockfile`, `yarn install --immutable`, `bun install --frozen-lockfile`. The sanctioned route for mutating commands is the Socket Firewall wrapper — `sfw pnpm add <pkg>` — whose prefix passes the guard while filtering registry traffic. Read-only commands (audit, outdated, why, view, ls) need no wrapper.
+
+## Detection
+
+The package manager is the one the lockfile names:
+
+| Lock file | Package manager | Config |
 |---|---|---|
 | `package-lock.json` | npm | `.npmrc` |
-| `yarn.lock` | yarn | `.yarnrc.yml` (berry) or `.yarnrc` (classic) |
-| `pnpm-lock.yaml` | pnpm | `.npmrc` or `.pnpmrc` |
-| `bun.lockb` | bun | `bunfig.toml` |
+| `pnpm-lock.yaml` | pnpm | `pnpm-workspace.yaml`, `.npmrc` |
+| `yarn.lock` | yarn | `.yarnrc` (1.x), `.yarnrc.yml` (4.x) |
+| `bun.lock` | bun | `bunfig.toml` |
 
-If no lock file exists, default to npm but warn the user about the missing lock file.
+`bun.lock` is bun's default text lockfile; the binary `bun.lockb` is legacy, migrated via `bun install --save-text-lockfile --frozen-lockfile --lockfile-only`. Yarn 1.x (classic) and 4.x (modern) are effectively different tools — run `yarn --version` before choosing a yarn form below.
 
-To confirm the version:
-- npm: `npm --version`
-- yarn: `yarn --version` (1.x = classic, 2+ = berry)
-- pnpm: `pnpm --version`
-- bun: `bun --version`
+## Audit
 
-## Command Reference
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Audit | `npm audit` | `pnpm audit` | 1.x `yarn audit` / 4.x `yarn npm audit` | `bun audit` |
+| JSON output | `npm audit --json` | `pnpm audit --json` | 1.x `yarn audit --json` (NDJSON) / 4.x `yarn npm audit --json` (NDJSON) | `bun audit --json` |
+| Production deps only | `npm audit --omit=dev` | `pnpm audit --prod` | 4.x `yarn npm audit --environment production` | `bun audit --prod` |
+| Transitive coverage | default | default | 1.x default / 4.x direct-only unless `-R` | default |
+| Auto-fix | `npm audit fix` (`--dry-run` previews, `--force` crosses majors) | `pnpm audit --fix` (writes overrides; method `override` or `update`) | none in either line — upgrade the offending package | `bun audit fix` (`--dry-run`, `--latest` crosses your own ranges) |
 
-### List Dependencies
+Exit codes: every auditor exits non-zero when findings remain, so the bare command doubles as a CI gate.
 
-| npm | yarn | pnpm | bun |
+## Outdated
+
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Report | `npm outdated` | `pnpm outdated` | 1.x `yarn outdated` / 4.x none | `bun outdated` |
+| JSON output | `npm outdated --json` | `pnpm outdated --format json` | 1.x `yarn outdated --json` (NDJSON) / 4.x none | none |
+
+Yarn 4.x has no outdated command. The read-only route is `yarn npm audit` for vulnerabilities plus `yarn npm info <pkg> --fields version` against `yarn info <pkg>` for version drift; `yarn upgrade-interactive` is a mutation UI, not an audit surface. Bun's columns are Current / Update (within range) / Latest, and positional filters take globs (`bun outdated '@types/*'`).
+
+## Why is this installed
+
+| npm | pnpm | yarn | bun |
 |---|---|---|---|
-| `npm ls` | `yarn info --all` | `pnpm ls` | `bun pm ls` |
-| `npm ls --all` (incl. transient) | `yarn info --all --recursive` | `pnpm ls --depth Infinity` | `bun pm ls --all` |
-| `npm ls --json` (machine-readable) | `yarn info --json` | `pnpm ls --json` | — |
+| `npm explain <pkg>` | `pnpm why <pkg>` | `yarn why <pkg>` (both lines; 4.x adds `-R`, `--json`, `--peers`) | `bun why <pkg>` (`--top`, `--depth <n>`) |
 
-### Check for Outdated Packages
+## Registry view
 
-| npm | yarn | pnpm | bun |
+| npm | pnpm | yarn | bun |
 |---|---|---|---|
-| `npm outdated` | `yarn upgrade-interactive` | `pnpm outdated` | `bun outdated` |
-| `npm outdated --json` | — | `pnpm outdated --json` | — |
+| `npm view <pkg> [field]` | `pnpm view <pkg> [field]` | 1.x `yarn info <pkg> [field]` / 4.x `yarn npm info <pkg> --fields <a,b>` (`--json`) | `bun info <pkg> [property]` (`--json`; alias `bun pm view`) |
 
-Output columns: Package, Current, Wanted (semver-compatible), Latest (newest).
+Fields use dot paths: `npm view lodash dist-tags.latest`, `bun info react repository.url`.
 
-### Security Audit
+## Dependency tree
 
-| npm | yarn | pnpm | bun |
+| npm | pnpm | yarn | bun |
 |---|---|---|---|
-| `npm audit` | `yarn npm audit` | `pnpm audit` | — |
-| `npm audit --json` | `yarn npm audit --json` | `pnpm audit --json` | — |
-| `npm audit fix` (auto-fix) | — | — | — |
+| `npm ls --all` (`--json`) | `pnpm ls --depth Infinity` (`--json`) | 1.x `yarn list [--depth <n>]` / 4.x `yarn info -R` (`--json`) | `bun pm ls --all` |
 
-For yarn classic (1.x): `yarn audit` instead of `yarn npm audit`.
+In yarn 4.x, `yarn info` reads the project's own tree (add `-A` for all workspaces, `-R` for transitives); only `yarn npm info` queries the registry.
 
-### Install a Package
+## Dedupe and prune
 
-| npm | yarn | pnpm | bun |
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Check only | `npm dedupe --dry-run` | `pnpm dedupe --check` | 4.x `yarn dedupe --check` (exit 1 on duplicates) | none |
+| Apply | `npm dedupe` | `pnpm dedupe` | 4.x `yarn dedupe` | none |
+| Prune extraneous | `npm prune` (`--dry-run`) | `pnpm prune` | — | none |
+
+Yarn 1.x rejects `yarn dedupe` with an error stating `yarn install` already dedupes.
+
+## Cache
+
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Inspect | `npm cache verify`, `npm cache ls` | `pnpm store status`, `pnpm store path` | 1.x `yarn cache list`, `yarn cache dir` | `bun pm cache` (prints path) |
+| Clean | `npm cache clean [<key>]` (`--force` for all) | `pnpm store prune` | `yarn cache clean` (both lines) | `bun pm cache rm` |
+
+## Workspace scoping
+
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Run script in one package | `npm run <script> -w <pkg>` | `pnpm --filter <pkg> run <script>` | 1.x `yarn workspace <pkg> run <script>` / 4.x `yarn workspaces foreach -A run <script>` with `--include <pkg>` | `bun run --filter <pkg> <script>` |
+| Run across all | `npm run <script> --workspaces` | `pnpm -r run <script>` | 4.x `yarn workspaces foreach -A run <script>` | `bun outdated -r`, `--filter` globs |
+
+In yarn 4.x `workspaces foreach` requires an explicit selector — `-A` (all), `-R` (recursive deps), or `-W` (worktree); its examples standardize on `-A`.
+
+## Mutations (through the guard)
+
+| Task | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| Add | `sfw npm install <pkg>` | `sfw pnpm add <pkg>` | `sfw yarn add <pkg>` | `sfw bun add <pkg>` |
+| Add dev | `sfw npm install -D <pkg>` | `sfw pnpm add -D <pkg>` | `sfw yarn add -D <pkg>` | `sfw bun add -d <pkg>` |
+| Remove | `npm uninstall <pkg>` | `pnpm remove <pkg>` | `yarn remove <pkg>` | `bun remove <pkg>` |
+| Reproducible install | `npm ci` | `pnpm install --frozen-lockfile` | `yarn install --immutable` | `bun install --frozen-lockfile` |
+
+Yarn 4.x treats `--frozen-lockfile` as a deprecated alias of `--immutable`, and `--immutable` defaults to on in CI.
+
+## npm 12 delta
+
+Breaking changes in npm 12 that affect dependency work (source: npm CLI changelog, v12.0.0):
+
+- Dependency lifecycle scripts are blocked by default unless allowed by the root package's `allowScripts` policy; record approvals with `npm install-scripts approve`, then run `npm rebuild` to execute newly approved scripts.
+- Unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning (unknown `.npmrc` configs still warn; `strict-npmrc` upgrades them to errors).
+- `npm view --json` always returns an array — scripts expecting a bare object for single-version queries must unwrap it.
+- git and tarball-URL dependencies are refused by default: `allow-git` and `allow-remote` default to `none` (set `all` or `root` to permit).
+- `npm shrinkwrap` is removed and `npm-shrinkwrap.json` is no longer loaded; rename a project-root shrinkwrap to `package-lock.json`.
+
+## Release-age gates
+
+Each manager can refuse versions published too recently:
+
+| PM | Where | Key | Unit |
 |---|---|---|---|
-| `npm install <pkg>` | `yarn add <pkg>` | `pnpm add <pkg>` | `bun add <pkg>` |
-| `npm install -D <pkg>` | `yarn add -D <pkg>` | `pnpm add -D <pkg>` | `bun add -d <pkg>` |
-| `npm install -g <pkg>` | `yarn global add <pkg>` | `pnpm add -g <pkg>` | `bun add -g <pkg>` |
-| `npm install` (from lock) | `yarn install` | `pnpm install` | `bun install` |
-| `npm ci` (clean install) | `yarn install --immutable` | `pnpm install --frozen-lockfile` | `bun install --frozen-lockfile` |
+| npm | `.npmrc` | `min-release-age` (exemptions: `min-release-age-exclude`) | days |
+| pnpm | `pnpm-workspace.yaml` | `minimumReleaseAge` (exemptions: `minimumReleaseAgeExclude`) | minutes (default 1440) |
+| yarn 4.x | `.yarnrc.yml` | `npmMinimalAgeGate` (exemptions: `npmPreapprovedPackages`) | duration string, e.g. `"1w"` |
+| bun | `bunfig.toml` `[install]` | `minimumReleaseAge` (exemptions: `minimumReleaseAgeExcludes`) | seconds |
 
-### Uninstall a Package
+The units differ per manager — a one-day gate is `1` (npm), `1440` (pnpm), `"1d"` (yarn), `86400` (bun).
 
-| npm | yarn | pnpm | bun |
-|---|---|---|---|
-| `npm uninstall <pkg>` | `yarn remove <pkg>` | `pnpm remove <pkg>` | `bun remove <pkg>` |
+## Machine-parse recipes
 
-### View Package Information
+Current/latest version pairs, reliably:
 
-| npm | yarn | pnpm | bun |
-|---|---|---|---|
-| `npm view <pkg>` | `yarn npm info <pkg>` | `pnpm view <pkg>` | — |
-| `npm view <pkg> versions` | `yarn npm info <pkg> --fields versions` | `pnpm view <pkg> versions` | — |
-| `npm view <pkg> repository` | — | `pnpm view <pkg> repository` | — |
+```bash
+# npm — object keyed by package: {current, wanted, latest, ...}
+npm outdated --json
+# single package: current from the tree, latest from the registry
+npm ls <pkg> --json --depth 0
+npm view <pkg> version
 
-### Why Is This Package Installed?
+# pnpm — object keyed by package: {current, wanted, latest, isDeprecated, dependencyType}
+pnpm outdated --format json
 
-| npm | yarn | pnpm | bun |
-|---|---|---|---|
-| `npm explain <pkg>` | `yarn why <pkg>` | `pnpm why <pkg>` | — |
+# yarn 1.x — NDJSON; the "table" line holds rows [Package, Current, Wanted, Latest, Type, URL]
+yarn outdated --json
 
-### Clear Cache
+# yarn 4.x — no outdated command; pair locked (project) with latest (registry)
+yarn info <pkg> --json
+yarn npm info <pkg> --fields version --json
 
-| npm | yarn | pnpm | bun |
-|---|---|---|---|
-| `npm cache clean --force` | `yarn cache clean` | `pnpm store prune` | `bun pm cache rm` |
-| `npm cache verify` | — | `pnpm store status` | — |
-
-## Lock Files
-
-| Package Manager | Lock File | Format | Commit? |
-|---|---|---|---|
-| npm | `package-lock.json` | JSON | Yes, always |
-| yarn classic | `yarn.lock` | Custom | Yes, always |
-| yarn berry | `yarn.lock` | YAML | Yes, always |
-| pnpm | `pnpm-lock.yaml` | YAML | Yes, always |
-| bun | `bun.lockb` | Binary | Yes, always |
-
-**Reading lock files:** Lock files pin exact versions of every package in the dependency tree (including transient). Use `npm ls --all` / `pnpm ls --depth Infinity` to read the resolved tree rather than parsing lock files directly.
-
-## Monorepo / Workspace Commands
-
-**Detection:**
-- `package.json` → `"workspaces": ["packages/*"]`
-- `pnpm-workspace.yaml` → `packages: ["packages/*"]`
-
-**Scoped operations:**
-
-| npm | yarn | pnpm |
-|---|---|---|
-| `npm ls -w <pkg>` | `yarn workspace <pkg> info` | `pnpm ls --filter <pkg>` |
-| `npm install <dep> -w <pkg>` | `yarn workspace <pkg> add <dep>` | `pnpm add <dep> --filter <pkg>` |
-| `npm run test -w <pkg>` | `yarn workspace <pkg> run test` | `pnpm run test --filter <pkg>` |
-| `npm run test --workspaces` | `yarn workspaces foreach run test` | `pnpm run test -r` |
-
-## Finding Release Notes
-
-1. Get the repository URL: `npm view <pkg> repository.url`
-2. Check GitHub releases: `https://github.com/<owner>/<repo>/releases`
-3. Check for CHANGELOG.md in the repo root
-4. Check the package's homepage: `npm view <pkg> homepage`
-
-## Upgrade Report
-
-To prepare an upgrade report for a package:
-
-1. Check current version: `npm ls <pkg>` (or equivalent)
-2. Check available versions: `npm view <pkg> versions`
-3. Check for breaking changes:
-   - Find the repository URL: `npm view <pkg> repository.url`
-   - Read the CHANGELOG.md or GitHub releases between current and target version
-   - Look for "BREAKING" or "breaking change" entries
-   - Major version bumps (e.g., 3.x → 4.x) almost always have breaking changes
-4. Check if dependents are compatible: `npm explain <pkg>` to see who depends on it
-5. For TypeScript projects, check if `@types/<pkg>` also needs updating
+# bun — no JSON report; parse the Current/Update/Latest table, or pair:
+bun pm ls
+bun info <pkg> version
+```

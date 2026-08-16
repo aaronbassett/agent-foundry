@@ -1,0 +1,17 @@
+# Lint policy for Cargo.toml. In a single crate, append these tables to Cargo.toml.
+# In a workspace: put them at the root as [workspace.lints.rust]/[workspace.lints.clippy]
+# and add `[lints] workspace = true` to each member.
+# Pair with clippy.toml (same directory) so unwrap/expect stay allowed in tests.
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+# Curated selection from clippy::pedantic — signal without the noise of enabling
+# the whole group. Extend deliberately, not wholesale. (must_use_candidate is
+# deliberately absent: it fires on cargo new's own lib boilerplate.)
+semicolon_if_nothing_returned = "warn"
+uninlined_format_args = "warn"
+redundant_closure_for_method_calls = "warn"

@@ -1,127 +1,87 @@
 # Packages – Utilities & Misc
 
-This covers assorted utility libraries and our stance on them, beyond the core categories above.
+Utility libraries beyond the core stack.
 
-## type-fest – TypeScript Type Utilities
-`type-fest` is a collection of TypeScript type utilities such as `PartialDeep<T>`, `Opaque<Type, Token>` (for branded types), `Jsonify<T>`, `SetOptional<T, Keys>` etc. Improves devx, include as a dev dependency since it’s types only.
+| Package | Verified | When | Gotcha |
+| --- | --- | --- | --- |
+| `type-fest` | 5.8.0 | Branded IDs (`Tagged`), `JsonValue`, `PartialDeep`, `SetOptional`, `LiteralUnion` | The branding type is `Tagged` — there is no usable `Opaque` or `Brand`. Heavy types can slow the language server. |
+| `ts-pattern` | 5.9.0 | Exhaustive pattern matching over discriminated unions | Last publish 2025-10 — stable and feature-complete, not dead. |
+| `es-toolkit` | 1.50.0 | Every lodash-shaped need: `debounce`, `cloneDeep`, `groupBy`, … | `es-toolkit/compat` gives drop-in lodash signatures during migration. |
+| `typeid-js` | 1.2.0 | Type-prefixed, K-sortable IDs (UUIDv7-based) | Last publish 2025-02 — dormant, but the TypeID spec is frozen. Suffix is 26 chars after the prefix. |
+| `tailwind-variants` | 3.3.1 | Variant-based class composition wherever we use Tailwind | — |
 
-We should use `type-fest` for:
-- Creating branded types for IDs (there’s `Opaque` or `Brand` type).
-- Strict typing on JSON (the `JsonValue` type).
-- Deep partial/required or filtering properties.
-- Ensuring literal types via `LiteralUnion` or string transformations, etc.
+## type-fest — branded types via `Tagged`
 
-**WARNING:** Sometimes the advanced types can be heavy on compile time. Don’t overuse to the point TS language server slows down.
+Types only; install as a dev dependency.
 
-## ts-pattern – Pattern Matching for TS - https://github.com/gvergnaud/ts-pattern
-`ts-pattern` provides algebraic pattern matching for TS discriminated unions and other types, with exhaustive checking.
+```ts
+import type { Tagged } from 'type-fest';
 
-We should use `ts-pattern` when:
-- We have a `Result` and want to pattern match `Ok`/`Err` instead of `if/else`.
-- We have complex union types (e.g., different variants of a message or shape).
-- It makes code more declarative. For instance, state machines or reducers can be nicely written with pattern matching.
+type UserId = Tagged<string, 'UserId'>;
+type OrderId = Tagged<string, 'OrderId'>;
 
-Example:
+const userId = 'user_123' as UserId;
+// @ts-expect-error -- an OrderId is not a UserId
+const wrong: OrderId = userId;
+```
 
-  ```
-  import { match, P } from 'ts-pattern';
+## ts-pattern
 
-  type Data =
-    | { type: 'text'; content: string }
-    | { type: 'img'; src: string };
+`.exhaustive()` fails to compile when a union member goes unhandled — prefer it over `.otherwise()`.
 
-  type Result =
-    | { type: 'ok'; data: Data }
-    | { type: 'error'; error: Error };
+```ts
+import { match, P } from 'ts-pattern';
 
-  const result: Result = ...;
+type Data = { type: 'text'; content: string } | { type: 'img'; src: string };
+type Res = { type: 'ok'; data: Data } | { type: 'error'; error: Error };
 
-  const html = match(result)
-    .with({ type: 'error' }, () => <p>Oups! An error occured</p>)
-    .with({ type: 'ok', data: { type: 'text' } }, (res) => <p>{res.data.content}</p>)
-    .with({ type: 'ok', data: { type: 'img', src: P.select() } }, (src) => <img src={src} />)
+export const describe = (res: Res): string =>
+  match(res)
+    .with({ type: 'error' }, ({ error }) => `failed: ${error.message}`)
+    .with({ type: 'ok', data: { type: 'text' } }, ({ data }) => data.content)
+    .with({ type: 'ok', data: { type: 'img', src: P.select() } }, (src) => `img: ${src}`)
     .exhaustive();
-  ```
+```
 
+## es-toolkit
 
-## Tailwind Variants – Utility for Tailwind CSS - https://www.tailwind-variants.org/docs/introduction
-`tailwind-variants` is a library to create variant-based utility classes in Tailwind CSS, making it easier to manage conditional styles. Include it anytime we use Tailwind (basically every project with a Web based frontend, including Tauri apps)
+Always es-toolkit, never lodash: smaller, faster, fully typed. Prefer modern built-ins first (`Array.prototype.at`, `structuredClone`, `Object.groupBy`), es-toolkit for the rest.
 
-Example:
+## typeid-js
 
-  ```
-  import { tv } from 'tailwind-variants';
- 
-  const button = tv({
-    base: 'font-medium bg-blue-500 text-white rounded-full active:opacity-80',
-    variants: {
-      color: {
-        primary: 'bg-blue-500 text-white',
-        secondary: 'bg-purple-500 text-white'
-      },
-      size: {
-        sm: 'text-sm',
-        md: 'text-base',
-        lg: 'px-4 py-3 text-lg'
-      }
-    },
-    compoundVariants: [
-      {
-        size: ['sm', 'md'],
-        class: 'px-3 py-1'
-      }
-    ],
-    defaultVariants: {
-      size: 'md',
-      color: 'primary'
-    }
-  });
-  
-  return (
-    <button className={button({ size: 'sm', color: 'secondary' })}>
-      Click me
-    </button>
-  );
-  ```
+IDs like `user_01m03vvxecexzt16xtnfamrqcj` — a type prefix plus a 26-character base32 UUIDv7 encoding, sortable by creation time. Store as plain strings; with short prefixes they're smaller than a 36-char hyphenated UUID.
 
-## es-toolkit – Modern Lodash Alternative - https://es-toolkit.dev/
+```ts
+import { typeid, TypeID } from 'typeid-js';
 
-`es-toolkit` is a utility library aiming to replace Lodash with faster, smaller implementations of common helpers. **Always** use `es-toolkit` in place of lodash.
+const id = typeid('user'); // TypeID<'user'>
+const str = id.toString(); // `user_${string}`, 26-char suffix
+export const parsed = TypeID.fromString(str, 'user');
+```
 
-We should:
-- Replace any Lodash usage with `es-toolkit` equivalents.
-- If a dev needs to do something like `debounce` or `deepClone`, reach for `es-toolkit` first.
+`TypeID<'user'>` is branded, so mixing ID kinds fails at compile time. Recency caveat: no release since 2025-02. The spec is stable so we keep using it, but re-check maintenance before adopting it in a new service.
 
-## typeid-js – Type-safe Unique IDs - https://github.com/jetify-com/typeid-js
-`typeid-js` implements TypeIDs – a format for unique IDs that include a type prefix and are k-sortable (based on time, like UUIDv7).
+## tailwind-variants
 
-Using TypeIDs in our projects:
-- It can replace using UUIDs for database primary keys or identifiers. Instead of a bare UUID string `"123e4567-e89b-12d3..."`, you have `"user_2x4y6..."`.
-- **Type safety**: with their TS lib, we can create a `TypeID<'user'>` which is a branded string that ensures at compile time you don't mix IDs of different types.
+```ts
+import { tv } from 'tailwind-variants';
 
-We should ensure:
-- Our DB fields can accommodate slightly longer strings (TypeID is 27 chars after prefix vs UUID 36 chars with hyphens, so length is fine).
-- We have to update any client code that might assume ID format (but if it's all new dev, just standardize on this).
+const button = tv({
+  base: 'rounded-full font-medium text-white',
+  variants: {
+    color: { primary: 'bg-blue-500', secondary: 'bg-purple-500' },
+    size: { sm: 'px-3 py-1 text-sm', lg: 'px-4 py-3 text-lg' },
+  },
+  defaultVariants: { color: 'primary', size: 'sm' },
+});
 
-We will:
-- Add `typeid-js` to back-end services where we generate IDs (like in a `createUser` function, use `TypeID` instead of `uuid`).
-- Possibly store them as strings in DB (just treat as strings).
-- On the client side, if using TypeScript, we could also leverage the `TypeID` type for better type checking.
+export const cls: string = button({ size: 'lg', color: 'secondary' });
+```
 
-Example:
+## Do not reach for
 
-  ```
-  import { typeid } from 'typeid-js';
-  const tid = typeid('prefix');
-  ```
+- `lodash` / `lodash-es` → `es-toolkit`.
+- type-fest `Opaque` / `UnwrapOpaque` → `Tagged` / `UnwrapTagged`.
+- `uuid` for new identifiers → `typeid-js`, or `crypto.randomUUID()` when a plain UUID is required.
 
-## Conclusion on Utilities
-
-We prefer to use small, focused utilities over writing our own one-off implementations (which may be error-prone). However, we also avoid adding too many trivial dependencies:
-
-- Many simple things can be done with modern JS (e.g., `Array.at(-1)` instead of Lodash `_.last`).
-- For those that can’t, we use the above libraries.
-
-Our choices lean toward well-maintained, modern, typed libraries (`type-fest`, `es-toolkit`, `ts-pattern`, etc.) and away from older or unmaintained ones.
-
-By following these guidelines, we keep our codebase modern, reduce bugs, and ensure we’re not re-solving solved problems. Each addition to our toolkit is justified by clear benefits and checked for long-term viability, consistent with our dependency guidelines (see `dependencies.md`).
+Prefer these small, focused, typed libraries over one-off hand-rolled helpers — but don't add trivial dependencies for things modern JS already does. Justify each addition per `dependencies.md`.

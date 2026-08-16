@@ -1,62 +1,20 @@
-# Core Principles
+# TypeScript Principles
 
-## General Rules
+Compiler posture lives in [strict-configuration.md](strict-configuration.md); this file is the type-safety stance behind it.
 
-- TypeScript only (strict mode on)
-- Follow the [naming conventions](naming.md)
-- All code must have zero linter, formatter, and type checker errors or warnings
-- Before writing a custom hook check [usehooks](https://github.com/uidotdev/usehooks)
-- Always use the most recent version of all dependencies
-- Always use pnpm
+## Type-safety posture
 
-## Simplicity & Pragmatism (KISS + YAGNI)
+- **`unknown` over `any`, always.** `any` is only acceptable inside a narrow, commented shim around an untyped dependency — and prefer writing a minimal module declaration instead.
+- **Parse, don't validate, at boundaries.** Data entering the system (HTTP bodies, env vars, file/DB reads, LLM output) is `unknown` until parsed by a schema into a domain type. A boolean "is valid" check that leaves the value typed as `any`/broad is a bug factory; the parse result is the only typed value downstream code sees.
+- **Exhaustiveness is compiler-enforced.** Discriminated unions end in `.exhaustive()` (ts-pattern) or a `default` that assigns to `never`; `Record<UnionType, …>` maps use `satisfies` so adding a variant breaks the build, not production.
+- **Type assertions (`as`) are boundary tools**, paired with a runtime check or a comment explaining why the compiler can't see the truth. An `as` mid-function is usually a design smell.
 
-Do the simplest thing that works today. Avoid speculative architecture.
+## Annotations vs inference
 
-- No "in case we need it later" hooks, contexts, caching layers, or utilities
-- If a component's responsibility fits in a sentence, it's scoped correctly
-- Dependencies must **earn their place**
+Annotate where types are contracts; infer where they're plumbing:
 
-> Perfect architecture that ships nothing is worse than imperfect UI that works.
+- Explicit return types on exported/public functions — they stop accidental API changes and speed up the checker.
+- Explicit types at module boundaries and empty containers (`const xs: Order[] = []`).
+- Everything else: let inference work, and reach for `satisfies` when you want checking without widening (see [patterns.md](patterns.md)).
 
-## User Experience First
-
-UI should be obvious, predictable, and kind.
-
-- Errors must be understandable and actionable
-- Async UX must always handle loading, error, empty, and success
-- Don't force users to infer intent — show what's happening and why
-
-> You are designing for someone under pressure. Help them.
-
-## Make It Work, Then Make It Fast
-
-Correctness and clarity come before optimization.
-
-- Only optimize when measurement proves a bottleneck
-- Memoization should prevent real cost, not theoretical cost
-- UI should be correct first, then efficient
-
-> Fast wrong UI is worse than slow correct UI.
-
-## Build for Joy, Not Scale
-
-The codebase should feel pleasant and obvious to work in.
-
-- Names should read like clear English
-- Components should be predictable and composable
-- Delight comes from clarity, not clever code
-
-> The best frontend feels like a well-made tool: effortless, reliable, enjoyable.
-
-## Final Directive
-
-When in doubt, choose the path that:
-
-1. Keeps the UI simple and obvious
-2. Feels predictable and enjoyable to work on
-3. Avoids abstractions until they are proven necessary
-4. Uses composition over configuration
-5. Favors clarity and real-world UX over clever code
-
-**If something hurts: simplify it, don't complicate it.**
+Dependency and version policy is owned by [dependencies.md](dependencies.md) — this file intentionally says nothing about it.
