@@ -38,7 +38,7 @@ For code-review checklists use the `devs:code-review` skill; for dependency audi
 
 - `${CLAUDE_SKILL_DIR}/scripts/init_python_project.sh <name> [package|fastapi]` — scaffold via `uv init` (src layout), append the `[tool.*]` policy tables, dev tools in the PEP 735 dev group, starter test; self-verifies with ruff + mypy + pytest before reporting success.
 - `${CLAUDE_SKILL_DIR}/scripts/setup_logging.sh` — `uv add structlog` plus a `logging_config.py` (console on TTY, JSON otherwise); refuses to overwrite an existing one.
-- `${CLAUDE_SKILL_DIR}/scripts/audit_dependencies.sh` — pip-audit over the `uv export`ed lockfile (ephemeral via uvx — nothing installed into any environment) plus `uv tree --outdated`; non-zero exit on findings.
+- `${CLAUDE_SKILL_DIR}/scripts/audit_dependencies.sh` — `uv audit` (falling back with instructions when the installed uv predates it) plus `uv tree --outdated`; non-zero exit on findings or when the vulnerability check cannot run.
 
 ## Config template (`${CLAUDE_SKILL_DIR}/assets/configs/`)
 

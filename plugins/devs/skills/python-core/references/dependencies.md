@@ -54,17 +54,16 @@ Groups are private: never published, installed by `uv sync` by default (`--no-de
 ## Auditing and upgrades
 
 ```bash
-uv tree --outdated                          # deps with latest available versions
-uv export --format requirements-txt -o reqs.txt
-uvx pip-audit -r reqs.txt --disable-pip     # → "No known vulnerabilities found"
+uv tree --outdated       # deps with latest available versions
+uv audit                 # built-in vulnerability audit over the lockfile (--output-format json for machine output)
 ```
 
-`uvx` runs tools in ephemeral envs — never add linters or auditors to the project just to run them.
+`uv audit` is built into current uv — probe with `uv audit --help`; if the installed uv predates it, upgrade uv rather than adding auditors to the project. The full audit command surface (ignores, tool audits, output formats) lives in deps-core's python reference.
 
 ## Migrating
 
 - From `requirements.txt`: `uv init && uv add -r requirements.txt` (and `uv add --dev -r requirements-dev.txt`).
-- From Poetry/Pipenv/pip-tools: `uvx migrate-to-uv` converts metadata and lockfile in place.
+- From Poetry/Pipenv/pip-tools: `sfw uvx migrate-to-uv` converts metadata and lockfile in place (Socket Firewall wrapping is what makes the one-shot run sanctioned — bare `uvx` is blocked in this environment).
 - Stop generating `pip freeze > requirements.txt`. If a consumer needs one, `uv export` it from the lockfile.
 
 ## `uv pip`: the escape hatch

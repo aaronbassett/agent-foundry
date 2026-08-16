@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Audit Python dependencies: known vulnerabilities (pip-audit over the exported
+# Audit Python dependencies: known vulnerabilities (uv audit over the
 # lockfile) and outdated packages (uv tree). Never installs into any
-# environment — pip-audit runs ephemerally via uvx. Runs every available check
-# even if an earlier one fails. Exit code: non-zero if a check that ran failed.
+# environment. Runs every available check even if an earlier one fails.
+# Exit code: non-zero if a check that ran failed.
 
 if [[ ! -f pyproject.toml ]]; then
     echo "No pyproject.toml in $(pwd) — run from the project root." >&2
@@ -18,15 +18,14 @@ fi
 
 failed=0
 
-echo "── Known vulnerabilities (pip-audit over uv.lock export) ──"
+echo "── Known vulnerabilities (uv audit) ──"
 if [[ -f uv.lock ]]; then
-    reqs="$(mktemp)"
-    trap 'rm -f "$reqs"' EXIT
-    if uv export --format requirements-txt --no-emit-project -o "$reqs" 2>/dev/null \
-        || uv export --format requirements-txt -o "$reqs"; then
-        uvx pip-audit -r "$reqs" --disable-pip || failed=1
+    if uv audit --help >/dev/null 2>&1; then
+        uv audit || failed=1
     else
-        echo "⚠ uv export failed — cannot audit." >&2
+        echo "⚠ This uv ($(uv --version 2>/dev/null)) lacks 'uv audit' — upgrade uv to get the built-in auditor." >&2
+        echo "  Until then, audit the exported lockfile in an environment that already has pip-audit:" >&2
+        echo "    uv export --no-emit-project -o requirements-audit.txt && pip-audit -r requirements-audit.txt" >&2
         failed=1
     fi
 else

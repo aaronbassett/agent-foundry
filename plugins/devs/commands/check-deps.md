@@ -1,77 +1,57 @@
 ---
 name: devs:check-deps
-description: Scan a project for all dependency ecosystems (TypeScript, Rust, Python) and run concurrent health checks across each one. Reports outdated packages, security vulnerabilities, and dependency status.
-allowed-tools: Agent, Glob, Read, Bash, AskUserQuestion
-argument-hint: "[path or ecosystem filter]"
+description: Detect every dependency ecosystem in a project (TypeScript/JavaScript, Rust, Python), identify each one's package manager and workspace root, and run concurrent read-only health checks — vulnerabilities, outdated packages, and hygiene — consolidated into one severity-ranked report.
+allowed-tools: ["Task", "Agent", "Read", "Glob", "Grep", "Bash"]
+argument-hint: "[path | typescript | rust | python]"
 ---
 
-Check project dependencies across all detected ecosystems by dispatching concurrent agents.
+Check project dependencies across all detected ecosystems by dispatching concurrent read-only `devs:deps-maintenance` agents.
 
-## Input Handling
+## Step 1 — Detect ecosystems, package managers, and workspace roots
 
-- **No arguments**: scan the current working directory
-- **Path argument**: scan that directory (e.g., `$ARGUMENTS` is a path)
-- **Ecosystem filter**: if `$ARGUMENTS` is "typescript", "rust", or "python", only check that ecosystem
+Target directory: `$ARGUMENTS` if it is a path, else the current working directory. If `$ARGUMENTS` is `typescript`, `rust`, or `python`, detect everything but dispatch only that ecosystem.
 
-## Step 1: Detect Ecosystems
+Find manifests (cap depth at 4; exclude `node_modules/`, `target/`, `.venv/`, `dist/`, `build/`):
 
-Scan the project root (or provided path) for manifest files. Exclude dependency directories:
+- `package.json` → typescript
+- `Cargo.toml` → rust
+- `pyproject.toml`, `requirements.txt` → python
 
-```
-Glob for:
-  - **/package.json (exclude node_modules/**)
-  - **/Cargo.toml (exclude target/**)
-  - **/pyproject.toml (exclude .venv/**)
-  - **/requirements.txt (exclude .venv/**)
-```
+**Collapse to workspace roots — one dispatch per root, not per manifest.** A `package.json` with a `workspaces` field, a directory with `pnpm-workspace.yaml`, a `Cargo.toml` with `[workspace]`, or a `pyproject.toml` with `[tool.uv.workspace]` is a root; its member manifests are covered by it and get no separate dispatch.
 
-Classify findings:
+**Identify the package manager per root** using the deps-core detection order: the `packageManager` field first, then the lockfile (`pnpm-lock.yaml`/`package-lock.json`/`yarn.lock`/`bun.lock`/`bun.lockb`; `uv.lock`/`poetry.lock`/`Pipfile.lock`/`requirements.txt`). Record it — the report headings use the detected manager, and a missing or duplicated lockfile is itself a finding to pass along.
 
-| Files Found | Ecosystem |
-|---|---|
-| Any `package.json` | typescript |
-| Any `Cargo.toml` | rust |
-| Any `pyproject.toml` or `requirements.txt` | python |
+If nothing is found, reply:
 
-If `$ARGUMENTS` is an ecosystem name, only report that ecosystem even if others are present.
+> No supported dependency manifests found. Supported: TypeScript/JavaScript (package.json), Rust (Cargo.toml), Python (pyproject.toml / requirements.txt).
 
-## Step 2: Handle No Results
+## Step 2 — Dispatch one agent per ecosystem, concurrently
 
-If no manifest files found:
+Each `devs:deps-maintenance` agent receives:
 
-> No supported dependency manifests found in this project. Supported ecosystems: TypeScript (package.json), Rust (Cargo.toml), Python (pyproject.toml / requirements.txt).
+- Its ecosystem, detected package manager, and workspace root path(s).
+- The mandate: "**Read-only run — change nothing.** Check for security vulnerabilities and outdated dependencies using the detected package manager's commands (prefer built-in auditors). If a needed tool is not installed, report the gap — do not install anything. Report findings grouped by severity; include the exact remediation commands a human would run, respecting the environment's install policy (sfw-wrapped, no npx). State every command you ran. If everything is clean, say so explicitly."
 
-## Step 3: Dispatch Agents
+Dispatch all ecosystems in a single message so they run concurrently.
 
-**Single ecosystem detected (or filtered):**
+## Step 3 — Consolidate
 
-Dispatch one `devs:deps-maintenance` agent with:
-- The ecosystem name
-- The manifest file path(s)
-- Instruction: "Check for outdated dependencies and security vulnerabilities. Report findings grouped by severity."
-
-**Multiple ecosystems detected:**
-
-Dispatch one `devs:deps-maintenance` agent **per ecosystem, concurrently**. Each receives:
-- Its specific ecosystem name (e.g., "typescript", "rust", "python")
-- The manifest file path(s) for that ecosystem
-- Instruction: "Focus on the [ecosystem] dependencies only. Check for outdated dependencies and security vulnerabilities. Report findings grouped by severity."
-
-## Step 4: Present Results
-
-Collect results from all agents and present a consolidated report:
+Merge the agents' reports into one, using the cross-ecosystem severity normalization from `devs:deps-core`:
 
 ```
 ## Dependency Health Report
 
-### TypeScript (npm)
-[agent results]
+### Security vulnerabilities        ← always first; "None found" if clean
+[package, severity (source scale), dependency path, fixed version,
+ non-breaking remediation yes/no — worst first, across all ecosystems]
 
-### Rust (cargo)
-[agent results]
+### <Ecosystem> (<detected package manager>)
+[outdated by semver impact: major / minor / patch]
+[hygiene: missing or duplicate lockfiles, legacy lockfile formats,
+ absent tooling worth having]
 
-### Python (poetry)
-[agent results]
+### Recommended actions
+[exact commands in order, sfw-wrapped where mutating]
 ```
 
-If any ecosystem had security vulnerabilities, highlight them at the top of the report.
+If any agent could not complete a check (missing tool, network failure), list it under the ecosystem as "not checked: <what> — <why>" rather than silently omitting it.

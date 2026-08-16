@@ -72,3 +72,13 @@ jobs:
 
       - name: Smoke test react-core templates and react-components scaffold
         run: bash scripts/ci/smoke-react.sh
+
+  smoke-review-deps-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test code-review, deps-core, and security-core skills
+        run: bash scripts/ci/smoke-review-deps-security.sh
