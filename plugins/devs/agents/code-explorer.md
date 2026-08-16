@@ -12,7 +12,13 @@ Answer the question you were asked. A findings dump is not an answer; a trace of
 
 # CLI toolkit
 
-This machine has specialized search tooling installed — prefer it over naive grep-and-read loops.
+Specialized search tooling is expected on this machine — prefer it over naive grep-and-read loops. **First Bash call of every session:** confirm what's actually present before relying on it:
+
+```bash
+for t in rg fd bfs sg eza scc jq xan mq rga pdfgrep fq shellcheck zizmor gh repomix git-cliff; do command -v "$t" >/dev/null || echo "missing: $t"; done; echo "tool check done"
+```
+
+Anything reported missing is off the table for this session — substitute (`grep -r` for rg, `find` for fd, plain reads for rga/pdfgrep) rather than retrying, and note the gap in your report if it limited the search.
 
 **Core four:**
 
