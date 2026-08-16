@@ -1,211 +1,234 @@
 #!/usr/bin/env node
+// Scaffold a feature component: typed query stub, container, four-state view,
+// CSF3 stories, and a Vitest + Testing Library test.
+//
+// Usage: node scaffold-component.mjs <featureName> <ComponentName>
+//   <featureName>    camelCase feature directory, e.g. "billing"
+//   <ComponentName>  PascalCase component base name, e.g. "RevenueCard"
+//
+// Run from the project root. Existing files are never overwritten.
 
-import { fileURLToPath } from 'url';
-import path from 'path';
-import fs from 'fs';
-
-// Get __dirname equivalent in ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import fs from 'node:fs';
+import path from 'node:path';
 
 const [featureName, componentName] = process.argv.slice(2);
 
-if (!featureName || !componentName) {
-  console.error('Usage: node scaffold-component.mjs <featureName> <ComponentName>');
-  console.error('Example: node scaffold-component.mjs userProfile UserProfileCard');
+function fail(...lines) {
+  for (const line of lines) console.error(line);
   process.exit(1);
 }
 
-const targetDir = path.join(process.cwd(), `src/features/${featureName}/components`);
-const containerPath = path.join(targetDir, `${componentName}Container.tsx`);
-const viewPath = path.join(targetDir, `${componentName}View.tsx`);
-const storiesPath = path.join(targetDir, `${componentName}View.stories.tsx`);
+if (!featureName || !componentName) {
+  fail(
+    'Usage: node scaffold-component.mjs <featureName> <ComponentName>',
+    'Example: node scaffold-component.mjs billing RevenueCard',
+  );
+}
 
-// Ensure target directory exists
-fs.mkdirSync(targetDir, { recursive: true });
+// A single safe path segment: letters and digits only, so separators,
+// "..", and every other traversal spelling are rejected outright.
+if (!/^[a-z][A-Za-z0-9]*$/.test(featureName)) {
+  fail(
+    `Invalid featureName "${featureName}".`,
+    'Expected a camelCase path segment (letters and digits only), e.g. "userProfile".',
+  );
+}
 
-const toCamelCase = (name) => name.charAt(0).toLowerCase() + name.slice(1);
-const componentNameCamel = toCamelCase(componentName);
-const featureNameCamel = toCamelCase(featureName);
+if (!/^[A-Z][A-Za-z0-9]*$/.test(componentName)) {
+  fail(
+    `Invalid ComponentName "${componentName}".`,
+    'Expected PascalCase (letters and digits only), e.g. "RevenueCard".',
+  );
+}
 
-const containerContent = `// src/features/${featureName}/components/${componentName}Container.tsx
-import { ${componentName}View } from './${componentName}View';
-// TODO: Replace with your actual data fetching hook
-import { use${componentName}Query } from '../api/use${componentName}Query';
+const name = componentName;
 
-interface ${componentName}Data {
-  // Define your data structure here
+const queryContent = `import { useEffect, useState } from 'react';
+
+export interface ${name}Data {
   id: string;
   name: string;
 }
 
-export function ${componentName}Container() {
-  // TODO: Implement your actual data fetching logic
-  const { data, error, isLoading } = use${componentName}Query();
+interface ${name}QueryState {
+  data: ${name}Data | null;
+  error: Error | null;
+  isLoading: boolean;
+}
 
-  if (isLoading) return <${componentName}View state="loading" />; 
-  if (error) return <${componentName}View state="error" message={error.message} />;
-  if (!data) return <${componentName}View state="empty" />;
+export function use${name}Query(): ${name}QueryState {
+  const [state, setState] = useState<${name}QueryState>({
+    data: null,
+    error: null,
+    isLoading: true,
+  });
 
-  return <${componentName}View state="ready" data={data} />;
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load(): Promise<void> {
+      try {
+        // TODO: replace with the real data source for the ${featureName} feature.
+        const data: ${name}Data = { id: 'todo', name: 'TODO' };
+        if (!cancelled) setState({ data, error: null, isLoading: false });
+      } catch (caught) {
+        const error = caught instanceof Error ? caught : new Error(String(caught));
+        if (!cancelled) setState({ data: null, error, isLoading: false });
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return state;
 }
 `;
 
-const viewContent = `// src/features/${featureName}/components/${componentName}View.tsx
-import React from 'react';
+const containerContent = `import type { ReactElement } from 'react';
 
-interface ${componentName}Data {
-  // Define your data structure here
-  id: string;
-  name: string;
+import { use${name}Query } from '../api/use${name}Query';
+import { ${name}View } from './${name}View';
+
+export function ${name}Container(): ReactElement {
+  const { data, error, isLoading } = use${name}Query();
+
+  if (isLoading) return <${name}View state="loading" />;
+  if (error) return <${name}View state="error" message={error.message} />;
+  if (!data) return <${name}View state="empty" />;
+
+  return <${name}View state="ready" data={data} />;
 }
+`;
 
-export type ${componentName}ViewProps =
+const viewContent = `import type { ReactElement } from 'react';
+
+import type { ${name}Data } from '../api/use${name}Query';
+
+export type ${name}ViewProps =
   | { state: 'loading' }
-  | { state: 'error'; message: string }
   | { state: 'empty' }
-  | { state: 'ready'; data: ${componentName}Data };
+  | { state: 'error'; message: string }
+  | { state: 'ready'; data: ${name}Data };
 
-export function ${componentName}View(props: ${componentName}ViewProps) {
+export function ${name}View(props: ${name}ViewProps): ReactElement {
   switch (props.state) {
     case 'loading':
-      return <div className="p-4 text-center text-gray-500">Loading ${componentNameCamel}...</div>;
-    case 'error':
-      return <div className="p-4 text-center text-red-500">Error: {props.message}</div>;
-    case 'empty':
-      return <div className="p-4 text-center text-gray-500">No ${componentNameCamel} data available.</div>;
-    case 'ready':
       return (
-        <div className="p-4 border rounded-lg shadow-sm">
-          <h2 className="text-xl font-semibold">Hello, {props.data.name}!</h2>
-          <p className="text-gray-600">ID: {props.data.id}</p>
-          {/* TODO: Implement your actual UI for the ready state */}
+        <div role="status" className="p-4 text-center text-gray-500">
+          Loading…
         </div>
       );
-    default:
-      return null;
+    case 'empty':
+      return <div className="p-4 text-center text-gray-500">Nothing here yet.</div>;
+    case 'error':
+      return <div className="p-4 text-center text-red-600">{props.message}</div>;
+    case 'ready':
+      return (
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="text-xl font-semibold">{props.data.name}</h2>
+          <p className="text-gray-600">ID: {props.data.id}</p>
+        </div>
+      );
+    default: {
+      const unreachable: never = props;
+      throw new Error(\`Unhandled state: \${JSON.stringify(unreachable)}\`);
+    }
   }
 }
 `;
 
-const storiesContent = `// src/features/${featureName}/components/${componentName}View.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
-import { ${componentName}View, type ${componentName}ViewProps } from './${componentName}View';
-import { HttpResponse, http, delay } from 'msw';
+const storiesContent = `import type { Meta, StoryObj } from '@storybook/react-vite';
 
-// Mock data for the ready state
-const mock${componentName}Data = {
-  id: 'abc-123',
-  name: 'Jane Doe',
-};
-
-// Define a mock query hook (replace with your actual one if it exists)
-const use${componentName}Query = () => {
-  return { data: mock${componentName}Data, error: null, isLoading: false };
-};
-
+import { ${name}View } from './${name}View';
 
 const meta = {
-  title: 'Features/${featureNameCamel}/${componentName}View',
-  component: ${componentName}View,
+  title: 'Features/${featureName}/${name}View',
+  component: ${name}View,
   tags: ['autodocs'],
-  argTypes: {
-    state: {
-      control: 'select',
-      options: ['loading', 'error', 'empty', 'ready'],
-      description: 'The current state of the component',
-    },
-    message: {
-      control: 'text',
-      description: 'Error message (only for error state)',
-    },
-    data: {
-      control: 'object',
-      description: 'Data to display (only for ready state)',
-    },
-  },
-  parameters: {
-    // Add MSW handlers for API mocking if needed
-    msw: {
-      handlers: [
-        http.get('/api/${featureNameCamel}/${componentNameCamel}', () => {
-          return HttpResponse.json(mock${componentName}Data);
-        }),
-      ],
-    },
-  },
-} satisfies Meta<typeof ${componentName}View>;
+} satisfies Meta<typeof ${name}View>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Loading: Story = {
-  args: {
-    state: 'loading',
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/${featureNameCamel}/${componentNameCamel}', async () => {
-          await delay('infinite'); // Simulate loading
-          return HttpResponse.json({});
-        }),
-      ],
-    },
-  },
-};
+export const Loading: Story = { args: { state: 'loading' } };
 
-export const Empty: Story = {
-  args: {
-    state: 'empty',
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/${featureNameCamel}/${componentNameCamel}', () => {
-          return HttpResponse.json({}); // Empty response
-        }),
-      ],
-    },
-  },
-};
+export const Empty: Story = { args: { state: 'empty' } };
 
-export const Error: Story = {
-  args: {
-    state: 'error',
-    message: 'Failed to fetch ${componentNameCamel} data.',
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/${featureNameCamel}/${componentNameCamel}', () => {
-          return new HttpResponse(null, { status: 500 }); // Simulate error
-        }),
-      ],
-    },
-  },
+export const ErrorState: Story = {
+  name: 'Error',
+  args: { state: 'error', message: 'Something went wrong.' },
 };
 
 export const Ready: Story = {
-  args: {
-    state: 'ready',
-    data: mock${componentName}Data,
-  },
+  args: { state: 'ready', data: { id: 'demo-1', name: 'Demo' } },
 };
 `;
 
-try {
-  fs.writeFileSync(containerPath, containerContent);
-  console.log(`Created: ${containerPath}`);
-  fs.writeFileSync(viewPath, viewContent);
-  console.log(`Created: ${viewPath}`);
-  fs.writeFileSync(storiesPath, storiesContent);
-  console.log(`Created: ${storiesPath}`);
+const testContent = `/** @vitest-environment jsdom */
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
-  console.log(`\nComponent '${componentName}' for feature '${featureName}' scaffolded successfully.`);
-  console.log('Remember to update `src/features/' + featureName + '/api/use' + componentName + 'Query.ts` (or equivalent) for data fetching.');
-  console.log('And `src/features/' + featureName + '/types/' + featureName + '.types.ts` for actual data types.');
-} catch (error) {
-  console.error('Error creating component files:', error);
-  process.exit(1);
+import { ${name}View } from './${name}View';
+
+afterEach(cleanup);
+
+describe('${name}View', () => {
+  it('renders the loading state with a status role', () => {
+    render(<${name}View state="loading" />);
+    expect(screen.getByRole('status')).toBeDefined();
+  });
+
+  it('renders the empty state', () => {
+    render(<${name}View state="empty" />);
+    expect(screen.getByText('Nothing here yet.')).toBeDefined();
+  });
+
+  it('renders the error message', () => {
+    render(<${name}View state="error" message="Something went wrong." />);
+    expect(screen.getByText('Something went wrong.')).toBeDefined();
+  });
+
+  it('renders the ready state', () => {
+    render(<${name}View state="ready" data={{ id: 'demo-1', name: 'Demo' }} />);
+    expect(screen.getByText('Demo')).toBeDefined();
+  });
+});
+`;
+
+const featureRoot = path.join(process.cwd(), 'src', 'features', featureName);
+const apiDir = path.join(featureRoot, 'api');
+const componentsDir = path.join(featureRoot, 'components');
+
+const targets = [
+  { filePath: path.join(apiDir, `use${name}Query.ts`), content: queryContent },
+  { filePath: path.join(componentsDir, `${name}Container.tsx`), content: containerContent },
+  { filePath: path.join(componentsDir, `${name}View.tsx`), content: viewContent },
+  { filePath: path.join(componentsDir, `${name}View.stories.tsx`), content: storiesContent },
+  { filePath: path.join(componentsDir, `${name}View.test.tsx`), content: testContent },
+];
+
+const existing = targets.filter(target => fs.existsSync(target.filePath));
+if (existing.length > 0) {
+  fail(
+    'Refusing to overwrite existing files:',
+    ...existing.map(target => `  ${target.filePath}`),
+    'Move or delete them first, or pick a different ComponentName.',
+  );
 }
+
+try {
+  fs.mkdirSync(apiDir, { recursive: true });
+  fs.mkdirSync(componentsDir, { recursive: true });
+  for (const target of targets) {
+    fs.writeFileSync(target.filePath, target.content, { flag: 'wx' });
+    console.log(`Created ${path.relative(process.cwd(), target.filePath)}`);
+  }
+} catch (error) {
+  fail(`Scaffolding failed: ${error instanceof Error ? error.message : String(error)}`);
+}
+
+console.log(`\nScaffolded ${name} in src/features/${featureName}.`);
+console.log(`Next: implement use${name}Query and replace the placeholder ${name}Data fields.`);

@@ -1,184 +1,99 @@
 # Component Patterns
 
-## Table of Contents
+The house contract for authoring components. Runtime and architecture concerns (state management, data fetching, performance) belong to the react-core skill; language and test mechanics belong to typescript-core.
 
-1. [One Component, One Responsibility](#one-component-one-responsibility)
-2. [Headless Components](#headless-components)
-3. [Container/Presenter Pattern](#containerpresenter-pattern)
-4. [Composition Over Configuration](#composition-over-configuration)
-5. [UI Component Rules](#ui-component-rules)
+## Container/Presenter Split
 
----
+Every feature component is a file triad:
 
-## One Component, One Responsibility
+```
+src/features/<feature>/components/
+├─ <Name>Container.tsx        # owns data: hooks, queries, callbacks
+├─ <Name>View.tsx             # pure: props in, JSX out
+└─ <Name>View.stories.tsx     # one story per canonical state
+```
 
-Each unit must do exactly one job clearly.
+Generate it with the scaffold script, run from the project root (alongside the triad it also emits a query-hook stub under `api/` and a View test):
 
-- **Containers**: fetch/derive/manage remote state → no markup complexity
-- **Presenters**: render UI → no queries/mutations/side effects
-- **Custom hooks**: encapsulate reusable logic → no JSX
-- A UI component must never validate schema logic or fetch data
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/scaffold-component.mjs <featureName> <ComponentName>
+```
 
-> Predictable code is easy to debug, test, reuse, and delete.
+- **Container** — calls hooks and queries, decides which state the View is in, passes data down. No markup beyond rendering the View.
+- **View** — renders from props alone. No data fetching, no side effects, no async. Testable and storybookable in isolation.
+- **Custom hooks** — reusable logic, no JSX.
 
----
+## The Four Canonical States
 
-## Headless Components
-
-Build components that separate logic from presentation.
-
-See [headless-components.md](headless-components.md) for comprehensive guidance on implementing headless components with Radix-style composition.
-
----
-
-## Container/Presenter Pattern
-
-Keep stateful logic (data fetching, auth, feature flags) in a container, and make the presentational component dumb, token-driven, and storybooked. Avoid large components with nested rendering functions.
-
-### Example Implementation
+Every View models exactly four states — `loading`, `empty`, `error`, `ready` — as a discriminated union prop. Do not invent new ones; a new variant belongs inside one of the four. Every View handles all four; stories cover all four.
 
 ```tsx
-// Container: owns data fetching, retries, and access checks
-export function RevenueCardContainer() {
-  const { data, error, isLoading } = useRevenue()
-
-  if (isLoading) return <RevenueCardView state="loading" />
-  if (error) return <RevenueCardView state="error" message="Revenue unavailable" />
-  if (!data || data.value === 0) return <RevenueCardView state="empty" message="No revenue yet" />
-
-  return <RevenueCardView state="ready" value={data.value} previousValue={data.previousValue} />
+interface RevenueData {
+  value: number;
+  previousValue: number;
 }
 
-// Presentational: pure UI, tokens only
-export function RevenueCardView({ state, value, previousValue, message }: RevenueCardViewProps) {
-  if (state === 'loading') return <MetricCard loading label="Revenue" />
-  if (state === 'error') return <MetricCard label="Revenue" error message={message} />
-  if (state === 'empty') return <MetricCard label="Revenue" empty message={message} />
+type RevenueCardViewProps =
+  | { state: "loading" }
+  | { state: "empty"; message: string }
+  | { state: "error"; message: string }
+  | { state: "ready"; data: RevenueData };
 
-  return (
-    <MetricCard label="Revenue" value={value} previousValue={previousValue} format="currency" />
-  )
+export function RevenueCardView(props: RevenueCardViewProps) {
+  switch (props.state) {
+    case "loading":
+      return <p role="status">Loading revenue…</p>;
+    case "empty":
+      return <p role="status">{props.message}</p>;
+    case "error":
+      return <p role="alert">{props.message}</p>;
+    case "ready":
+      return <p>{props.data.value.toLocaleString()}</p>;
+  }
+}
+
+// Declared here for the example — in real code this is the feature's query hook.
+declare function useRevenueQuery(): {
+  data: RevenueData | undefined;
+  error: Error | null;
+  isLoading: boolean;
+};
+
+export function RevenueCardContainer() {
+  const { data, error, isLoading } = useRevenueQuery();
+
+  if (isLoading) return <RevenueCardView state="loading" />;
+  if (error) return <RevenueCardView state="error" message="Revenue unavailable" />;
+  if (!data) return <RevenueCardView state="empty" message="No revenue yet" />;
+  return <RevenueCardView state="ready" data={data} />;
 }
 ```
 
-### Storybook Contract
+The union makes illegal states unrepresentable: only `ready` carries data, `empty` and `error` carry a message, and the exhaustive switch turns an unhandled state into a type error.
 
-Capture the four canonical states—loading, empty, error, ready—do not invent new ones.
+Stories mirror the union:
 
 ```tsx
 // RevenueCardView.stories.tsx
-export const Loading = { args: { state: 'loading' } }
-export const Empty = { args: { state: 'empty', message: 'No revenue yet' } }
-export const Error = { args: { state: 'error', message: 'Revenue unavailable' } }
-export const Ready = { args: { state: 'ready', value: 124500, previousValue: 110600 } }
-
-// Playground: single canvas to view all states side by side
-export const Playground = {
-  render: () => (
-    <div className="grid gap-4 md:grid-cols-2">
-      <RevenueCardView state="loading" />
-      <RevenueCardView state="empty" message="No revenue yet" />
-      <RevenueCardView state="error" message="Revenue unavailable" />
-      <RevenueCardView state="ready" value={124500} previousValue={110600} />
-    </div>
-  ),
-}
+export const Loading = { args: { state: "loading" } };
+export const Empty = { args: { state: "empty", message: "No revenue yet" } };
+export const ErrorState = { args: { state: "error", message: "Revenue unavailable" } };
+export const Ready = { args: { state: "ready", data: { value: 124500, previousValue: 110600 } } };
 ```
 
-> To learn how to mock the API requests needed for container component stories and write interactive tests, see the [Advanced Storybook Guide](references/advanced-storybook.md).
+For interactive stories, MDX docs, and mocking the container's queries, see [storybook.md](storybook.md).
 
-Containers stay thin and easy to regenerate. Presentational pieces stay consistent, testable, and visualized.
+## Composition Rules
 
----
+- **Children and slots over prop explosion.** When props multiply to configure sub-parts (toolbar options, footer options, per-region renderers), split the component into composable parts — `Table.Toolbar`, `Table.Body`, `Table.Pagination` — and let consumers arrange JSX instead of memorising prop interactions. See [headless-components.md](headless-components.md) for compound components.
+- **Controlled vs uncontrolled.** A stateful prop is either controlled (`value` + `onChange` owned by the parent) or uncontrolled (`defaultValue` + internal state) — support one or both pairs, never a hybrid.
+- **Naming.** Event props are `on<Event>` (`onValueChange`); internal handlers are `handle<Event>`; the props type is `<Component>Props`.
 
-## Composition Over Configuration
+## UI Source Priority
 
-### No God Components
+1. Existing components in `components/ui`
+2. Installed primitives — check `package.json`; the installed stack is the convention
+3. Composition of existing components
+4. New component — last resort; if it must be new, build it headless ([headless-components.md](headless-components.md))
 
-Do not create components with endless props:
-
-```tsx
-// DO NOT DO THIS
-<DataTable
-  data={transactions}
-  columns={columns}
-  pagination={true}
-  paginationPosition="bottom"
-  pageSize={10}
-  pageSizeOptions={[10, 25, 50]}
-  sortable={true}
-  defaultSortColumn="date"
-  defaultSortDirection="desc"
-  filterable={true}
-  filterPosition="header"
-  filterDebounce={300}
-  selectable={true}
-  selectionMode="multiple"
-  onSelectionChange={handleSelection}
-  expandable={true}
-  expandedRowRender={renderExpandedRow}
-  loading={isLoading}
-  loadingComponent={<CustomLoader />}
-  emptyState={<EmptyTransactions />}
-  rowActions={rowActions}
-  rowActionsPosition="end"
-  headerSticky={true}
-  stickyOffset={64}
-  virtualized={true}
-  rowHeight={52}
-  overscan={5}
-/>
-```
-
-Nobody can reason about 60 props and their interactions.
-
-### Use Composition Instead
-
-Build complex interfaces from focused, single-purpose pieces:
-
-```tsx
-// Each piece does one thing well
-<DataTable data={transactions} columns={columns}>
-  <DataTableToolbar>
-    <DataTableFilter column="status" options={statusOptions} placeholder="Filter by status" />
-    <DataTableFilter column="type" options={typeOptions} placeholder="Filter by type" />
-    <DataTableSearch placeholder="Search transactions..." />
-    <DataTableViewOptions />
-  </DataTableToolbar>
-
-  <DataTableHeader sticky offset={64} />
-
-  <DataTableBody
-    loading={isLoading}
-    emptyState={<EmptyTransactions />}
-    expandedRow={row => <TransactionDetails transaction={row} />}
-  />
-
-  <DataTableFooter>
-    <DataTableSelection mode="multiple" onSelectionChange={handleSelection} />
-    <DataTablePagination pageSize={10} pageSizeOptions={[10, 25, 50]} />
-  </DataTableFooter>
-</DataTable>
-```
-
-Each piece has a clear purpose. When requirements change you reorganize JSX rather than hunting through props.
-
-This principle scales to every complex component:
-
-- **Forms**: FormField, FormLabel, FormControl, FormMessage
-- **Dialogs**: DialogTrigger, DialogContent, DialogHeader, DialogFooter
-- **Navigation**: NavRoot, NavList, NavItem, NavLink
-
-Small pieces, clearly named, easy to learn.
-
----
-
-## UI Component Rules
-
-- Always import UI from `components/ui`
-- UI sources must follow priority:
-  1. **Radix UI**
-  2. **shadcn-ui**
-  3. **Composition of existing components**
-  4. **New components as a last resort**
-- Never introduce additional UI libraries
+Never introduce additional UI libraries; package choices are owned by the react-core packages reference.

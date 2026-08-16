@@ -62,3 +62,13 @@ jobs:
 
       - name: Smoke test typescript-core templates and references
         run: bash scripts/ci/smoke-typescript-core.sh
+
+  smoke-react:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Smoke test react-core templates and react-components scaffold
+        run: bash scripts/ci/smoke-react.sh

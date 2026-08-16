@@ -91,8 +91,7 @@ else
     print_success "strict-node.json rejects enums (erasableSyntaxOnly enforced)"
 fi
 
-# ── 4. Rot-token scan over references/ and assets/ ──────────────────────────
-# (SKILL.md is excluded: its landmarks table legitimately quotes wrong forms.)
+# ── 4. Rot-token scan over the whole skill ──────────────────────────────────
 ROT_PATTERNS=(
     '\.addSink\('
     'seamless-immutable'
@@ -101,7 +100,7 @@ ROT_PATTERNS=(
 )
 rot_found=0
 for pattern in "${ROT_PATTERNS[@]}"; do
-    if hits="$(grep -rEn "$pattern" "$SKILL_DIR/references" "$SKILL_DIR/assets" 2>/dev/null)"; then
+    if hits="$(grep -rEn "$pattern" "$SKILL_DIR/SKILL.md" "$SKILL_DIR/references" "$SKILL_DIR/assets" 2>/dev/null)"; then
         print_error "stale prescription '$pattern':"
         echo "$hits"
         rot_found=1

