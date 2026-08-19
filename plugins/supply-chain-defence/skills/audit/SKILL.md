@@ -79,7 +79,13 @@ npm view <package> maintainers --json
 
 Flag single-maintainer packages with high download counts as higher risk (these are prime targets for account takeover attacks like the Axios incident).
 
-### 6. SBOM Generation (Optional)
+### 6. npmscan Vulnerability Cross-Check (MCP, if connected)
+
+If the `npmscan` MCP server is available, call `batch_query_vulnerabilities` with all direct dependency names (up to 100 per call) to cross-reference OSV.dev — a second, independent source from npm's own advisory DB. Optionally call `get_latest_advisories` filtered to your dependencies' packages for recent GHSA entries.
+
+This is advisory, third-party enrichment over a public endpoint (no auth, 30 req/min) — treat it as a supplementary signal, not a replacement for `npm audit`, and skip this step silently if the server isn't connected.
+
+### 7. SBOM Generation (Optional)
 
 If `@cyclonedx/cyclonedx-npm` is installed and the user wants an SBOM, offer to generate:
 
@@ -96,6 +102,9 @@ Present findings as a structured report:
 
 ### Vulnerabilities (npm audit)
 - X critical, Y high, Z moderate
+
+### Vulnerabilities (npmscan/OSV.dev cross-check)
+- Additional findings not in npm audit, or "npmscan MCP not connected"
 
 ### Lockfile Integrity
 - PASS/FAIL with details

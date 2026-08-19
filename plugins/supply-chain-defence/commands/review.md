@@ -7,6 +7,9 @@ allowed-tools:
   - Glob
   - WebFetch
   - WebSearch
+  - mcp__npmscan__get_package
+  - mcp__npmscan__query_vulnerabilities
+  - mcp__npmscan__batch_query_vulnerabilities
 argument-hint: "<package-name|file-path|directory>"
 ---
 
@@ -75,8 +78,12 @@ Report direct dependency count. Flag unusually large trees.
 socket npm info <package>
 ```
 
-### npmscan.com
-Search for the package on npmscan.com for malware indicators.
+### npmscan (MCP, if connected)
+If the `npmscan` MCP server is available, use it for malware and OSV.dev vulnerability signal that `npm view`/`npm audit` won't surface:
+- `get_package` — install scripts, maintainers, version history (cross-check against the Registry Metadata / Maintainer Info / Lifecycle Scripts checks above)
+- `query_vulnerabilities` — OSV.dev vulnerabilities for this package
+
+Each result includes an `npmscanUrl` — cite it in the report so findings are traceable. This is advisory, third-party enrichment (public endpoint, no auth, 30 req/min) — treat it as one more signal, not ground truth, and don't block on it being unavailable.
 
 ## Step 3: For a Directory or File
 
@@ -88,6 +95,7 @@ Additionally run:
 - `lockfile-lint` on the lockfile
 - Dependency age analysis (flag anything published in last 5 days)
 - Bulk typosquatting check
+- If the `npmscan` MCP server is available, call `batch_query_vulnerabilities` once with up to 100 dependency names instead of querying each individually — faster and stays within the rate limit
 
 ## Step 4: Present Report
 
